@@ -50,3 +50,14 @@ def batched_mlogit(beta):
     # Compute the logistic probabilities, including the last element as 0
     return _softmax(np.hstack([beta, np.zeros((beta.shape[0], 1))]))  # Append 0 for the last element
 
+
+def batched_wrapper(integrand1, integrand2, integrand3, k, k_0):
+    """
+    Wrap three N*k*k integrands into a N*(3k²) matrix
+    """
+    N = integrand1.shape[0]
+    return np.concatenate([
+        integrand1.reshape(N, -1),
+        integrand2.reshape(N, -1),
+        integrand3.reshape(N, -1)
+    ], axis=1)

@@ -1,13 +1,15 @@
 import numpy as np
 from cubature import cubature
+from multinomial_logistic.utils import unwrap
 
 def quadrature_integration(func, S, A, R_00, schur_root, alpha, k, k_0):
-    print('integrating ')
+    print('integrating... ')
     expectations, err = cubature(func, args=(S, A, R_00, schur_root, alpha, k, k_0,), ndim=k+k_0,
                                   vectorized=True,
-                                  fdim=k*k ,xmin=[-8]*(k+k_0), xmax=[8]*(k+k_0), abserr = 1e-3, relerr=1e-3,
+                                  fdim=k*k + k*k + k*k_0  ,xmin=[-8]*(k+k_0), xmax=[8]*(k+k_0), abserr = 1e-3, relerr=1e-3,
                                   maxEval=100000, norm=2)
-    return expectations.reshape((k, k))
+    print('expectations are calculated with shape', expectations.shape)
+    return unwrap(expectations, k, k_0)
 
 
 

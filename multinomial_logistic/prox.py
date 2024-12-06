@@ -18,7 +18,7 @@ def prox_deriv_fp(beta_batch, g_batch, S):
     # Compute the proximal derivative as a fixed point equation for each beta in the batch
     return g_batch - batched_mult(S, batched_mlogit(beta_batch)[:, :-1])
 
-def prox_fp_iteration(g_batch, S, max_iter=1000, tol=1e-3):
+def prox_fp_iteration(g_batch, S, max_iter=1000, tol=1e-5):
     beta_batch = np.zeros_like(g_batch)  # Shape (N, k)
     
     for i in range(max_iter):

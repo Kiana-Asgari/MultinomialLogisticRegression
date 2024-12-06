@@ -5,7 +5,9 @@ from scipy.stats import multivariate_normal
 from multinomial_logistic.integration import quadrature_integration
 from scipy.linalg import sqrtm
 from multinomial_logistic.prox import prox_fp_iteration
-from multinomial_logistic.fixed_point_system.fp_integrands import fixed_point_integrands
+from multinomial_logistic.fixed_point_system.fp_integrands import batched_fixed_point_integrands
+from multinomial_logistic.fixed_point_system.fp_system import fixed_point_system
+from multinomial_logistic.utils import wrapper
 
 def mock_func_prox(Z_batch, S, A, R_00, schur_root, alpha, k, k_0):
     mvn = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0))
@@ -96,4 +98,14 @@ def test_fp_integrands():
     R_00 = np.eye(k)
     schur_root = np.eye(k)
     alpha = 1.0
-    fixed_point_integrands(Z_batch, S, A, R_00, schur_root, alpha, k, k_0)
+    result = batched_fixed_point_integrands(Z_batch, S, A, R_00, schur_root, alpha, k, k_0)
+    print('result', result.shape, result)
+
+def test_fp_system():
+    print("Running test_fp_system")
+    k, k_0 = 2, 2  # Example dimensions
+    vars = wrapper(10 * np.eye(k), np.eye(k), np.eye(k))
+    R_00 = np.eye(k)
+    alpha = 1.0
+    result = fixed_point_system(vars, R_00, alpha, k, k_0)
+    print('result', result.shape, result)
