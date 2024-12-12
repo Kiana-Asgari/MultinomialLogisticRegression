@@ -6,6 +6,7 @@ import numpy as np
 def fixed_point_system(vars, R_00, alpha, k, k_0):
     print("in fixed point system...")
     S, R_10, R_11 = unwrap(vars, k, k_0)
+    print('         with paramsS, R_10, R_11 are', S, R_10, R_11)
     schur = schur_complement(R_10, R_11, R_00)
     schur_root = sqrtm(schur)
     A = R_10 @ np.linalg.inv(sqrtm(R_00))
@@ -14,5 +15,8 @@ def fixed_point_system(vars, R_00, alpha, k, k_0):
     fp_eqs1 = alpha * S @ fp_eqs[0] @ S - schur
     fp_eqs2 = fp_eqs[1]
     fp_eqs3 = fp_eqs[2]
-    print('fp_eqs are computed with shapes', fp_eqs1.shape, fp_eqs2.shape, fp_eqs3.shape)
+    print('fp_eqs are computed:', fp_eqs1.flatten())
+    print('                     ', fp_eqs2.flatten())
+    print('                     ', fp_eqs3.flatten())
+
     return wrapper(fp_eqs1, fp_eqs2, fp_eqs3)

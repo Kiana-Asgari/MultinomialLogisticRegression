@@ -1,13 +1,13 @@
 import numpy as np
 from multinomial_logistic.utils import batched_mlogit, schur_complement
-from multinomial_logistic.gaussian_variable import coloring_transform
 from scipy.stats import multivariate_normal
-from multinomial_logistic.integration import quadrature_integration
+from multinomial_logistic.integration import quadrature_integration, coloring_transform
 from scipy.linalg import sqrtm
 from multinomial_logistic.prox import prox_fp_iteration
 from multinomial_logistic.fixed_point_system.fp_integrands import batched_fixed_point_integrands
 from multinomial_logistic.fixed_point_system.fp_system import fixed_point_system
 from multinomial_logistic.utils import wrapper
+from multinomial_logistic.fixed_point_system.fp_solver import fixed_point_solver_iterative, fixed_point_solver_newton
 
 def mock_func_prox(Z_batch, S, A, R_00, schur_root, alpha, k, k_0):
     mvn = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0))
@@ -109,3 +109,13 @@ def test_fp_system():
     alpha = 1.0
     result = fixed_point_system(vars, R_00, alpha, k, k_0)
     print('result', result.shape, result)
+
+def test_fp_solver():
+    print("Running test_fp_solver")
+    k, k_0 = 1, 1
+    R_00 = np.eye(k)
+    alpha = 1.0
+    #S, R_10, R_11 = fixed_point_solver_iterative(R_00, alpha, k, k_0)
+    #print('S, R_10, R_11', S, R_10, R_11)
+    S, R_10, R_11 = fixed_point_solver_newton(R_00, alpha, k, k_0)
+    print('S, R_10, R_11', S, R_10, R_11)

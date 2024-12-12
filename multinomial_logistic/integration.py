@@ -1,14 +1,23 @@
 import numpy as np
 from cubature import cubature
-from multinomial_logistic.utils import unwrap
+from multinomial_logistic.utils import unwrap, batched_mult, batched_outer
+from scipy.linalg import sqrtm
+
+def coloring_transform(Z_vectorized, A, R_00, schur_root, alpha, k, k_0):
+    Z_top = Z_vectorized[:,:k] # (N, k)
+    Z_bottom = Z_vectorized[:,-k_0:] # (N, k_0)
+    g = batched_mult(A , Z_bottom) + batched_mult(schur_root, Z_top)
+    g_0 = batched_mult(sqrtm(R_00), Z_bottom)
+
+    return g, g_0
 
 def quadrature_integration(func, S, A, R_00, schur_root, alpha, k, k_0):
-    print('integrating... ')
+    print('     integrating... ')
     expectations, err = cubature(func, args=(S, A, R_00, schur_root, alpha, k, k_0,), ndim=k+k_0,
                                   vectorized=True,
                                   fdim=k*k + k*k + k*k_0  ,xmin=[-8]*(k+k_0), xmax=[8]*(k+k_0), abserr = 1e-3, relerr=1e-3,
                                   maxEval=100000, norm=2)
-    print('expectations are calculated with shape', expectations.shape)
+    print('     expectations are calculated with shape', expectations.shape)
     return unwrap(expectations, k, k_0)
 
 
