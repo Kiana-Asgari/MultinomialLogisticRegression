@@ -4,6 +4,7 @@ from multinomial_logistic.utils import unwrap, batched_mult, batched_outer
 from scipy.linalg import sqrtm
 
 def coloring_transform(Z_vectorized, A, R_00, schur_root, alpha, k, k_0):
+    # A = R_10 @ R_00^{-1}, schur_root = sqrtm(R_11 - R_10 @ R_00^{-1} @ R_10.T)
     Z_top = Z_vectorized[:,:k] # (N, k)
     Z_bottom = Z_vectorized[:,-k_0:] # (N, k_0)
     g = batched_mult(A , Z_bottom) + batched_mult(schur_root, Z_top)
@@ -11,9 +12,19 @@ def coloring_transform(Z_vectorized, A, R_00, schur_root, alpha, k, k_0):
 
     return g, g_0
 
-def quadrature_integration(func, S, A, R_00, schur_root, alpha, k, k_0):
+def schur_complement(R_10, R_11, R_00): # Returns R\R_00
+    R_00inv = np.linalg.inv(R_00)
+    return R_11 - R_10 @ R_00inv @ (R_10).T
+
+def schur_decomposition(R_00, A, schur): # Returns R_10, R_11, R_00
+    R_11 = schur + A @ A.T
+    R_10 = A @ sqrtm(R_00)
+    return np.block([[R_11, R_10],
+                    [R_10.T, R_00]])
+    
+def quadrature_integration(func,S_cononical, A, R_00, schur_cononical, alpha, k, k_0):
     print('     integrating... ')
-    expectations, err = cubature(func, args=(S, A, R_00, schur_root, alpha, k, k_0,), ndim=k+k_0,
+    expectations, err = cubature(func, args=(S_cononical, A, R_00, schur_cononical, alpha, k, k_0,), ndim=k+k_0,
                                   vectorized=True,
                                   fdim=k*k + k*k + k*k_0  ,xmin=[-8]*(k+k_0), xmax=[8]*(k+k_0), abserr = 1e-3, relerr=1e-3,
                                   maxEval=100000, norm=2)

@@ -1,5 +1,5 @@
 import numpy as np
-from multinomial_logistic.utils import batched_mlogit, schur_complement
+from multinomial_logistic.utils import batched_mlogit
 from scipy.stats import multivariate_normal
 from multinomial_logistic.integration import quadrature_integration, coloring_transform
 from scipy.linalg import sqrtm
@@ -112,10 +112,10 @@ def test_fp_system():
 
 def test_fp_solver():
     print("Running test_fp_solver")
-    k, k_0 = 1, 1
+    k, k_0 = 2, 2
     R_00 = np.eye(k)
-    alpha = 1.0
+    alpha = 10
     #S, R_10, R_11 = fixed_point_solver_iterative(R_00, alpha, k, k_0)
     #print('S, R_10, R_11', S, R_10, R_11)
-    S, R_10, R_11 = fixed_point_solver_newton(R_00, alpha, k, k_0)
-    print('S, R_10, R_11', S, R_10, R_11)
+    S, R = fixed_point_solver_newton(R_00, alpha, k, k_0)
+    print('S, R', S, R)

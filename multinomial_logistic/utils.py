@@ -7,6 +7,12 @@ from scipy.linalg import sqrtm
 from cubature import cubature
 
 
+def batched_product(S, B_batched): # S is k x k, B_batched is N x k x k. Returns N x k x k.
+    return np.einsum('ij,njk->nik', S, B_batched)
+
+def batched_inv(J_batched): # J_batched is N x k x k. Returns N x k x k.
+    return np.linalg.inv(J_batched)
+
 def batched_scalar_mult(S_batched, p_batch): # S_batched is N x k x k, p_batch is N 1D array. Returns N x k
     return S_batched * p_batch[:, np.newaxis, np.newaxis]
 
@@ -31,9 +37,6 @@ def wrapper(S, R_10, R_11): # wrap (S, R_10, R_11)
 def mlogit(beta): # returns a k+1 dimentional logistic perobablity vector with the prob of 0 as the last element
     return softmax(np.append(beta,0))
 
-def schur_complement(R_10, R_11, R_00): # Returns R\R_00
-    R_00inv = np.linalg.inv(R_00)
-    return R_11 - R_10 @ R_00inv @ (R_10).T
 
 def batched_normal_basis(i, k, N): # Reutrns the standard basis of R^k
     assert i in range(-1, k)
@@ -50,6 +53,17 @@ def batched_mlogit(beta):
     # Compute the logistic probabilities, including the last element as 0
     return _softmax(np.hstack([beta, np.zeros((beta.shape[0], 1))]))  # Append 0 for the last element
 
+
+def batched_mlogit_jacobian(beta):
+    v = batched_mlogit(beta)[:, :-1]
+    N, k = v.shape
+    # This results in an (N, k, k) array
+    outer_products = v[:, :, np.newaxis] * v[:, np.newaxis, :]
+    # This results in an (N, k, k) array with diagonals set to v and other elements zero
+    diagonals = np.zeros_like(outer_products)
+    np.einsum('ijj->ij', diagonals)[:] = v
+    result_matrices = diagonals - outer_products
+    return result_matrices
 
 def batched_wrapper(integrand1, integrand2, integrand3, k, k_0):
     """

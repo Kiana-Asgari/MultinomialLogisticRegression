@@ -1,18 +1,25 @@
 from multinomial_logistic.fixed_point_system.fp_integrands import batched_fixed_point_integrands
-from multinomial_logistic.utils import unwrap, schur_complement, sqrtm, wrapper
-from multinomial_logistic.integration import quadrature_integration
+from multinomial_logistic.utils import unwrap, sqrtm, wrapper
+from multinomial_logistic.integration import quadrature_integration, schur_decomposition
 import numpy as np
+
 
 def fixed_point_system(vars, R_00, alpha, k, k_0):
     print("in fixed point system...")
-    S, R_10, R_11 = unwrap(vars, k, k_0)
-    print('         with paramsS, R_10, R_11 are', S, R_10, R_11)
-    schur = schur_complement(R_10, R_11, R_00)
-    schur_root = sqrtm(schur)
-    A = R_10 @ np.linalg.inv(sqrtm(R_00))
+    S, A, schur = unwrap(vars, k, k_0)
+    #S_canonical, schur_canonical, A = unwrap(vars, k, k_0)
+    #print('S_canonical, schur_canonical, A', S_canonical, schur_canonical, A)
+  
 
-    fp_eqs = quadrature_integration(batched_fixed_point_integrands, S, A, R_00, schur_root, alpha, k, k_0)
-    fp_eqs1 = alpha * S @ fp_eqs[0] @ S - schur
+    fp_eqs = quadrature_integration(batched_fixed_point_integrands, S, A, R_00, schur, alpha, k, k_0)
+
+    #S = S_canonical.T @ S_canonical
+   # schur = schur_canonical.T @ schur_canonical
+
+    R = schur_decomposition(R_00, A, schur)
+    print('         with paramsS, S, R:', S, R)
+
+    fp_eqs1 = alpha * S @ fp_eqs[0] @ S  - schur 
     fp_eqs2 = fp_eqs[1]
     fp_eqs3 = fp_eqs[2]
     print('fp_eqs are computed:', fp_eqs1.flatten())
@@ -20,3 +27,37 @@ def fixed_point_system(vars, R_00, alpha, k, k_0):
     print('                     ', fp_eqs3.flatten())
 
     return wrapper(fp_eqs1, fp_eqs2, fp_eqs3)
+
+
+
+
+
+
+
+
+
+"""
+def fixed_point_system(vars, R_00, alpha, k, k_0):
+    print("in fixed point system...")
+    #S, R_10, R_11 = unwrap(vars, k, k_0)
+    S_canonical, schur_canonical, A = unwrap(vars, k, k_0)
+    print('  S_canonical, schur_canonical, A', S_canonical, schur_canonical, A)
+  
+
+    fp_eqs = quadrature_integration(batched_fixed_point_integrands, S_canonical, A, R_00, schur_canonical, alpha, k, k_0)
+
+    S = S_canonical.T @ S_canonical
+    schur = schur_canonical.T @ schur_canonical
+
+    R = schur_decomposition(R_00, A, schur)
+    print('         with paramsS, S, R:', S, R)
+
+    fp_eqs1 = alpha *  fp_eqs[0]  - np.linalg.inv(S) @ schur @ np.linalg.inv(S)
+    fp_eqs2 = fp_eqs[1]
+    fp_eqs3 = fp_eqs[2]
+    print('fp_eqs are computed:', fp_eqs1.flatten())
+    print('                     ', fp_eqs2.flatten())
+    print('                     ', fp_eqs3.flatten())
+
+    return wrapper(fp_eqs1, fp_eqs2, fp_eqs3)
+"""
