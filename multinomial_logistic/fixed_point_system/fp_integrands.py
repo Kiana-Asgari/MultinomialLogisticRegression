@@ -14,11 +14,7 @@ S = R_11 - R_10 @ R_00^{-1} @ R_01
 """
 
 
-
-
-
-
-def batched_fixed_point_integrands(Z_batch, S, A, R_00, schur, alpha, k, k_0): # Z ~ N(0,I_k)
+def batched_fixed_point_integrands(Z_batch, S, A, schur, R_00, lambda_reg, alpha, k, k_0): # Z ~ N(0,I_k)
     N = Z_batch.shape[0]
     schur_root = sqrtm(schur)
 

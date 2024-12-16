@@ -17,12 +17,64 @@ E[ (I_k + S^* J P(prox(g + yS; S))^{-1} ) ] = (1-1/alpha)I_k
 """
 
 
-def S_fp_integrand(Z_batch, S_canonical, R_00, schur_root_t, A_t, alpha, k, k_0):
+
+def S_fp_solver_new(R_00, schur_t, A_t, alpha, k, k_0):
+    print("in S_fp_solver... ")
+    S_t = np.eye(k)
+    canonical = False
+    for t in range(1000):
+        integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0, canonical).reshape(k,k)
+        S_next = 1/alpha * np.linalg.inv(np.eye(k) - integrand) @ S_t
+        print(f'     **S_fp_solver iteration {t+1} finished with S={S_next.flatten()}**')
+        if np.linalg.norm(S_t - S_next) < 1e-3:
+            print(f'     **S_fp_solver converged in {t+1} iterations**')
+            break
+        S_t = S_next
+    return S_t
+
+"""
+def S_fp_solver(R_00, schur_t, A_t, alpha, k, k_0):
+    #print("in S_fp_solver... ")
+    S_init_canonical = np.eye(k).flatten()
+
+    solution, infodict, ier, mesg = fsolve(S_fp_equation, S_init_canonical, 
+                                         args=(R_00, schur_t, A_t, alpha, k, k_0,),
+                                         xtol=1e-10, epsfcn=1e-10, 
+                                         full_output=True)
+    
+    print("            Computing S...")
+    print("            Termination message:", mesg)
+    print("            Number of function evaluations:", infodict['nfev'])
+    print("            Final residuals:", infodict['fvec'])
+
+    S_canonical = solution.reshape((k,k))
+    S = S_canonical @ S_canonical.T
+    return S
+"""
+
+def S_fp_equation(S_flat_canonical, R_00, schur_t, A_t, alpha, k, k_0):
+    print("   in S_fp_equation...")
+    S_canonical  = S_flat_canonical.reshape((k, k))
+    eq_flat = integration(_S_fp_integrand, S_canonical=S_canonical, R_00=R_00, schur_t=schur_t, A_t=A_t, alpha=alpha, k=k, k_0=k_0)
+    #print('  fp_eq is computed:', np.array(eq_flat.reshape(k,k) - ((1-1/alpha) * np.eye(k))).flatten())
+    print('residual:', np.array(eq_flat.reshape(k,k) - ((1 - 1/alpha) * np.eye(k))).flatten())
+    return np.array(eq_flat.reshape(k,k) - ((1 - 1/alpha) * np.eye(k))).flatten()
+
+"""
+*************************************************************************************
+nasty integrands
+"""
+
+def _S_fp_integrand(Z_batch, S_canonical, R_00, schur_t, A_t, alpha, k, k_0, canonical):
     N = Z_batch.shape[0]
-    S = S_canonical @ S_canonical.T # to ensure S is positive semidefinite
+    if canonical:
+        S = S_canonical @ S_canonical.T # to ensure S is positive semidefinite
+    else:
+        S = S_canonical
+    schur_root = sqrtm(schur_t)
     
     # Coloring transform
-    g_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root_t  , alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
+    g_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root, alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
     pdf = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0)).pdf(Z_batch)
     prob_y_batch = batched_mlogit(g_0_batch)
 
@@ -30,7 +82,7 @@ def S_fp_integrand(Z_batch, S_canonical, R_00, schur_root_t, A_t, alpha, k, k_0)
 
     for i in range(-1, k):
         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
-        prox_g_batch = prox_fp_iteration(g_batch + batched_mult(S, y_batch), S) # prox(g + yS; S)
+        prox_g_batch = prox_fp_iteration(g_batch + batched_mult(S, y_batch), S=S) # prox(g + yS; S)
         score_jacobian_batch = score_jacobian_batched(prox_g_batch, S, k) # (I + S @ Jp(prox(g + yS; S)))^{-1}
         integrand += batched_scalar_mult(score_jacobian_batch, prob_y_batch[:, i]) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y)  
 
@@ -42,42 +94,21 @@ def S_fp_integrand(Z_batch, S_canonical, R_00, schur_root_t, A_t, alpha, k, k_0)
 
 
 
-def integration(integrand, S_canonical, R_00, schur_root_t, A_t, alpha, k, k_0):
-    print('integrating... ')
+def integration(integrand, S_canonical, R_00, schur_t, A_t, alpha, k, k_0, canonical):
+    #print('integrating... ')
     fdim = k*k
     ndim = k+k_0
-    expectations, err = cubature(integrand, args=(S_canonical, R_00, schur_root_t, A_t, alpha, k, k_0,), ndim=ndim,
+    expectations, err = cubature(integrand, args=(S_canonical, R_00, schur_t, A_t, alpha, k, k_0, canonical), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-8]*ndim, xmax=[8]*ndim, abserr = 1e-3, relerr=1e-3,
+                                  fdim= fdim ,xmin=[-8]*ndim, xmax=[8]*ndim, abserr = 1e-6, relerr=1e-6,
                                   maxEval=100000, norm=2)
-    print('done integrating')
+    if err.any() > 1e-2:
+        print('     **[Warning] integration in the S_fp error is too large**')
+    #print('done integrating')
     return expectations
 
 
 
-def S_fp_equation(S_flat_canonical, R_00, schur_root_t, A_t, alpha, k, k_0):
-    print("   in S_fp_equation...")
-    S_canonical  = S_flat_canonical.reshape((k, k))
-    eq_flat = integration(S_fp_integrand, S_canonical=S_canonical, R_00=R_00, schur_root_t=schur_root_t, A_t=A_t, alpha=alpha, k=k, k_0=k_0)
-    
-    print('  fp_eq is computed:', np.array(eq_flat.reshape(k,k) - ((1-1/alpha) * np.eye(k))).flatten())
-    return np.array(eq_flat.reshape(k,k) - ((1-1/alpha) * np.eye(k))).flatten()
 
 
-def S_fp_solver(R_00, schur_root_t, A_t, alpha, k, k_0):
-    print("in S_fp_solver... ")
-    S_init_canonical = np.eye(k).flatten()
 
-    solution, infodict, ier, mesg = fsolve(S_fp_equation, S_init_canonical, 
-                                         args=(R_00, schur_root_t, A_t, alpha, k, k_0,),
-                                         xtol=1e-10, epsfcn=1e-10, 
-                                         full_output=True)
-    
-    print("Computing S... Termination code (ier):", ier)
-    print("            Termination message:", mesg)
-    print("            Number of function evaluations:", infodict['nfev'])
-    print("            Final residuals:", infodict['fvec'])
-
-    S_canonical = solution.reshape((k,k))
-    S = S_canonical @ S_canonical.T
-    return S

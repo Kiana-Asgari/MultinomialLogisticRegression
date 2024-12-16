@@ -7,7 +7,7 @@ def score_batched(V_batch, y_batch):
     y_batch: N*k
     returns: N*k p(v) - y
     """
-    return batched_mlogit(V_batch) - y_batch
+    return batched_mlogit(V_batch)[:,:-1] - y_batch
 
 def score_jacobian_batched(V_batch, S, k):
     """
