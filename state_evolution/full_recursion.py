@@ -1,6 +1,9 @@
 import numpy as np
+
 from scipy.stats import multivariate_normal
 from scipy.linalg import sqrtm
+from cubature import cubature
+
 
 from state_evolution.functions import score_batched, score_jacobian_batched
 from multinomial_logistic.utils import batched_mlogit, batched_outer, batched_scalar_mult, batched_mult, batched_normal_basis
@@ -8,8 +11,21 @@ from multinomial_logistic.integration import coloring_transform, batched_mult
 from multinomial_logistic.prox import prox_fp_iteration
 from multinomial_logistic.fixed_point_system.fp_system import fixed_point_system
 from multinomial_logistic.utils import wrapper
-from cubature import cubature
 
+
+"""
+    State Evoltion Recursion for the Regularized Multinomial Logistic Regression.
+    The state evolution recursion is used to compute the fixed point of the state evolution equations.
+    The state evolution equations are:
+        S_{t+1} = 1/alpha * (I - E[(I + S @ Jp(prox(g + yS; S)))^{-1}] + 2*lambda_reg*S_t)^{-1} @ S_t
+        R_01_{t+1} = (I - alpha*2*lambda_reg * S_{t+1}) @ R_01_t - alpha * S_{t+1} @ E[(p(prox(g + yS; S)) - y)g_0.T] 
+        schur_{t+1} = alpha * S_{t+1} @ E[(p(v)-y) @ (p(v)-y).T] @ S_{t+1}
+    This recursion is used to compute the fixed point of the state evolution equations
+        (1/alpha - 1) * I + (2*lambda_reg) * S =  E[(I + S @ Jp(v))^{-1}] 
+        (-2*lambda_reg) @ R_01 = E[(p(v) - y)g_0.T] 
+        schur = alpha * S @ E[(p(v)-y) @ (p(v)-y).T] @ S
+
+"""
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, tol=1e-6, max_iter=1000):
     print('*************state evolution iteration started*************')
@@ -24,12 +40,13 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
         S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
         schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
         R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-        print(f'     schur_next: {schur_next}')
-
+       
+        print(f'     schur_{t+1:d}: {schur_next}')
         print(f'     state evolution iteration {t+1} finished.')
 
         equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
                                        , R_00, lambda_reg, alpha, k, k_0)
+        
         print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
         print(f'     **THE R_01 RESIDUAL IS {np.linalg.norm(R_01_next - R_01_t)}**')
         print(f'     **THE SCHUR RESIDUAL IS {np.linalg.norm(schur_next - schur_t)}**')
@@ -56,7 +73,10 @@ def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
     # S_{t+1} = 1/alpha * (I - E[(I + S @ Jp(prox(g + yS; S)))^{-1}] + 2*lambda_reg*S_t)^{-1} @ S_t
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
+    print(np.eye(k) - integrand + 2*lambda_reg*S_t)
     S = 1/alpha * np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t) @ S_t
+    #S_t_inv = np.linalg.inv(S_t)
+    #S = 1/alpha * np.linalg.inv(S_t_inv - S_t_inv @ integrand + 2*lambda_reg*np.eye(k))
     return S
 
 def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):

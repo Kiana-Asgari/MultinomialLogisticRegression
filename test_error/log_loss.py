@@ -10,8 +10,9 @@ from test_error.utils import plot_array
 
 
 def plot_log_loss_vs_alpha(R_00, alpha_min, alpha_max, lambda_reg, k, k_0):
-    alpha_values = np.linspace(alpha_min, alpha_max, 100, endpoint=True)
+    alpha_values = np.linspace(alpha_min, alpha_max, 20, endpoint=True)
     log_loss_values = []
+    
     for alpha in alpha_values:
         schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
                                         lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
@@ -20,10 +21,11 @@ def plot_log_loss_vs_alpha(R_00, alpha_min, alpha_max, lambda_reg, k, k_0):
     name = f"log_loss_vs_alpha_lambda_reg={lambda_reg:.2f}_nclass={k+1:d}" 
     plot_array(alpha_values, log_loss_values, title=title,\
                x_label="alpha", y_label="log loss",\
-                name=name, save_path='multinomial_logistic/data/log_loss')
+                name=name, save_path='multinomial_logistic/data/log_loss/3_classes')
+    
 
 def plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, k_0):
-    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, 100, endpoint=True)
+    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, 20, endpoint=True)
     log_loss_values = []
     for lambda_reg in lambda_reg_values:
         schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
@@ -36,7 +38,7 @@ def plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, 
     print('log_loss_values', log_loss_values)
     plot_array(lambda_reg_values, log_loss_values, title=title,\
                x_label="lambda_reg", y_label="log loss",\
-                name=name, save_path='multinomial_logistic/data/log_loss')
+                name=name, save_path='multinomial_logistic/data/log_loss/3_classes')
     return lambda_reg_values, log_loss_values
 
 

@@ -14,7 +14,7 @@ def fixed_point_system(vars, R_00, lambda_reg, alpha, k, k_0):
     S, A, schur = unwrap(vars, k, k_0)
     fp_eqs = quadrature_integration(batched_fixed_point_integrands, S, A, schur, R_00, lambda_reg, alpha, k, k_0)
 
-    R_00, R_10, R_11 = schur_decomposition(R_00, A, schur)
+    R_00, R_10, R_11 = schur_decomposition(R_00 = R_00, A = A, schur = schur)
 
     fp_eqs1 = alpha * S @ fp_eqs[0] @ S  - schur 
     fp_eqs2 = fp_eqs[1] + 2*lambda_reg * R_10
