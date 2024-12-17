@@ -17,8 +17,8 @@ def fixed_point_system(vars, R_00, lambda_reg, alpha, k, k_0):
     R_00, R_10, R_11 = schur_decomposition(R_00, A, schur)
 
     fp_eqs1 = alpha * S @ fp_eqs[0] @ S  - schur 
-    fp_eqs2 = fp_eqs[1] - lambda_reg * R_11
-    fp_eqs3 = fp_eqs[2] - lambda_reg * R_10
+    fp_eqs2 = fp_eqs[1] + 2*lambda_reg * R_10
+    fp_eqs3 = fp_eqs[2] + 2*lambda_reg * R_11
 
     return wrapper(fp_eqs1, fp_eqs2, fp_eqs3)
 

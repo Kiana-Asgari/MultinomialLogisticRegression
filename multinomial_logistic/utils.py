@@ -75,3 +75,11 @@ def batched_wrapper(integrand1, integrand2, integrand3, k, k_0):
         integrand2.reshape(N, -1),
         integrand3.reshape(N, -1)
     ], axis=1)
+
+
+def log_sum_exp_batch(V):
+    exp_V = np.exp(V)
+    sum_exp_V = np.sum(exp_V, axis=1)
+    sum_exp_plus_1 = 1 + sum_exp_V
+    result = np.log(sum_exp_plus_1) 
+    return result

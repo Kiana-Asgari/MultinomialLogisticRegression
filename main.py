@@ -7,20 +7,30 @@ from state_evolution.S_fp import S_fp_equation, S_fp_solver_new
 from state_evolution.full_recursion import S_recursion, R_01_recursion, schur_recursion
 from state_evolution.state_evolution_iteration import state_evolution_fixed_point
 from state_evolution.full_recursion import state_evolution_full_recursion
+from test_error.utils import plot_array
+from test_error.bias import plot_alpha_vs_bias, plot_lambda_vs_bias
+from test_error.log_loss import plot_log_loss_vs_lambda_reg, plot_log_loss_vs_alpha
 if __name__ == "__main__":
     print("Running main")
-    #test_integration_1()
-    #test_integration_2()
-    #test_prox()
-    #test_fp_integrands()
-    #test_fp_system()
-    k = 2
-    k_0 = 2
-    R_00 = np.array(np.array([[2,1],
-                             [1,2]]))
-    #state_evolution_fixed_point(R_00=np.eye(k_0), schur_0=np.eye(k_0), R_01_0=np.zeros((k_0,k)),\
-    #                             alpha=30, k=k, k_0=k_0)
-    state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
-                                    lambda_reg=0, alpha=10, k=k, k_0=k_0)
-    #S_fp_solver(R_00=np.eye(k_0), schur_t=np.eye(k_0), A_t=np.zeros((k_0,k)),\
-     #           alpha=10, k=k, k_0=k_0)
+    k = 1
+    k_0 =1
+   
+    #R_00 = np.array(np.array([[2,1],
+    #                         [1,2]]))
+    R_00 = np.eye(k_0)
+    alpha = 6
+    lambda_reg = 0
+
+    #state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
+    #schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
+    #                                lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+
+    #plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min=0, lambda_reg_max=5, alpha=alpha, k=k, k_0=k_0)
+    plot_log_loss_vs_alpha(R_00, alpha_min=4, alpha_max=15, lambda_reg=lambda_reg, k=k, k_0=k_0)     
+
+    #for lambda_reg in [0.1, 0.5, 1, 2, 5]:
+    #    plot_alpha_vs_bias(R_00, alpha_min=1.1, alpha_max=10, lambda_reg=lambda_reg, k=k, k_0=k_0)
+    #for alpha in [1.1, 2, 5, 10]:
+    #    plot_lambda_vs_bias(R_00, lambda_reg_min=0.1, lambda_reg_max=5, alpha=alpha, k=k, k_0=k_0)
+    #plot_alpha_vs_bias(R_00, lambda_reg=0, alpha_min=3.1, alpha_max=10, k=k, k_0=k_0)
+

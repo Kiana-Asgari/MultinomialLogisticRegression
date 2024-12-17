@@ -13,6 +13,7 @@ from cubature import cubature
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, tol=1e-6, max_iter=1000):
     print('*************state evolution iteration started*************')
+    print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}')
     R_01_t = R_01_0
     schur_t = schur_0
     S_t = np.eye(k)
@@ -20,14 +21,15 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
     for t in range(max_iter):
         print(f'     state evolution iteration {t+1} started... ')
 
-        S_next = S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0)
-        schur_next = schur_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0)
-        R_01_next = R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0)
+        S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+        schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+        R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
         print(f'     schur_next: {schur_next}')
 
         print(f'     state evolution iteration {t+1} finished.')
 
-        equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next), R_00, lambda_reg, alpha, k, k_0)
+        equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
+                                       , R_00, lambda_reg, alpha, k, k_0)
         print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
         print(f'     **THE R_01 RESIDUAL IS {np.linalg.norm(R_01_next - R_01_t)}**')
         print(f'     **THE SCHUR RESIDUAL IS {np.linalg.norm(schur_next - schur_t)}**')
@@ -51,20 +53,22 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 
 
 def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
+    # S_{t+1} = 1/alpha * (I - E[(I + S @ Jp(prox(g + yS; S)))^{-1}] + 2*lambda_reg*S_t)^{-1} @ S_t
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    #S = 1/alpha * S_t @ np.linalg.inv(np.eye(k) - integrand)
-    S = 1/alpha * np.linalg.inv(np.eye(k) - integrand) @ S_t
+    S = 1/alpha * np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t) @ S_t
     return S
 
 def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    #print('         in R_01_recursion... ')
+    # R_01_{t+1} = (I - alpha*2*lambda_reg * S_{t+1}) @ R_01_t - alpha * S_{t+1} @ E[(p(prox(g + yS; S)) - y)g_0.T] 
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_R_01_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    R_01 = R_01_t - alpha * S_next @ integrand 
+    R_01 =  (np.eye(k) - alpha*2*lambda_reg * S_next) @ R_01_t \
+            - alpha * S_next @ integrand 
     return R_01
 
 def schur_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
+    # schur_{t+1} = alpha * S_{t+1} @ E[(p(v)-y) @ (p(v)-y).T] @ S_{t+1}
     #print('         in schur_recursion... ')
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_schur_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
