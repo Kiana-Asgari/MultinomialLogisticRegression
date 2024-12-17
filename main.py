@@ -4,12 +4,26 @@ from multinomial_logistic.utils import batched_mlogit_jacobian, batched_mlogit
 import numpy as np
 
 from state_evolution.S_fp import S_fp_equation, S_fp_solver_new
-from state_evolution.full_recursion import S_recursion, R_01_recursion, schur_recursion
+from state_evolution.full_recursion import S_recursion, R_01_recursion, schur_recursion, integration
 from state_evolution.state_evolution_iteration import state_evolution_fixed_point
 from state_evolution.full_recursion import state_evolution_full_recursion
 from test_error.utils import plot_array
 from test_error.bias import plot_alpha_vs_bias, plot_lambda_vs_bias
 from test_error.log_loss import plot_log_loss_vs_lambda_reg, plot_log_loss_vs_alpha
+from multinomial_logistic.prox import prox_fp_iteration
+from scipy.stats import multivariate_normal
+from multinomial_logistic.utils import batched_scalar_mult
+
+
+def _S_fp_integrad_test(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
+    N = Z_batch.shape[0]
+    integrand = np.ones((N, k, k))
+    pdf = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0)).pdf(Z_batch)
+    integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
+
+    return integrand.reshape(N, -1)
+
+
 if __name__ == "__main__":
     print("Running main")
     k = 3
@@ -22,17 +36,21 @@ if __name__ == "__main__":
     R_01 = np.zeros((k_0,k))
     R_11 =  R_00
     schur = R_11 - R_01 @ np.linalg.inv(R_00) @ R_01.T
-    print(f'     schur: {schur}')
+    A = np.eye(k)
     #R_00 =  np.eye(k_0)
 
-    alpha = 30
-    lambda_reg = 0
+    alpha = 40
+    lambda_reg = 1
 
+    #integrand = integration(_S_fp_integrad_test, S, R_00, schur, A, alpha=alpha, k=k, k_0=k_0)
+    #print('integrand: ', integrand)
     #state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
-    schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=schur, R_01_0=R_01,\
-                                    lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+    #                                lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+    #schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=schur, R_01_0=R_01,\
+    #                                lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
 
-    #plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min=0.1, lambda_reg_max=5, alpha=alpha, k=k, k_0=k_0)
+    plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min=0, lambda_reg_max=4, alpha=alpha,\
+                                 k=k, k_0=k_0, max_iter=5)
     #plot_log_loss_vs_alpha(R_00, alpha_min=1, alpha_max=15, lambda_reg=lambda_reg, k=k, k_0=k_0)     
 
     #for lambda_reg in [0.1, 0.5, 1, 2, 5]:

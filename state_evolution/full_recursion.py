@@ -27,12 +27,13 @@ from multinomial_logistic.utils import wrapper
 
 """
 
-def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, tol=1e-6, max_iter=1000):
+def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0,\
+                                    tol=1e-5, max_iter=1000):
     print('*************state evolution iteration started*************')
     print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}')
     R_01_t = R_01_0
     schur_t = schur_0
-    S_t = np.eye(k)
+    S_t = 1/20 * np.eye(k)
 
     for t in range(max_iter):
         print(f'     state evolution iteration {t+1} started... ')
@@ -42,12 +43,14 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
         R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
        
         print(f'     schur_{t+1:d}: {schur_next}')
+        print(f'     R_01_{t+1:d}: {R_01_next}')
+        print(f'     S_{t+1:d}: {S_next}')
         print(f'     state evolution iteration {t+1} finished.')
 
-        equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
-                                       , R_00, lambda_reg, alpha, k, k_0)
+        #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
+        #                               , R_00, lambda_reg, alpha, k, k_0)
         
-        print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
+        #print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
         print(f'     **THE R_01 RESIDUAL IS {np.linalg.norm(R_01_next - R_01_t)}**')
         print(f'     **THE SCHUR RESIDUAL IS {np.linalg.norm(schur_next - schur_t)}**')
         print(f'     **THE S RESIDUAL IS {np.linalg.norm(S_next - S_t)}**')
@@ -56,13 +59,13 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
             (R_01_next, R_01_t), 
             (schur_next, schur_t), 
             (S_next, S_t)
-        ]) or all(np.linalg.norm(residual) < tol for residual in np.array(equations)):
-            print(f'*************state evolution iteration finished*************')
-            print(f'       **THE RESIDUAL IS {equations}**')
-            print(f'       **parameters converged to:\n S={S_next.flatten()}\n , R_01={R_01_next.flatten()}\n, schur={schur_next.flatten()}**')
+        ]) :
             break
 
         schur_t, R_01_t, S_t = schur_next, R_01_next, S_next
+    #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
+    #                                , R_00, lambda_reg, alpha, k, k_0)
+    #print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
     return schur_t, R_01_t, S_t
 
 
@@ -70,13 +73,14 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 
 
 def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    # S_{t+1} = 1/alpha * (I - E[(I + S @ Jp(prox(g + yS; S)))^{-1}] + 2*lambda_reg*S_t)^{-1} @ S_t
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    print(np.eye(k) - integrand + 2*lambda_reg*S_t)
+    #print('in S_recursion... ')
+    #print('expectation is ', integrand)
+    #print('inv(I - E)', np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t))
     S = 1/alpha * np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t) @ S_t
-    #S_t_inv = np.linalg.inv(S_t)
-    #S = 1/alpha * np.linalg.inv(S_t_inv - S_t_inv @ integrand + 2*lambda_reg*np.eye(k))
+    #print('previous S: ', S_t)
+    #print('new S: ', S)
     return S
 
 def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
@@ -158,6 +162,10 @@ def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
 
 
 
+
+
+
+
 def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
     N = Z_batch.shape[0]
     schur_root = sqrtm(schur_t)
@@ -173,23 +181,26 @@ def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
         prox_g_batch = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S=S_t) # prox(g + yS; S)
         score_jacobian_batch = score_jacobian_batched(prox_g_batch, S_t, k) # (I + S @ Jp(prox(g + yS; S)))^{-1}
+    
+        #print('score_jacobian for y = ', i)
+        #print('    .... with eigenvalues: ', np.linalg.eigvals(score_jacobian_batch[0]))
         integrand += batched_scalar_mult(score_jacobian_batch, prob_y_batch[:, i]) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y)  
-
     integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
-
+    
     if k == 1:
         return integrand.reshape(-1)#flattened  
     return integrand.reshape(N, -1) #flattened
 
 
-def integration(integrand, S_canonical, R_00, schur_t, A_t, alpha, k, k_0):
+def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     #print('     integrating... ')
     fdim = k*k
     ndim = k+k_0
-    expectations, err = cubature(integrand, args=(S_canonical, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
+    expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
                                   fdim= fdim ,xmin=[-8]*ndim, xmax=[8]*ndim, abserr = 1e-6, relerr=1e-6,
-                                  maxEval=150000, norm=2)
+                                  maxEval= 2500000, norm=2)
+    #print('     integration error: ', err)
     #if err.any() > 1e-2:
     #    print('     **[Warning] integration error is too large**')
     #print('     done integrating')

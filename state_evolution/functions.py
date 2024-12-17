@@ -17,4 +17,3 @@ def score_jacobian_batched(V_batch, S, k):
     """
     J = batched_mlogit_jacobian(V_batch)
     return batched_inv(np.eye(k) + batched_product(S, J))
-

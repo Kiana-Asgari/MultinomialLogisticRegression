@@ -9,10 +9,10 @@ from state_evolution.full_recursion import state_evolution_full_recursion
 from test_error.utils import plot_array
 
 
-def plot_log_loss_vs_alpha(R_00, alpha_min, alpha_max, lambda_reg, k, k_0):
-    alpha_values = np.linspace(alpha_min, alpha_max, 20, endpoint=True)
+def plot_log_loss_vs_alpha(R_00, alpha_min, alpha_max, lambda_reg, k, k_0, max_iter=1000):
+    alpha_values = np.linspace(alpha_min, alpha_max, max_iter, endpoint=False)
     log_loss_values = []
-    
+
     for alpha in alpha_values:
         schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
                                         lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
@@ -21,11 +21,11 @@ def plot_log_loss_vs_alpha(R_00, alpha_min, alpha_max, lambda_reg, k, k_0):
     name = f"log_loss_vs_alpha_lambda_reg={lambda_reg:.2f}_nclass={k+1:d}" 
     plot_array(alpha_values, log_loss_values, title=title,\
                x_label="alpha", y_label="log loss",\
-                name=name, save_path='multinomial_logistic/data/log_loss/3_classes')
+                name=name, save_path='multinomial_logistic/data/log_loss/4_classes')
     
 
-def plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, k_0):
-    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, 20, endpoint=True)
+def plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, k_0, max_iter):
+    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, max_iter, endpoint=False)
     log_loss_values = []
     for lambda_reg in lambda_reg_values:
         schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
@@ -38,7 +38,7 @@ def plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, 
     print('log_loss_values', log_loss_values)
     plot_array(lambda_reg_values, log_loss_values, title=title,\
                x_label="lambda_reg", y_label="log loss",\
-                name=name, save_path='multinomial_logistic/data/log_loss/3_classes')
+                name=name, save_path='multinomial_logistic/data/log_loss/4_classes')
     return lambda_reg_values, log_loss_values
 
 
@@ -46,7 +46,7 @@ def plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, 
 def test_error(R_00, schur, R_01, alpha, k, k_0):
     print('     computing test error... ')
     loss = integrate(log_loss, R_00, schur, R_01, alpha, k, k_0)
-    print('     done computing test error')
+    print('     done computing test error with loss: ', loss)
     return loss
 
 
@@ -82,7 +82,7 @@ def integrate(integrand, R_00, schur, R_01, alpha, k, k_0):
     expectations, err = cubature(integrand, args=(R_00, schur, R_01, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
                                   fdim= fdim ,xmin=[-8]*ndim, xmax=[8]*ndim, abserr = 1e-6, relerr=1e-6,
-                                  maxEval=150000, norm=2)
+                                  maxEval=2500000, norm=2)
     #if err.any() > 1e-2:
     #    print('     **[Warning] integration error is too large**')
     #print('     done integrating')

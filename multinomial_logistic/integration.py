@@ -26,7 +26,7 @@ def quadrature_integration(func,S, A, schur, R_00, lambda_reg, alpha, k, k_0):
     expectations, err = cubature(func, args=(S, A, schur, R_00, lambda_reg, alpha, k, k_0), ndim=k+k_0,
                                   vectorized=True,
                                   fdim=k*k + k*k + k*k_0  ,xmin=[-8]*(k+k_0), xmax=[8]*(k+k_0), abserr = 1e-6, relerr=1e-6,
-                                  maxEval=100000, norm=2)
+                                  maxEval= k * 2500000, norm=2)
     #print('     expectations are calculated with shape', expectations.shape)
     return unwrap(expectations, k, k_0)
 
