@@ -21,4 +21,4 @@ $$\left(\frac{1}{\alpha} - 1\right) \cdot I + (2\lambda_{\text{reg}}) \cdot S = 
 
 $$(-2\lambda_{\text{reg}}) \cdot R_{01} = \mathbb{E}\left[(p(v) - y)g_0^T\right]$$
 
-$$\text{R/R_{00}} = \alpha \cdot S \cdot \mathbb{E}\left[(p(v)-y) \cdot (p(v)-y)^T\right] \cdot S$$
+$${R/R_{00}} = \alpha \cdot S \cdot \mathbb{E}\left[(p(v)-y) \cdot (p(v)-y)^T\right] \cdot S$$
