@@ -10,8 +10,10 @@ $$S_{t+1} = \frac{1}{\alpha} \left(I - \mathbb{E}\left[\left(I + S \cdot \text{J
 
 $$R_{01_{t+1}} = \left(I - \alpha \cdot 2\lambda_{\text{reg}} \cdot S_{t+1}\right) \cdot R_{01_t} - \alpha \cdot S_{t+1} \cdot \mathbb{E}\left[\left(p(\text{prox}(g + yS; S)) - y\right)g_0^T\right]$$
 
-$$\text{R/R_00}_{t+1} = \alpha \cdot S_{t+1} \cdot \mathbb{E}\left[(p(v_t)-y) \cdot (p(v_t)-y)^T\right] \cdot S_{t+1}$$
-where $v_t = \text{prox}(g_t + yS_t; S_t)$ for $g_t,g_0\sim \cN(0,R_t)$ and $y\sim \bp(g_0)$
+$${R/R_{00}}_{t+1} = \alpha  S_{t+1}  \mathbb{E}
+\left[(p(v_t)-y) \cdot (p(v_t)-y)^T\right]  S_{t+1}$$
+
+where $v_t = \text{prox}(g_t + yS_t; S_t)$ for $g_t,g_0\sim N(0,R_t)$ and $y\sim p(g_0)$
 
 This recursion is used to compute the fixed point of the state evolution equations:
 
@@ -19,4 +21,4 @@ $$\left(\frac{1}{\alpha} - 1\right) \cdot I + (2\lambda_{\text{reg}}) \cdot S = 
 
 $$(-2\lambda_{\text{reg}}) \cdot R_{01} = \mathbb{E}\left[(p(v) - y)g_0^T\right]$$
 
-$$\text{schur} = \alpha \cdot S \cdot \mathbb{E}\left[(p(v)-y) \cdot (p(v)-y)^T\right] \cdot S$$
+$$\text{R/R_{00}} = \alpha \cdot S \cdot \mathbb{E}\left[(p(v)-y) \cdot (p(v)-y)^T\right] \cdot S$$
