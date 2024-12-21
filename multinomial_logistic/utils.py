@@ -6,6 +6,20 @@ from scipy.stats import multivariate_normal
 from scipy.linalg import sqrtm
 from cubature import cubature
 
+def batched_sqrtm(A_batched): # A_batched is N x k x k. Returns N x k x k.
+    # Perform eigen-decomposition for all matrices in the batch
+    N, k, k_0 = A_batched.shape
+    A_batched = 1/2* (A_batched + A_batched.transpose(0, 2, 1)) # for numerical stability
+    eigvals, eigvecs = np.linalg.eigh(A_batched)  # eigvals: N x k, eigvecs: N x k x k
+    eigvals = np.maximum(eigvals, 0) # for numerical stability
+
+    # Compute the square root of the eigenvalues
+    sqrt_eigvals = np.sqrt(eigvals)  # N x k
+    # Reconstruct the square root matrices
+    sqrtm_batch = np.einsum('nij,nj,nkj->nik', eigvecs, sqrt_eigvals, np.linalg.inv(eigvecs))
+    return sqrtm_batch
+
+
 
 def batched_product(S, B_batched): # S is k x k, B_batched is N x k x k. Returns N x k x k.
     return np.einsum('ij,njk->nik', S, B_batched)

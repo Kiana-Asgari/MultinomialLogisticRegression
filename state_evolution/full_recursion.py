@@ -28,12 +28,14 @@ from multinomial_logistic.utils import wrapper
 """
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0,\
-                                    tol=1e-5, max_iter=1000):
+                                    tol=1e-3, max_iter=25):
+    div_tol = np.linalg.norm(R_00)* 1e3
     print('*************state evolution iteration started*************')
     print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}')
     R_01_t = R_01_0
     schur_t = schur_0
-    S_t = 1/20 * np.eye(k)
+    S_t =  np.eye(k)
+    divergence = False
 
     for t in range(max_iter):
         print(f'     state evolution iteration {t+1} started... ')
@@ -42,10 +44,10 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
         schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
         R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
        
-        print(f'     schur_{t+1:d}: {schur_next}')
-        print(f'     R_01_{t+1:d}: {R_01_next}')
-        print(f'     S_{t+1:d}: {S_next}')
-        print(f'     state evolution iteration {t+1} finished.')
+        #print(f'     schur_{t+1:d}: {schur_next}')
+        #print(f'     R_01_{t+1:d}: {R_01_next}')
+        #print(f'     S_{t+1:d}: {S_next}')
+        #print(f'     state evolution iteration {t+1} finished.')
 
         #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
         #                               , R_00, lambda_reg, alpha, k, k_0)
@@ -55,18 +57,33 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
         print(f'     **THE SCHUR RESIDUAL IS {np.linalg.norm(schur_next - schur_t)}**')
         print(f'     **THE S RESIDUAL IS {np.linalg.norm(S_next - S_t)}**')
 
+        if np.linalg.norm(S_next) > div_tol or np.linalg.norm(schur_next) > div_tol or np.linalg.norm(R_01_next) > div_tol:
+            print('     **Divergence detected **')
+            print(f'     **S_next: {S_next}**')
+            print(f'     **schur_next: {schur_next}**')
+            print(f'     **R_01_next: {R_01_next}**')
+            print(f'     **Halting state evolution recursion**')
+            divergence = True
+            break
+
         if all(np.linalg.norm(next - current) < tol for next, current in [
-            (R_01_next, R_01_t), 
+            (1/10*R_01_next, 1/10*R_01_t), 
             (schur_next, schur_t), 
             (S_next, S_t)
         ]) :
+            divergence = False
             break
 
         schur_t, R_01_t, S_t = schur_next, R_01_next, S_next
+
+    if divergence:
+        print('     **Divergence detected due to reaching max_iter**')
+
     #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
     #                                , R_00, lambda_reg, alpha, k, k_0)
-    #print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
-    return schur_t, R_01_t, S_t
+    #print(f'** done with state evolution recursion. THE FP RESIDUAL {np.linalg.norm(equations)}**')
+    print(f'     **done with state evolution recursion. schur_t: {schur_t}**')
+    return schur_t, R_01_t, S_t, divergence
 
 
 
@@ -75,33 +92,30 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    #print('in S_recursion... ')
-    #print('expectation is ', integrand)
-    #print('inv(I - E)', np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t))
+    #integrand = monte_carlo_expectation(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     S = 1/alpha * np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t) @ S_t
-    #print('previous S: ', S_t)
-    #print('new S: ', S)
     return S
 
 def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
     # R_01_{t+1} = (I - alpha*2*lambda_reg * S_{t+1}) @ R_01_t - alpha * S_{t+1} @ E[(p(prox(g + yS; S)) - y)g_0.T] 
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_R_01_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
+    #integrand = monte_carlo_expectation(_R_01_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     R_01 =  (np.eye(k) - alpha*2*lambda_reg * S_next) @ R_01_t \
             - alpha * S_next @ integrand 
     return R_01
 
 def schur_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
     # schur_{t+1} = alpha * S_{t+1} @ E[(p(v)-y) @ (p(v)-y).T] @ S_{t+1}
-    #print('         in schur_recursion... ')
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_schur_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
+    #integrand = monte_carlo_expectation(_schur_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     schur = alpha * S_next @ integrand @ S_next
     return schur
 
 #####################################################################################
 
-def _schur_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
+def _schur_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
     """
     full equation: 1/alpha * S_t E[score(v_t, y_t)@ score(v_t, y_t).T] S_t = (R/R_00)_{t+1}
     integrand: score(v_t, y_t)@ score(v_t, y_t).T | g,g_0 ~ N(0, R_t)
@@ -124,7 +138,8 @@ def _schur_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
         score_batch = score_batched(prox_g_batch, y_batch) # p(prox(g + yS; S)) - y
         integrand += batched_scalar_mult(batched_outer(score_batch, score_batch), prob_y_batch[:, i]) # score @ score.T   
 
-    integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
+    if not monte_carlo:
+        integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
 
     if k == 1:
         return integrand.reshape(-1)#flattened  
@@ -132,7 +147,7 @@ def _schur_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
 
 
 
-def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):   
+def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):   
     """
     R_{01, t+1} = R_{01,t} - alpha * E[score(v_t, y_t)@ G_0.T]
     score(v_t, y _t) = P(v) - y
@@ -154,7 +169,8 @@ def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
         score_batch = score_batched(prox_g_batch, y_batch) # p(prox(g + yS; S)) - y
         integrand += batched_scalar_mult(batched_outer(score_batch, g_0_batch), prob_y_batch[:, i]) # score @ g_0.T
 
-    integrand = batched_scalar_mult(integrand, pdf) 
+    if not monte_carlo:
+        integrand = batched_scalar_mult(integrand, pdf) 
 
     if k == 1:
         return integrand.reshape(-1)#flattened  
@@ -166,7 +182,7 @@ def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
 
 
 
-def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
+def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
     N = Z_batch.shape[0]
     schur_root = sqrtm(schur_t)
     
@@ -185,23 +201,142 @@ def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0):
         #print('score_jacobian for y = ', i)
         #print('    .... with eigenvalues: ', np.linalg.eigvals(score_jacobian_batch[0]))
         integrand += batched_scalar_mult(score_jacobian_batch, prob_y_batch[:, i]) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y)  
-    integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
+   
+    if not monte_carlo:
+        integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
     
     if k == 1:
         return integrand.reshape(-1)#flattened  
     return integrand.reshape(N, -1) #flattened
 
 
+#####################################################################################
+
 def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
-    #print('     integrating... ')
     fdim = k*k
     ndim = k+k_0
     expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-8]*ndim, xmax=[8]*ndim, abserr = 1e-6, relerr=1e-6,
-                                  maxEval= 2500000, norm=2)
-    #print('     integration error: ', err)
-    #if err.any() > 1e-2:
-    #    print('     **[Warning] integration error is too large**')
+                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, relerr=1e-4,
+                                  maxEval= 550_000, norm=2)
+    print('     integration error: ', err)
+    #for e in err:
+    #   if e > 1e-3:
+    #     print('     **[Warning] state evolution integration error is too large**')
+    #     break
     #print('     done integrating')
     return expectations.reshape(k, k)
+
+
+
+###############################################################
+def monte_carlo_expectation(func, S, R_00, schur_t, A_t, alpha, k, k_0, 
+                            initial_samples=500_000, max_samples=1_000_000, 
+                            tol= 1e-3):
+    fdim = k * k
+    ndim = k + k_0
+    monte_carlo = True
+    
+    # Start with an initial number of samples
+    num_samples = initial_samples
+    
+    # A variable to keep track of the previous estimate for error checking
+    prev_estimate = None
+    current_estimate = None
+    err = np.inf
+
+
+    
+    
+    z_batch = np.random.normal(0, 1, (num_samples, ndim))
+    func_values_1 = func(z_batch, S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo)
+    expectation_1 = np.mean(func_values_1, axis=0)
+
+    # Second batch
+    z_batch = multivariate_normal.rvs(mean=np.zeros(ndim), cov=np.eye(ndim), size=num_samples)
+    func_values_2 = func(z_batch, S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo)
+    expectation_2 = np.mean(func_values_2, axis=0)
+
+    # Combined estimate
+    current_estimate = (expectation_1 + expectation_2) / 2
+    err = np.linalg.norm(expectation_1 - expectation_2)
+
+    if err > tol:
+        print('     **[Warning] Adaptive sampling error is still too large**, err = ', err)
+    return current_estimate.reshape(k, k)
+
+
+
+
+######################
+import numpy as np
+
+def trapezoidal_nd(func,  S, R_00, schur_t, A_t, alpha, k, k_0,\
+                    bounds, n_per_dim):
+
+    ndim = len(bounds)
+    # Construct the grid
+    axes = [np.linspace(a, b, n_per_dim) for (a, b) in bounds]
+    mesh = np.meshgrid(*axes, indexing='ij')
+    # mesh[i] is an n_per_dim^ndim array of coordinates along dimension i
+    # Flatten the mesh to get a list of points
+    points = np.vstack([m.reshape(-1) for m in mesh]).T  # shape (n_per_dim^ndim, ndim)
+
+    # Evaluate the function on these points
+    f_values = func(points, S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False)  # shape (N, fdim), N = n_per_dim^ndim
+    
+    # Compute the 1D trapezoidal weights for each dimension
+    # For trapezoidal rule in one dimension:
+    # weights_1d = [1/2, 1, 1, ..., 1, 1/2]
+    weights_1d = np.ones(n_per_dim)
+    weights_1d[0] = 0.5
+    weights_1d[-1] = 0.5
+    
+    f_values_nd = f_values.reshape(*([n_per_dim]*ndim), -1)
+    
+    # Compute the product of step sizes
+    step_sizes = [(b - a) / (n_per_dim - 1) for (a, b) in bounds]
+    volume_element = np.prod(step_sizes)
+
+    W = np.ones_like(f_values_nd[..., 0])  # shape (n_per_dim,..., n_per_dim)
+    for i in range(ndim):
+        # Expand weights_1d to match W shape, multiply
+        shape = [1]*ndim
+        shape[i] = n_per_dim
+        w_expanded = weights_1d.reshape(shape)
+        W = W * w_expanded
+    
+    integral = np.tensordot(W, f_values_nd, axes=[list(range(ndim)), list(range(ndim))])
+    # integral shape is (fdim,) after tensordot
+    
+    integral *= volume_element
+    return integral
+
+
+def romberg_extrapolation(func, S, R_00, schur_t, A_t, alpha, k, k_0,\
+                            N_start=4, steps=6):
+    print('     romberg extrapolation started...')
+
+    ndim = k + k_0
+    fdim = k*k
+    bounds = [(-8, 8)]*ndim
+    R = []  # will hold arrays of shape (fdim,)
+    N = N_start
+    for i in range(steps):
+        R.append(trapezoidal_nd(func, S, R_00, schur_t, A_t, alpha, k, k_0, bounds, N))
+        N = 2*N  # double resolution for next step
+    
+    R = np.array(R)  # shape (steps, fdim)
+    
+    R_table = np.zeros((steps, steps, fdim))
+    R_table[:,0,:] = R
+    
+    for j in range(1, steps):
+        power = 4**j - 1
+        for i in range(j, steps):
+            R_table[i,j,:] = R_table[i,j-1,:] + (R_table[i,j-1,:] - R_table[i-1,j-1,:]) / power
+    
+    return R_table[steps-1, steps-1, :].reshape(k, k)
+
+#####################################################################################
+

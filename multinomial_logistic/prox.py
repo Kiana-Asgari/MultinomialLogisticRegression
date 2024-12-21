@@ -15,7 +15,7 @@ vectorized version for a batch of inputs
 
 
 
-def prox_fp_iteration(g_batch, S, max_iter=100, tol=1e-6):
+def prox_fp_iteration(g_batch, S, max_iter=200, tol=1e-5):
     # computes Prox(g; S) = argmin_beta { g.T S^{-1}g @ mlogit(beta) }
     prox_t = np.zeros_like(g_batch)  # Shape (N, k)
     flag_converged = False
