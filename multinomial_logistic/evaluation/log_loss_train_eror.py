@@ -8,6 +8,39 @@ from multinomial_logistic.utils import batched_mult, batched_outer, batched_scal
 from state_evolution.full_recursion import state_evolution_full_recursion
 from multinomial_logistic.evaluation.utils import plot_array
 from multinomial_logistic.prox import prox_fp_iteration
+from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
+
+
+def plot_train_log_loss_vs_lambda(R_00, lambda_reg_min, lambda_reg_max, k, k_0, max_iter, save_path):
+    print('plotting train error vs lambda_reg... for parameters:')
+
+    alpha_values = [2,4,6]               
+    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, max_iter, endpoint=False)
+
+    train_error_batches = np.zeros((len(alpha_values), len(lambda_reg_values)))
+    train_error_empirical_batches = np.zeros((len(alpha_values), len(lambda_reg_values)))
+    legends = ['alpha=2', 'alpha=4', 'alpha=6']
+
+
+    for i, alpha in enumerate(alpha_values):
+        for j, lambda_reg in enumerate(lambda_reg_values):
+            schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
+                                        lambda_reg=lambda_reg/2, alpha=alpha, k=k, k_0=k_0)
+            if divergence:
+                print('     **Divergence detected**')
+                break
+            train_error_batches[i,j] = train_error(R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
+            _, _, _, train_error_empirical = fit_mle_baseline(alpha=alpha, k=k, lambda_reg=lambda_reg,\
+                                                    d=250, R_00=R_00, n_trials=100)
+            train_error_empirical_batches[i,j] = train_error_empirical   
+            print(f' alpha = {alpha:.2f}   train_error_batches = {train_error_batches[i,j]}', 'empirical = ', train_error_empirical_batches[i,j])
+
+    title = f"train error log loss vs lambda_reg, number of class={k+1:d}, R_00=({R_00})"
+    name = f"train_error_vs_lambda_reg_nclass={k+1:d}_R_00={R_00}" 
+    plot_array(lambda_reg_values, train_error_batches,   train_error_empirical_batches,\
+               legends=legends, title=title,\
+                x_label="lambda_reg", y_label="train error",\
+                name=name, save_path=save_path)
 
 
 def plot_train_log_loss_vs_alpha(R_00, alpha_min, alpha_max, k, k_0, max_iter, save_path):
@@ -38,33 +71,14 @@ def plot_train_log_loss_vs_alpha(R_00, alpha_min, alpha_max, k, k_0, max_iter, s
                 name=name, save_path=save_path)
     
 
-def plot_train_log_loss_vs_lambda_reg(R_00, lambda_reg_min, lambda_reg_max, alpha, k, k_0, max_iter, save_path):
-    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, max_iter, endpoint=False)
-    log_loss_values = []
 
-    for lambda_reg in lambda_reg_values:
-
-        schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
-                                        lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)      
-        log_loss_values.append(train_error(R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0))
-
-
-    nclass = k+1
-    title = f"log loss vs lambda_reg for alpha={alpha:.2f}, number of class={nclass:d}"
-    name = f"log_loss_vs_lambda_reg_alpha={alpha:.2f}_nclass={nclass:d}" 
-    print('lambda_reg_values', lambda_reg_values)
-    print('log_loss_values', log_loss_values)
-    plot_array(lambda_reg_values, log_loss_values, title=title,\
-               x_label="lambda_reg", y_label="log loss",\
-                name=name, save_path=save_path)
-    return lambda_reg_values, log_loss_values
 
 
 
 def train_error(R_00, schur, R_01, S,alpha, k, k_0):
-    print('     computing test error... with parameters: R_00=', R_00, 'schur=', schur, 'R_01=', R_01, 'S=', S)
+    print('     computing train  error... with parameters: R_00=', R_00, 'schur=', schur, 'R_01=', R_01, 'S=', S)
     loss = integrate(_train_log_loss_integrand, R_00, schur, R_01, S, alpha, k, k_0)
-    print('     done computing test error with loss: ', loss)
+    print('     done computing train error with loss: ', loss)
     return loss
 
 

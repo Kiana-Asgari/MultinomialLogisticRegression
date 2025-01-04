@@ -22,7 +22,7 @@ def batched_sqrtm(A_batched): # A_batched is N x k x k. Returns N x k x k.
 
 
 def batched_product(S, B_batched): # S is k x k, B_batched is N x k x k. Returns N x k x k.
-    return np.einsum('ij,njk->nik', S, B_batched)
+    return np.einsum('ij,njk->nik', S, B_batched, optimize='optimal')
 
 def batched_inv(J_batched): # J_batched is N x k x k. Returns N x k x k.
     return np.linalg.inv(J_batched)
@@ -97,3 +97,22 @@ def log_sum_exp_batch(V):
     sum_exp_plus_1 = 1 + sum_exp_V
     result = np.log(sum_exp_plus_1) 
     return result
+
+
+#######################################################################
+## Cabutute integration
+#######################################################################
+
+def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, fdim, ndim, maxEval=250_000, abserr=1e-5, norm=2):
+    expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
+                                  vectorized=True,
+                                  fdim= fdim ,xmin=[-3.4]*ndim, xmax=[3.4]*ndim, abserr=1e-5,
+                                  maxEval=maxEval, norm=norm)
+    #print('     integration error: ', err)
+    #for e in err:
+    #   if e > 1e-3:
+    #     print('     **[Warning] state evolution integration error is too large**')
+    #     break
+    #print('     done integrating')
+    return expectations.reshape(k, k)
+    

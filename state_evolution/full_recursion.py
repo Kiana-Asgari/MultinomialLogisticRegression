@@ -28,10 +28,10 @@ from multinomial_logistic.utils import wrapper
 """
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0,\
-                                    tol=1e-3, max_iter=25):
-    div_tol = np.linalg.norm(R_00)* 1e3
+                                    tol=1e-5, max_iter=200):
+    div_tol = np.linalg.norm(R_00)* 1e2
     print('*************state evolution iteration started*************')
-    print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}')
+    print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}','R_00: ', R_00)
     R_01_t = R_01_0
     schur_t = schur_0
     S_t =  np.eye(k)
@@ -217,9 +217,9 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, relerr=1e-4,
-                                  maxEval= 550_000, norm=2)
-    print('     integration error: ', err)
+                                  fdim= fdim ,xmin=[-3.4]*ndim, xmax=[3.4]*ndim, abserr=1e-5,
+                                  maxEval= 250_000, norm=2)
+    #print('     integration error: ', err)
     #for e in err:
     #   if e > 1e-3:
     #     print('     **[Warning] state evolution integration error is too large**')
@@ -230,113 +230,6 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
 
 
 ###############################################################
-def monte_carlo_expectation(func, S, R_00, schur_t, A_t, alpha, k, k_0, 
-                            initial_samples=500_000, max_samples=1_000_000, 
-                            tol= 1e-3):
-    fdim = k * k
-    ndim = k + k_0
-    monte_carlo = True
-    
-    # Start with an initial number of samples
-    num_samples = initial_samples
-    
-    # A variable to keep track of the previous estimate for error checking
-    prev_estimate = None
-    current_estimate = None
-    err = np.inf
 
 
-    
-    
-    z_batch = np.random.normal(0, 1, (num_samples, ndim))
-    func_values_1 = func(z_batch, S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo)
-    expectation_1 = np.mean(func_values_1, axis=0)
-
-    # Second batch
-    z_batch = multivariate_normal.rvs(mean=np.zeros(ndim), cov=np.eye(ndim), size=num_samples)
-    func_values_2 = func(z_batch, S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo)
-    expectation_2 = np.mean(func_values_2, axis=0)
-
-    # Combined estimate
-    current_estimate = (expectation_1 + expectation_2) / 2
-    err = np.linalg.norm(expectation_1 - expectation_2)
-
-    if err > tol:
-        print('     **[Warning] Adaptive sampling error is still too large**, err = ', err)
-    return current_estimate.reshape(k, k)
-
-
-
-
-######################
-import numpy as np
-
-def trapezoidal_nd(func,  S, R_00, schur_t, A_t, alpha, k, k_0,\
-                    bounds, n_per_dim):
-
-    ndim = len(bounds)
-    # Construct the grid
-    axes = [np.linspace(a, b, n_per_dim) for (a, b) in bounds]
-    mesh = np.meshgrid(*axes, indexing='ij')
-    # mesh[i] is an n_per_dim^ndim array of coordinates along dimension i
-    # Flatten the mesh to get a list of points
-    points = np.vstack([m.reshape(-1) for m in mesh]).T  # shape (n_per_dim^ndim, ndim)
-
-    # Evaluate the function on these points
-    f_values = func(points, S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False)  # shape (N, fdim), N = n_per_dim^ndim
-    
-    # Compute the 1D trapezoidal weights for each dimension
-    # For trapezoidal rule in one dimension:
-    # weights_1d = [1/2, 1, 1, ..., 1, 1/2]
-    weights_1d = np.ones(n_per_dim)
-    weights_1d[0] = 0.5
-    weights_1d[-1] = 0.5
-    
-    f_values_nd = f_values.reshape(*([n_per_dim]*ndim), -1)
-    
-    # Compute the product of step sizes
-    step_sizes = [(b - a) / (n_per_dim - 1) for (a, b) in bounds]
-    volume_element = np.prod(step_sizes)
-
-    W = np.ones_like(f_values_nd[..., 0])  # shape (n_per_dim,..., n_per_dim)
-    for i in range(ndim):
-        # Expand weights_1d to match W shape, multiply
-        shape = [1]*ndim
-        shape[i] = n_per_dim
-        w_expanded = weights_1d.reshape(shape)
-        W = W * w_expanded
-    
-    integral = np.tensordot(W, f_values_nd, axes=[list(range(ndim)), list(range(ndim))])
-    # integral shape is (fdim,) after tensordot
-    
-    integral *= volume_element
-    return integral
-
-
-def romberg_extrapolation(func, S, R_00, schur_t, A_t, alpha, k, k_0,\
-                            N_start=4, steps=6):
-    print('     romberg extrapolation started...')
-
-    ndim = k + k_0
-    fdim = k*k
-    bounds = [(-8, 8)]*ndim
-    R = []  # will hold arrays of shape (fdim,)
-    N = N_start
-    for i in range(steps):
-        R.append(trapezoidal_nd(func, S, R_00, schur_t, A_t, alpha, k, k_0, bounds, N))
-        N = 2*N  # double resolution for next step
-    
-    R = np.array(R)  # shape (steps, fdim)
-    
-    R_table = np.zeros((steps, steps, fdim))
-    R_table[:,0,:] = R
-    
-    for j in range(1, steps):
-        power = 4**j - 1
-        for i in range(j, steps):
-            R_table[i,j,:] = R_table[i,j-1,:] + (R_table[i,j-1,:] - R_table[i-1,j-1,:]) / power
-    
-    return R_table[steps-1, steps-1, :].reshape(k, k)
-
-#####################################################################################
 
