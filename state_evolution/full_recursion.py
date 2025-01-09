@@ -8,7 +8,7 @@ from cubature import cubature
 from state_evolution.functions import score_batched, score_jacobian_batched
 from multinomial_logistic.utils import batched_mlogit, batched_outer, batched_scalar_mult, batched_mult, batched_normal_basis
 from multinomial_logistic.integration import coloring_transform, batched_mult
-from multinomial_logistic.prox import prox_fp_iteration
+from multinomial_logistic.prox import prox_fp_iteration, ProximalOperatorError
 from multinomial_logistic.fixed_point_system.fp_system import fixed_point_system
 from multinomial_logistic.utils import wrapper
 
@@ -27,50 +27,45 @@ from multinomial_logistic.utils import wrapper
 
 """
 
+div_prox = False
+
+
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0,\
-                                    tol=1e-5, max_iter=200):
-    div_tol = np.linalg.norm(R_00)* 1e2
+                                    S_0=None,tol=1e-5, max_iter=200):
+    div_tol = np.linalg.norm(R_00)* 5 * 1e1
     print('*************state evolution iteration started*************')
     print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}','R_00: ', R_00)
     R_01_t = R_01_0
     schur_t = schur_0
-    S_t =  np.eye(k)
+    if S_0 is None:
+        S_t =  np.eye(k)
+    else:
+        S_t = S_0
     divergence = False
-
+    errors = np.zeros((max_iter, 3))
+    
     for t in range(max_iter):
         print(f'     state evolution iteration {t+1} started... ')
-
         S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
         schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
         R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-       
-        #print(f'     schur_{t+1:d}: {schur_next}')
-        #print(f'     R_01_{t+1:d}: {R_01_next}')
-        #print(f'     S_{t+1:d}: {S_next}')
-        #print(f'     state evolution iteration {t+1} finished.')
+        errors[t] = np.array([np.linalg.norm(R_01_next - R_01_t), np.linalg.norm(schur_next - schur_t), np.linalg.norm(S_next - S_t)])
 
-        #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
-        #                               , R_00, lambda_reg, alpha, k, k_0)
-        
-        #print(f'     **THE FP RESIDUAL IS {np.linalg.norm(equations)}**')
-        print(f'     **THE R_01 RESIDUAL IS {np.linalg.norm(R_01_next - R_01_t)}**')
-        print(f'     **THE SCHUR RESIDUAL IS {np.linalg.norm(schur_next - schur_t)}**')
-        print(f'     **THE S RESIDUAL IS {np.linalg.norm(S_next - S_t)}**')
+            
 
-        if np.linalg.norm(S_next) > div_tol or np.linalg.norm(schur_next) > div_tol or np.linalg.norm(R_01_next) > div_tol:
-            print('     **Divergence detected **')
-            print(f'     **S_next: {S_next}**')
-            print(f'     **schur_next: {schur_next}**')
-            print(f'     **R_01_next: {R_01_next}**')
-            print(f'     **Halting state evolution recursion**')
-            divergence = True
-            break
+        print(f'     **THE R_01 RESIDUAL IS {errors[t,0]}**')
+        print(f'     **THE SCHUR RESIDUAL IS {errors[t,1]}**')
+        print(f'     **THE S RESIDUAL IS {errors[t,2]}**')
+        print(f'     **THE S norm IS {np.linalg.norm(S_next)}**')
 
-        if all(np.linalg.norm(next - current) < tol for next, current in [
-            (1/10*R_01_next, 1/10*R_01_t), 
-            (schur_next, schur_t), 
-            (S_next, S_t)
-        ]) :
+        divergence = check_for_divergence(S_next, S_t, schur_next, schur_t, \
+                                          R_01_next, R_01_t, div_tol, t+1, errors)
+        if divergence:
+            print(' diverged for values: schur_t: ', schur_t, 'R_01_t: ', R_01_t, 'S_t: ', S_t)
+            return schur_t, R_01_t, S_t, divergence
+
+
+        if all(errors[t]<tol) :
             divergence = False
             break
 
@@ -92,24 +87,19 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    #integrand = monte_carlo_expectation(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     S = 1/alpha * np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t) @ S_t
     return S
 
 def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    # R_01_{t+1} = (I - alpha*2*lambda_reg * S_{t+1}) @ R_01_t - alpha * S_{t+1} @ E[(p(prox(g + yS; S)) - y)g_0.T] 
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_R_01_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    #integrand = monte_carlo_expectation(_R_01_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     R_01 =  (np.eye(k) - alpha*2*lambda_reg * S_next) @ R_01_t \
             - alpha * S_next @ integrand 
     return R_01
 
 def schur_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    # schur_{t+1} = alpha * S_{t+1} @ E[(p(v)-y) @ (p(v)-y).T] @ S_{t+1}
     A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
     integrand = integration(_schur_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
-    #integrand = monte_carlo_expectation(_schur_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     schur = alpha * S_next @ integrand @ S_next
     return schur
 
@@ -122,6 +112,7 @@ def _schur_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carl
     score(v_t, y _t) = P(v) - y
     v = prox(g + Sy)
     """
+    global div_prox 
     N = Z_batch.shape[0]
     schur_root_t = sqrtm(schur_t)
     
@@ -134,7 +125,7 @@ def _schur_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carl
 
     for i in range(-1, k):
         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
-        prox_g_batch = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S_t) # prox(g + yS; S)
+        prox_g_batch, div_prox = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S_t) # prox(g + yS; S)
         score_batch = score_batched(prox_g_batch, y_batch) # p(prox(g + yS; S)) - y
         integrand += batched_scalar_mult(batched_outer(score_batch, score_batch), prob_y_batch[:, i]) # score @ score.T   
 
@@ -153,6 +144,7 @@ def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
     score(v_t, y _t) = P(v) - y
     v = prox(g + Sy)
     """
+    global div_prox 
     N = Z_batch.shape[0]
     schur_root_t = sqrtm(schur_t)   
     
@@ -165,7 +157,7 @@ def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
 
     for i in range(-1, k):
         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
-        prox_g_batch = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S_t) # prox(g + yS; S)
+        prox_g_batch, div_prox = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S_t) # prox(g + yS; S)
         score_batch = score_batched(prox_g_batch, y_batch) # p(prox(g + yS; S)) - y
         integrand += batched_scalar_mult(batched_outer(score_batch, g_0_batch), prob_y_batch[:, i]) # score @ g_0.T
 
@@ -185,7 +177,7 @@ def _R_01_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
 def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
     N = Z_batch.shape[0]
     schur_root = sqrtm(schur_t)
-    
+    global div_prox 
     # Coloring transform
     g_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root, alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
     pdf = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0)).pdf(Z_batch)
@@ -195,7 +187,7 @@ def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
 
     for i in range(-1, k):
         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
-        prox_g_batch = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S=S_t) # prox(g + yS; S)
+        prox_g_batch, div_prox = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S=S_t) # prox(g + yS; S)
         score_jacobian_batch = score_jacobian_batched(prox_g_batch, S_t, k) # (I + S @ Jp(prox(g + yS; S)))^{-1}
     
         #print('score_jacobian for y = ', i)
@@ -215,21 +207,58 @@ def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
 def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     fdim = k*k
     ndim = k+k_0
-    expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
-                                  vectorized=True,
-                                  fdim= fdim ,xmin=[-3.4]*ndim, xmax=[3.4]*ndim, abserr=1e-5,
-                                  maxEval= 250_000, norm=2)
-    #print('     integration error: ', err)
-    #for e in err:
-    #   if e > 1e-3:
-    #     print('     **[Warning] state evolution integration error is too large**')
-    #     break
-    #print('     done integrating')
+    expectations, err = cubature(integrand, 
+                                   args=(S, R_00, schur_t, A_t, alpha, k, k_0,), 
+                                   ndim=ndim,
+                                   vectorized=True,
+                                   fdim=fdim,
+                                   xmin=[-3.4]*ndim, 
+                                   xmax=[3.4]*ndim, 
+                                   abserr=1e-5,
+                                   maxEval=250_000, 
+                                   norm=2)
+    if np.max(err) > 1e-4:
+        print('     **Error in integration is too large**', np.max(err))
+
     return expectations.reshape(k, k)
+
 
 
 
 ###############################################################
 
 
+def check_for_divergence(S_next, S_t, schur_next, schur_t, R_01_next, R_01_t,\
+                          div_tol, iter,errors):
+    global div_prox
+    divergence = False
 
+    if div_prox:
+        print("[DIVERGENCE] Halting state evolution due to [prox] divergence")
+        divergence = True
+
+    for i in range(1, iter):
+        if all(errors[i,j] - errors[i-1,j] > 1e-5 for j in range(3)):
+            print("[DIVERGENCE] Halting state evolution due to [all errors increase > 0]")
+            print(f"Error jump detected: {errors[i] - errors[i-1]}")
+            divergence = True
+            break
+
+        if any(errors[i,j] > div_tol/2 for j in range(3)):
+            print("[DIVERGENCE] Halting state evolution due to one [error] too large")
+            divergence = True
+            break
+
+        if any(errors[i,j] - errors[i-1,j] > 0.5 and errors[i,j] > 5 \
+               for j in range(3)):
+            print("[DIVERGENCE] Halting state evolution due to one [error] too large and growing")
+            divergence = True
+            break
+
+
+ 
+
+    if np.linalg.norm(S_next) > div_tol or np.linalg.norm(schur_next) > div_tol or np.linalg.norm(R_01_next) > div_tol:
+        print("[DIVERGENCE] Halting state evolution due to [norm] divergence")
+        divergence = True
+    return divergence 

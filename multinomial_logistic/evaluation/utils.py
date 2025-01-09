@@ -14,7 +14,7 @@ def plot_distribution(density, empirical_density, z_values, title, x_label, y_la
     plt.plot(z_values, density, 'r-', label='Theoretical Density')
     
     # Plot histogram of empirical data
-    plt.hist(empirical_density, bins=40, density=True, label='Empirical Distribution', facecolor='none', edgecolor='blue')
+    plt.hist(empirical_density, bins=100, density=True, label='Empirical Distribution', facecolor='none', edgecolor='blue')
     
     plt.title(title)
     plt.xlabel(x_label)
@@ -40,7 +40,7 @@ def plot_distribution(density, empirical_density, z_values, title, x_label, y_la
 
 
 def plot_array(x_data, y_data_batch, empricial_data_batch, legends, title, x_label, y_label, name,\
-               y_cap=None, irreducible_error=None, save_path=None, window_size=5):
+               y_cap=None, irreducible_error=None, save_path=None, multiple_irreducible_error=False):
     x_data = np.asarray(x_data).flatten()
     
     if y_data_batch.ndim == 1:
@@ -60,13 +60,15 @@ def plot_array(x_data, y_data_batch, empricial_data_batch, legends, title, x_lab
         # Get color from current plot
         line, = plt.plot(x_data, y_data, label=legend)
         color = line.get_color()
+        if multiple_irreducible_error:
+            plt.axhline(y=irreducible_error[i], color=color, linestyle='--', label='Irreducible Error')
         
         # Plot empirical data with same color but dotted line
         if empricial_data_batch is not None and i < len(empricial_data_batch):
             emp_data = np.asarray(empricial_data_batch[i]).flatten()
             plt.plot(x_data, emp_data, color=color, marker='o', linestyle='None', label=f"{legend} (empirical)")
     
-    if irreducible_error is not None:
+    if irreducible_error is not None and not multiple_irreducible_error:
         plt.axhline(y=irreducible_error, color='red', linestyle='--', label='Irreducible Error')
     if y_cap is not None:
         plt.ylim(top=y_cap)
@@ -96,3 +98,33 @@ def plot_array(x_data, y_data_batch, empricial_data_batch, legends, title, x_lab
 # Example usage:
 # data = np.array([1, 2, 3, 4, 5])
 # plot_array(data, "Sample Plot", "X-axis", "Y-axis", "plot.png")
+def custom_linspace(start, end, n_points, dense_factor=3):
+    """
+    Creates a non-uniform linspace with denser points at start and end.
+    
+    Args:
+        start (float): Starting value
+        end (float): Ending value
+        n_points (int): Total number of points
+        dense_factor (int): How many times denser the end regions should be
+    
+    Returns:
+        np.array: Non-uniform spaced array
+    """
+    # Calculate the range and segment sizes
+    total_range = end - start
+    segment_size = total_range / 5  # Divide into 5 segments
+    
+    # Calculate points per segment
+    base_points = n_points // (2*dense_factor + 3)  # Points in regular segments
+    dense_points = base_points * dense_factor       # Points in dense segments
+    
+    # Create segments
+    first_dense = np.linspace(start, start + segment_size, dense_points)
+    middle1 = np.linspace(start + segment_size, start + 2*segment_size, base_points)[1:]
+    middle2 = np.linspace(start + 2*segment_size, start + 3*segment_size, base_points)[1:]
+    middle3 = np.linspace(start + 3*segment_size, start + 4*segment_size, base_points)[1:]
+    last_dense = np.linspace(start + 4*segment_size, end, dense_points)
+    
+    # Combine all segments
+    return np.concatenate([first_dense, middle1, middle2, middle3, last_dense])

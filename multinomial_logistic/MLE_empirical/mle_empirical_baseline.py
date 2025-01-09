@@ -122,14 +122,15 @@ def lbfgs_multinomial(X, Y, alpha, lambda_reg,
 
 
 
-def fit_mle_baseline(alpha, k, lambda_reg, R_00, n_trials, d = 500):
+def fit_mle_baseline(alpha, k, lambda_reg, R_00, n_trials, \
+                     d = 500, return_full_results = False):
 
     zeros_pad = np.zeros((k, d-k))  # k x (d-k) matrix of zeros
     Theta_0 = np.hstack([sqrtm( R_00), zeros_pad])  # concatenate horizontally to get k x d matrix
-    avg_Theta_hat = np.zeros((k, d))
-    avg_norm = 0
-    avg_test_error = 0
-    avg_train_error = 0
+    Theta_hats = np.zeros((n_trials, k, d))
+    norms = np.zeros(n_trials)
+    test_errors = np.zeros(n_trials)
+    train_errors = np.zeros(n_trials)
     print(' starting fitting mle with lambda_reg: ', lambda_reg, 'for alpha: ', alpha, 'and k: ', k)
 
     for i in range(n_trials):
@@ -138,18 +139,22 @@ def fit_mle_baseline(alpha, k, lambda_reg, R_00, n_trials, d = 500):
             X=X, Y=Y_onehot, alpha=alpha, lambda_reg=lambda_reg, verbose=False
         )
 
-        avg_norm += np.linalg.norm(Theta_0- Theta_hat)**2
-        avg_Theta_hat += Theta_hat
-        avg_test_error += test_error(Theta_0, Theta_hat)
-        avg_train_error += train_error(Theta_hat, X, Y_onehot)
+        Theta_hats[i] = Theta_hat
+        norms[i] = np.linalg.norm(Theta_0- Theta_hat)**2
+        test_errors[i] = test_error(Theta_0, Theta_hat)
+        train_errors[i] = train_error(Theta_hat, X, Y_onehot)
 
-    avg_Theta_hat /= n_trials
-    avg_norm /= n_trials
-    avg_test_error /= n_trials
-    avg_train_error /= n_trials
-    return avg_Theta_hat, avg_norm, avg_test_error, avg_train_error
+    avg_Theta_hat = np.mean(Theta_hats, axis=0)
+    avg_norms = np.mean(norms)
+    avg_test_error = np.mean(test_errors)
+    avg_train_error = np.mean(train_errors)
+    print(f" in MLE Average norm: {avg_norms}, Average test error: {avg_test_error}, Average train error: {avg_train_error}")
 
-import matplotlib.pyplot as plt
+    if return_full_results:
+        return Theta_hats, norms, test_errors, train_errors
+    else:
+        return avg_Theta_hat, avg_norms, avg_test_error, avg_train_error
+
 
 
 def esd_empirical(alpha, k, lambda_reg, R_00, max_iter = 100, d = 250):

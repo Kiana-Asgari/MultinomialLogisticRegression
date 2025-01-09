@@ -11,8 +11,8 @@ def test_error(Theta_0, Theta_hat):
     R_00 = Theta_0 @ Theta_0.T
     R_11 = Theta_hat @ Theta_hat.T
     R_01 = Theta_0 @ Theta_hat.T
-    schur = R_11 - R_01 @ np.linalg.inv(R_00) @ R_01.T
-    A = np.linalg.inv(R_00) @ R_01.T
+    schur = R_11 - R_01.T @ np.linalg.inv(R_00) @ R_01
+    A = R_01.T @ np.linalg.inv(sqrtm(R_00))
     k_0 = Theta_0.shape[0]
     k = Theta_hat.shape[0]
     alpha = None
@@ -54,8 +54,8 @@ def integration(integrand, R_00, schur, A, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=( R_00, schur, A, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, abserr=1e-4,
-                                  maxEval= 500_000, norm=2)
+                                  fdim= fdim ,xmin=[-3.4]*ndim, xmax=[3.4]*ndim, abserr=1e-6,
+                                  maxEval= 250_000, norm=2)
     #for e in err:
     #   if e > 1e-3:
     #     print('     **[Warning] state evolution integration error is too large**')

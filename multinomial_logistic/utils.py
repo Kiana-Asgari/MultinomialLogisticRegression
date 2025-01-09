@@ -91,11 +91,12 @@ def batched_wrapper(integrand1, integrand2, integrand3, k, k_0):
     ], axis=1)
 
 
-def log_sum_exp_batch(V):
-    exp_V = np.exp(V)
+def log_sum_exp_batch(V): # I changed this recently. if face issues, revert to the old version
+    exp_V = np.exp(V - np.max(V, axis=-1, keepdims=True)) #stability trick
     sum_exp_V = np.sum(exp_V, axis=1)
-    sum_exp_plus_1 = 1 + sum_exp_V
-    result = np.log(sum_exp_plus_1) 
+    sum_exp_plus_1 = np.exp(-1*np.max(V, axis=-1)) + sum_exp_V
+    
+    result = np.log(sum_exp_plus_1) + np.max(V, axis=-1)
     return result
 
 

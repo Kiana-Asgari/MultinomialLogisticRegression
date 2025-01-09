@@ -59,36 +59,48 @@ def plot_test_error_vs_alpha( R_00, alpha_min, alpha_max \
     print('plotting test error vs alpha... for parameters:')
     print('     R_00 = ', R_00)
 
-    lambda_reg_values = [0, 0.01, 0.05]               
+    R_00_values = [ np.eye(k), R_00]               
     alpha_values = np.linspace(alpha_min, alpha_max, max_iter, endpoint=False)
 
-    irr_error = irreducible_error(R_00, k, k_0, alpha=None)
-    test_error_batches = np.zeros((len(lambda_reg_values), len(alpha_values)))
-    legends = ['lambda_reg=0', 'lambda_reg=0.01', 'lambda_reg=0.05']
+    irr_error2 = irreducible_error(R_00, k, k_0, alpha=None)
+    irr_error1 = irreducible_error(np.eye(k), k, k_0, alpha=None)
+    test_error_batches = np.zeros((len(R_00_values), len(alpha_values)))
+    test_error_empirical_batches = np.zeros((len(R_00_values), len(alpha_values)))
 
-    for i, lambda_reg in enumerate(lambda_reg_values):
+    legends = ['R_00=I_k', f'R_00={R_00.flatten()}']
+
+
+    for i, R_00 in enumerate(R_00_values):
+        schur_0=R_00
+        R_01_0=np.zeros((k_0,k))
+        S_0=np.eye(k)
         for j, alpha in enumerate(alpha_values):
-            schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
-                                            lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+            schur_0, R_01_0, S_0, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=schur_0, R_01_0=R_01_0, S_0=S_0,\
+                                            lambda_reg=0, alpha=alpha, k=k, k_0=k_0)
             if divergence:
                 print('     **Divergence detected**')
                 break
 
-            print(f'     schur = {schur}')
-            print(f'     R_01 = {R_01}')
-            print(f'     S = {S}')
-            test_error_batches[i,j] = test_error(R_00, schur, R_01, k, k_0, alpha)
-        print(f' lambda_reg = {lambda_reg:.2f}   test_error_batches = {test_error_batches[i,:]}')
+            print(f'     schur = {schur_0}')
+            print(f'     R_01 = {R_01_0}')
+            print(f'     S = {S_0}')
+            test_error_batches[i,j] = test_error(R_00, schur_0, R_01_0, k, k_0, alpha)
+            _, _, test_error_empirical,_ = fit_mle_baseline(alpha=alpha, k=k, lambda_reg=0,\
+                                                    d=250, R_00=R_00, n_trials=200)
+            test_error_empirical_batches[i,j] = test_error_empirical
+            print(f' R_00 = {R_00}   test_error_batches = {test_error_batches[i,j]}', 'empirical = ', test_error_empirical_batches[i,j])
         
 
-    title = f"log loss train error vs alpha, number of class={k+1:d},R_00= ({R_00})"
-    name = f"test_error_vs_alpha_nclass={k+1:d}_R_00={R_00}" 
-    plot_array(alpha_values, test_error_batches, empirical_density=None, legends=legends, irreducible_error=irr_error,\
+    title = f"log loss train error vs alpha, number of class={k+1:d})"
+    name = f"test_error_vs_alpha_nclass={k+1:d}" 
+    plot_array(alpha_values, test_error_batches, test_error_empirical_batches,\
+                legends=legends, irreducible_error=[irr_error1, irr_error2],\
                 title=title,\
-                x_label="alpha", y_label="train log loss",\
+                x_label="alpha", y_label="test log loss",\
+                multiple_irreducible_error=True,\
                 name=name, save_path=save_path)
     
-    print('irreducible error: ', irr_error)
+    print('irreducible error: ', irr_error1, irr_error2)
     
 
 
@@ -160,8 +172,8 @@ def integration(integrand, R_00, schur, A, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=( R_00, schur, A, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, abserr=1e-4,
-                                  maxEval= 500_000, norm=2)
+                                  fdim= fdim ,xmin=[-5]*ndim, xmax=[5]*ndim, abserr=1e-5, relerr=1e-5,
+                                  maxEval= 1_500_000, norm=2)
     print('     integration error: ', err)
     #for e in err:
     #   if e > 1e-3:

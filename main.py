@@ -15,19 +15,46 @@ from multinomial_logistic.ESD_theoretical.Marchenko_Pastur_FP import recover_den
 from multinomial_logistic.ESD_theoretical.ODE import recover_density_via_ODE
 from multinomial_logistic.phase_transition.phase_transition import phase_transition_minimization,plot_phase_transition
 
+from multinomial_logistic.MLE_empirical.phase_transition_empirical import phase_transition
+from multinomial_logistic.phase_transition.phase_transion_exhaustive import phase_transition_exhaustive_search
+from multinomial_logistic.log_data.log_fp import run_and_log_fp, read_fp_results
+from multinomial_logistic.log_data.log_mle_empirical import read_mle_results, run_and_log_mle
+from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests, read_fp_test_results
+from multinomial_logistic.log_data.log_esd import run_and_log_esd
+from multinomial_logistic.log_data.log_fp_regularized import run_and_log_fp_regularized
+from multinomial_logistic.log_data.utils import plot_fp_test_results
 if __name__ == "__main__":
     print("Running main")
     
-    k = 1
-    k_0 = 1
+    k = 2
+    k_0 = 2
 
-    
+    alpha = 3.1473684210526316
+
+    #run_and_log_esd(k_0=k_0, k=k, lambda_reg=0, alpha_input=alpha,\
+    #                R_00_input=R_00, S_input=S, schur_input=schur, R_01_input=R_01)
+
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0)
+    #run_and_log_mle(k=k, k_0=k_0, lambda_reg=0)
+    #run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0)
+    #run_and_log_fp_regularized(k_0=k_0, k=k)
+    plot_fp_test_results(k=k, k_0=k_0, empirical_mean_only=False, window_size=1, alpha_min=3)    
+    #results = read_fp_results(alpha=4.23333, k=k, k_0=k_0, R_00=np.eye(k))
+
+    #print(results)
     #R_00 = np.array([[1,1/2], [1/2,1]])
     R_00 = np.eye(k)
-    alpha = 10
+    alpha = 1.5
+    #phase_transition(R_00=R_00, k=k, k_0=k_0)
+    #alpha = phase_transition_exhaustive_search(R_00=R_00, k=k, k_0=k_0)
+
+   # plot_train_log_loss_vs_alpha(R_00=R_00, alpha_min=4.3, alpha_max=20, k=k, k_0=k_0, max_iter=15,\
+   #                           save_path='multinomial_logistic/data/figures/train_error')
+    #phase_transition(R_00=R_00, k=k, k_0=k_0)
+    #phase_transition_minimization(R_00=R_00, k=k, k_0=k_0, C0=np.zeros(k*k).flatten())
     #C_opt, alpha_opt = phase_transition_minimization(R_00=R_00, k=k, k_0=k_0)
-    plot_phase_transition(k, k_0)
-    #_, empirical_density = esd_empirical(alpha=alpha, k=k, lambda_reg=0, R_00=R_00, max_iter=100, d=250)
+    #plot_phase_transition(k, k_0)
+   # _, empirical_density = esd_empirical(alpha=3.1, k=k, lambda_reg=0, R_00=R_00, max_iter=100, d=250)
 
     #R_00 = np.eye(k)
     #plot_norm_vs_lambda_reg(R_00, lambda_reg_min=0.2, lambda_reg_max=1.6, k=k, k_0=k_0, max_iter=20,\
