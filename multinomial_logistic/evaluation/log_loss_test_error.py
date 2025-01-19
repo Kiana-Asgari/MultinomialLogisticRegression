@@ -108,11 +108,8 @@ def plot_test_error_vs_alpha( R_00, alpha_min, alpha_max \
 ####################################################################################################
 
 def test_error( R_00, schur, R_01, k, k_0, alpha):
-    print('     computing test error... with parameters:')
-    A = R_01 @ np.linalg.inv(sqrtm(R_00))
-
+    A = R_01 @ sqrtm(np.linalg.inv(R_00))
     loss = integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
-    print('     done computing test error with loss: ', loss)
     return loss
 
 
@@ -172,9 +169,10 @@ def integration(integrand, R_00, schur, A, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=( R_00, schur, A, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-5]*ndim, xmax=[5]*ndim, abserr=1e-5, relerr=1e-5,
-                                  maxEval= 1_500_000, norm=2)
-    print('     integration error: ', err)
+                                  fdim= fdim ,xmin=[-3.4]*ndim, xmax=[3.4]*ndim, abserr=1e-5, relerr=1e-5,
+                                  maxEval= 500_000, norm=2)
+    if err.item() > 1e-4:
+        print('     **[Warning] log loss test error integration error is too large**', err)
     #for e in err:
     #   if e > 1e-3:
     #     print('     **[Warning] state evolution integration error is too large**')

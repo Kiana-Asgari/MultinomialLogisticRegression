@@ -138,6 +138,8 @@ def _train_log_loss_integrand(Z_batch, R_00, schur, R_01, S, alpha, k, k_0):
     for i in range(-1, k):
         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batch
         prox_g_batch, div_prox = prox_fp_iteration(g_batch + batched_mult(S, y_batch), S) # prox(g + yS; S)
+
+        
         if div_prox:
             print('     **prox Divergence detected**')
             break
@@ -158,9 +160,9 @@ def integrate(integrand, R_00, schur, R_01, S, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=(R_00, schur, R_01, S, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-5]*ndim, xmax=[5]*ndim, abserr = 1e-6, relerr=1e-6,
+                                  fdim= fdim ,xmin=[-3.4]*ndim, xmax=[3.4]*ndim, abserr = 1e-4, relerr=1e-4,
                                   maxEval=1_500_000, norm=2)
-    #if err.any() > 1e-2:
-    #    print('     **[Warning] integration error is too large**')
+    if err.item() > 1e-4:
+        print('     **[Warning] train error integration error is too large**, err=', err)
     #print('     done integrating')
     return expectations     

@@ -112,3 +112,66 @@ def run_and_log_fp_regularized(k_0=2, k=2, alpha_values=[1.5,2,3,5], tol=1e-5, m
                     }, f, indent=2)
             
     return base_filepath 
+
+
+
+
+
+
+
+
+def get_regularized_fp_data(k, k_0, R_00):
+    # Create base filepath
+    base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution", f"fp_reg_data_k{k}_k0{k_0}.json")
+    
+    if not os.path.exists(base_filepath):
+        print(f"No regularized FP data found at {base_filepath}")
+        return
+        
+    # Load the data
+    with open(base_filepath, 'r') as f:
+        data = json.load(f)
+    
+    # Initialize lists to store results
+    alphas = []
+    lambda_regs = []
+    S_matrices = []
+    schur_matrices = []
+    R_01_matrices = []
+    diverged_flags = []
+    
+    # Process each result
+    for key, result in data["results"].items():
+        # Parse the key to get alpha and lambda_reg
+        key_data = json.loads(key)
+        if not np.array_equal(np.array(key_data["R_00"]), R_00):
+            continue
+            
+        alpha = key_data["alpha"]
+        lambda_reg = key_data["lambda_reg"]
+        
+        # Store the values
+        alphas.append(alpha)
+        lambda_regs.append(lambda_reg)
+        S_matrices.append(np.array(result["S"]))
+        schur_matrices.append(np.array(result["schur"]))
+        R_01_matrices.append(np.array(result["R_01"]))
+        diverged_flags.append(result["diverged"])
+    
+    # Convert lists to numpy arrays
+    alphas = np.array(alphas)
+    lambda_regs = np.array(lambda_regs)
+    S_matrices = np.array(S_matrices)
+    schur_matrices = np.array(schur_matrices)
+    R_01_matrices = np.array(R_01_matrices)
+    diverged_flags = np.array(diverged_flags)
+    
+    # Sort everything by alpha and lambda_reg
+    sort_idx = np.lexsort((alphas, lambda_regs))
+    alphas = alphas[sort_idx]
+    lambda_regs = lambda_regs[sort_idx]
+    S_matrices = S_matrices[sort_idx]
+    schur_matrices = schur_matrices[sort_idx]
+    R_01_matrices = R_01_matrices[sort_idx]
+    diverged_flags = diverged_flags[sort_idx]
+    return alphas, lambda_regs, S_matrices, schur_matrices, R_01_matrices, diverged_flags

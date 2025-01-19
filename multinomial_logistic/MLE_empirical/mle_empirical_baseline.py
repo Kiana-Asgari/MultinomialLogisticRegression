@@ -1,43 +1,22 @@
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize
 
 from multinomial_logistic.utils import batched_mlogit, log_sum_exp_batch, batched_outer, batched_mlogit_jacobian
 from scipy.linalg import sqrtm
 from scipy import linalg
-from multinomial_logistic.MLE_empirical.test_error import test_error
-from multinomial_logistic.MLE_empirical.train_error import train_error
-
-def generate_data(alpha, d, k, Theta_0, random_state=0):
-    np.random.seed(random_state)
-    n = np.ceil(alpha*d).astype(int)
-    X = np.random.randn(n, d)  # shape (n, d)
-    
-    # Logits for non-baseline classes: shape (n, k)
-    Beta_batch = X @ Theta_0.T
-    prob_y_batch = batched_mlogit(Beta_batch)
-    cdf_y_batch = np.cumsum(prob_y_batch, axis=1)
-
-    # Prob(class j) for j=1..k    
-    # Draw labels
-    Y_onehot = np.zeros((n, k))  # shape (n, k)
-    random_values = np.random.uniform(0, 1, size=(n,))
-    samples = np.argmax(random_values[:, None] <= cdf_y_batch, axis=1) # e_j => label j-1, 0 => label k
-
-    # convert to one-hot
-    Y_onehot = np.zeros((n, k))  # shape (n, k)
-    # Only set 1.0 for non-baseline classes (when samples < k)
-    baseline_mask = samples < k
-    Y_onehot[np.arange(n)[baseline_mask], samples[baseline_mask]] = 1.0
-
-    return X, Y_onehot
+from multinomial_logistic.MLE_empirical.utils.test_error import test_error, mle_misclassification_test_error
+from multinomial_logistic.MLE_empirical.utils.train_error import train_error
+from multinomial_logistic.MLE_empirical.utils.data_generation import generate_data
 
 
 
 
 
-def negative_log_likelihood_and_gradient(theta, X, Y, alpha, lambda_reg):
+
+def negative_log_likelihood_and_gradient(theta, X, Y, lambda_reg):
     n, d = X.shape
     k = theta.shape[0]
 
@@ -57,11 +36,11 @@ def negative_log_likelihood_and_gradient(theta, X, Y, alpha, lambda_reg):
 
 
 
-def lbfgs_multinomial(X, Y, alpha, lambda_reg, 
+def lbfgs_multinomial(X, Y, lambda_reg, 
                       theta_init=None,
-                      max_iter=1000, 
-                      tol=1e-5,
-                      verbose=False):
+                      max_iter=5000, 
+                      tol=1e-8,
+                      verbose=True):
     """
     Perform L-BFGS optimization to minimize the negative log-likelihood of 
     multinomial logistic regression with L2-regularization.
@@ -97,7 +76,7 @@ def lbfgs_multinomial(X, Y, alpha, lambda_reg,
         # Reshape flat -> (k, d)
         theta = theta_flat.reshape(k, d)
         # Compute negative log-likelihood + grad using your custom function
-        nll, grad = negative_log_likelihood_and_gradient(theta, X, Y, alpha, lambda_reg)
+        nll, grad = negative_log_likelihood_and_gradient(theta, X, Y, lambda_reg)
         # Flatten gradient back to 1D
         grad_flat = grad.ravel()
         return nll, grad_flat
@@ -122,76 +101,115 @@ def lbfgs_multinomial(X, Y, alpha, lambda_reg,
 
 
 
-def fit_mle_baseline(alpha, k, lambda_reg, R_00, n_trials, \
-                     d = 500, return_full_results = False):
+def fit_mle_baseline(alpha=None, k=None, lambda_reg=0, R_00=None, n_trials = 1, \
+                     d = 500, return_full_results = True,\
+                     X_train_batch=None, Y_train_batch=None, X_test_batch=None, Y_test_batch=None):
+
+    if X_train_batch is not None:
+        n_trials = 1
+        d = X_train_batch.shape[1]
+        k = Y_train_batch.shape[1]
 
     zeros_pad = np.zeros((k, d-k))  # k x (d-k) matrix of zeros
-    Theta_0 = np.hstack([sqrtm( R_00), zeros_pad])  # concatenate horizontally to get k x d matrix
+    Theta_0 = np.hstack([sqrtm( R_00), zeros_pad]) if X_train_batch is None else np.zeros((k, d)) # concatenate horizontally to get k x d matrix
     Theta_hats = np.zeros((n_trials, k, d))
     norms = np.zeros(n_trials)
     test_errors = np.zeros(n_trials)
     train_errors = np.zeros(n_trials)
-    print(' starting fitting mle with lambda_reg: ', lambda_reg, 'for alpha: ', alpha, 'and k: ', k)
+    misclassification_test_errors = np.zeros(n_trials)
+
+
 
     for i in range(n_trials):
-        X, Y_onehot = generate_data(alpha=alpha, d=d, k=k, Theta_0=Theta_0, random_state=i)
+        if X_train_batch is None:
+            X, Y_onehot = generate_data(alpha=alpha, d=d, k=k, Theta_0=Theta_0, random_state=2*i)
+        else:
+            X = X_train_batch
+            Y_onehot = Y_train_batch
+
         Theta_hat, history = lbfgs_multinomial(
-            X=X, Y=Y_onehot, alpha=alpha, lambda_reg=lambda_reg, verbose=False
+            X=X, Y=Y_onehot, lambda_reg=lambda_reg, verbose=False
         )
 
         Theta_hats[i] = Theta_hat
         norms[i] = np.linalg.norm(Theta_0- Theta_hat)**2
-        test_errors[i] = test_error(Theta_0, Theta_hat)
+
+        if X_test_batch is None:
+            test_errors[i] = test_error(Theta_0, Theta_hat)
+            misclassification_test_errors[i] = mle_misclassification_test_error(Theta_0, Theta_hat)
+        else:
+            test_errors[i] = train_error(Theta_hat, X_test_batch, Y_test_batch)
+            misclassification_test_errors[i] = 0
         train_errors[i] = train_error(Theta_hat, X, Y_onehot)
 
     avg_Theta_hat = np.mean(Theta_hats, axis=0)
     avg_norms = np.mean(norms)
     avg_test_error = np.mean(test_errors)
     avg_train_error = np.mean(train_errors)
-    print(f" in MLE Average norm: {avg_norms}, Average test error: {avg_test_error}, Average train error: {avg_train_error}")
-
+    avg_misclassification_test_error = np.mean(misclassification_test_errors)
     if return_full_results:
-        return Theta_hats, norms, test_errors, train_errors
+        return Theta_hats, norms, test_errors, train_errors, misclassification_test_errors
     else:
-        return avg_Theta_hat, avg_norms, avg_test_error, avg_train_error
+        return avg_Theta_hat, avg_norms, avg_test_error, avg_train_error, avg_misclassification_test_error
 
 
 
-def esd_empirical(alpha, k, lambda_reg, R_00, max_iter = 100, d = 250):
-
-    zeros_pad = np.zeros((k, d-k))  # k x (d-k) matrix of zeros
-    Theta_0 = np.hstack([sqrtm( R_00), zeros_pad])  # concatenate horizontally to get k x d matrix
+def esd_empirical(alpha, k, lambda_reg, R_00, max_iter = 100, d = 250, plot_esd = False):
+    zeros_pad = np.zeros((k, d-k))
+    Theta_0 = np.hstack([sqrtm(R_00), zeros_pad])
     avg_Theta_hat = np.zeros((k, d))
+    # Initialize as empty array that we'll append to
+    esd_full = np.array([])
     avg_esd = 0
     print(' starting fitting mle with lambda_reg: ', lambda_reg, 'for alpha: ', alpha, 'and k: ', k)
+    
     for i in range(max_iter):
         X, Y_onehot = generate_data(alpha=alpha, d=d, k=k, Theta_0=Theta_0, random_state=i)
         Theta_hat, history = lbfgs_multinomial(
-            X=X, Y=Y_onehot, alpha=alpha, lambda_reg=lambda_reg, verbose=False
+            X=X, Y=Y_onehot, lambda_reg=lambda_reg, verbose=False
         )
 
         Hessian = batched_hessian(Theta_hat, X, Y_onehot, alpha, lambda_reg)
-        avg_esd += linalg.eigvalsh(Hessian)
+        print('norm of X: ', np.mean(np.linalg.norm(X, axis=1)))
+        print('Hessian shape: ', Hessian.shape)
+        print('first diagonal: ', np.diag(Hessian))
+        print('first row: ', Hessian[0,:])
+        print('smalleset and largest eigenvalues: ', np.min(np.linalg.eigvalsh(Hessian)), np.max(np.linalg.eigvalsh(Hessian)))
+        print('determinant: ', np.linalg.det(Hessian))
+        eigenvals = linalg.eigvalsh(Hessian)
+        # If this is the first iteration, initialize esd_full with the correct shape
+        if i == 0:
+            esd_full = np.array([eigenvals])
+        else:
+            esd_full = np.vstack([esd_full, eigenvals])
+        
+        # Calculate density values using histogram
+        hist, bin_edges = np.histogram(eigenvals, bins=500, density=True)
+        max_density = np.max(hist)
+        print(f"Iteration {i+1} completed, shape of esd_full: {esd_full.shape}, max density: {max_density:.4f}")
+        hist, bin_edges = np.histogram(eigenvals, bins=100, density=True)
+        max_density = np.max(hist)
+        print(f"2Iteration {i+1} completed, shape of esd_full: {esd_full.shape}, max density: {max_density:.4f}")
 
-    avg_esd /= max_iter
+    avg_esd = np.mean(esd_full, axis=0)
 
-    # Plot the histogram with transparent fill and black edges
-    plt.figure(figsize=(10, 6))
-    plt.hist(avg_esd, bins=50, density=True, 
-             facecolor='none', edgecolor='red')
-    plt.xlabel('Eigenvalues')
-    plt.ylabel('Probability Density')
-    plt.title(f'Eigenvalue Spectrum Density (α={alpha}, k={k}, R_00={R_00})')
-    
-    save_path = f'multinomial_logistic/data/ESD/{k}_classes/esd_alpha_{alpha}_k_{k}_R_00_{R_00}.png'
-    
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    plt.savefig(save_path)
-    plt.close()
+    if plot_esd:
+        # Plot the histogram with transparent fill and black edges
+        plt.figure(figsize=(10, 6))
+        plt.hist(avg_esd, bins=100, density=True, 
+                 facecolor='none', edgecolor='red')
+        plt.xlabel('Eigenvalues')
+        plt.ylabel('Probability Density')
+        plt.title(f'Eigenvalue Spectrum Density (α={alpha}, k={k}, R_00={R_00})')
+        
+        save_path = f'multinomial_logistic/data/ESD/{k}_classes/esd_alpha_{alpha}_k_{k}_R_00_{R_00}.png'
+        
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        plt.close()
 
-
-    return avg_Theta_hat, avg_esd
+    return avg_Theta_hat, avg_esd, esd_full
 
 
 

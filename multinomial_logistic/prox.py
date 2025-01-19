@@ -12,14 +12,14 @@ class ProximalOperatorError(RuntimeError):
     """Exception raised when proximal operator computation fails to converge."""
     pass
 
-def prox_fp_iteration(g_batch, S, max_iter=1000, tol=1e-5):
+def prox_fp_iteration(g_batch, S, max_iter=15000, tol=1e-4, verbose=False):
     # computes Prox(g; S) = argmin_beta { g.T S^{-1}g @ mlogit(beta) }
     prox_t = np.zeros_like(g_batch)  # Shape (N, k)
     error = 0
     alpha = 1
     divergence = False
 
-    if np.linalg.norm(S) >  3*1e1:
+    if np.linalg.norm(S) >  3*1e4:
         prox_t, divergence = prox_newton_iteration(g_batch, S, prox_t, verbose=False)
     else:
         for i in range(max_iter):
@@ -40,9 +40,8 @@ def prox_fp_iteration(g_batch, S, max_iter=1000, tol=1e-5):
                 break
             
  
-   # print(f'     prox_fp_iteration converged with n-iter: {i}, error: {error}, alpha: {alpha}')
     
-    if error > 1e-3:
+    if error     > 1:
         print(' prox_fp_iteration did not converge with error', error)
         prox_next, divergence = prox_newton_iteration(g_batch, S, prox_t, verbose=False)
     return prox_next, divergence
@@ -56,7 +55,7 @@ def prox_fp_iteration(g_batch, S, max_iter=1000, tol=1e-5):
 
 
 def best_alpha(F, deriv_inv, prox_t, S, g_batch):
-    alpha_values = np.linspace(0.2, 1.2, 10)
+    alpha_values = np.linspace(0.01, 1.2, 20)
     error_values = []
     grad =  np.einsum('nij, ni->nj', deriv_inv, F)
 
@@ -71,7 +70,7 @@ def best_alpha(F, deriv_inv, prox_t, S, g_batch):
 
 
 def prox_newton_iteration(g_batch, S, prox_fp,\
-                           max_iter=100, tol=1e-3, verbose=False):
+                           max_iter=10000, tol=1e-2, verbose=False):
     
     divergence = False
     if verbose:
@@ -97,12 +96,10 @@ def prox_newton_iteration(g_batch, S, prox_fp,\
             
         prox_t = prox_next
     if error > tol:
-        divergence = True
-        if not verbose:
-            prox_next = prox_fp_iteration(g_batch, S, prox_fp, verbose=True)
+        divergence = False #changed this
         print(' WARN: prox_newton_iteration did not converge for S = ', S, 'error = ', error)
         print('HALTING...')
-    #print('    *** prox with newton converged with n-iter: ', i, 'error: ', error)
+    print('    *** prox with newton converged with n-iter: ', i, 'error: ', error)
    
     return prox_next, divergence
 

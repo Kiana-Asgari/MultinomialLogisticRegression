@@ -1,140 +1,170 @@
 
 import numpy as np
 
-from state_evolution.full_recursion import state_evolution_full_recursion
-
-
-from multinomial_logistic.evaluation.log_loss_test_error import  plot_test_error_vs_alpha, plot_test_error_vs_lambda
-from multinomial_logistic.evaluation.log_loss_train_eror import plot_train_log_loss_vs_alpha, plot_train_log_loss_vs_lambda
-from cubature import cubature
-from multinomial_logistic.evaluation.F_norm import plot_norm_vs_lambda_reg
-from multinomial_logistic.evaluation.misclassification_test_error import plot_misclass_test_error_vs_lambda, plot_misclass_test_error_vs_alpha
-
-from multinomial_logistic.MLE_empirical.mle_empirical_baseline import  esd_empirical
-from multinomial_logistic.ESD_theoretical.Marchenko_Pastur_FP import recover_density, stieltjes_inversion
-from multinomial_logistic.ESD_theoretical.ODE import recover_density_via_ODE
-from multinomial_logistic.phase_transition.phase_transition import phase_transition_minimization,plot_phase_transition
-
-from multinomial_logistic.MLE_empirical.phase_transition_empirical import phase_transition
-from multinomial_logistic.phase_transition.phase_transion_exhaustive import phase_transition_exhaustive_search
-from multinomial_logistic.log_data.log_fp import run_and_log_fp, read_fp_results
-from multinomial_logistic.log_data.log_mle_empirical import read_mle_results, run_and_log_mle
-from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests, read_fp_test_results
+from multinomial_logistic.MLE_empirical.ESD_empirical import esd_empirical
+from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
+import matplotlib.pyplot as plt
+import os
+from multinomial_logistic.log_data.utils import plot_density, plot_regularized_error, plot_errors, plot_regularized_error_vs_d
+from multinomial_logistic.log_data.log_fp import run_and_log_fp
 from multinomial_logistic.log_data.log_esd import run_and_log_esd
+from multinomial_logistic.ESD.Marchenko_Pastur_FP import recover_density
+from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests_regularized, read_fp_tests_regularized, run_and_log_fp_tests, run_and_log_fp_classification_test_error
+from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle_regularized, log_mle_esd, read_mle_esd
 from multinomial_logistic.log_data.log_fp_regularized import run_and_log_fp_regularized
-from multinomial_logistic.log_data.utils import plot_fp_test_results
+from multinomial_logistic.log_data.log_fp import run_and_log_fp
+
+
+
+#########################
+# final plottings
+#########################
+
+def plot_final_results(what_to_plot):
+    if what_to_plot == 'regularized_error':
+        R_00 = np.array([[1,1/2], [1/2,1]])
+        k = 2
+        k_0 = 2
+        plot_regularized_error(k, k_0, R_00, emp_window=0.015, lambda_reg_max=0.55)
+
+    if what_to_plot == 'density5':
+        R_00 = np.array([[1,1/2], [1/2,1]])
+        alpha = 5.0
+        d = 250
+        k = 2
+        k_0 = 2
+        esd_full_5 = read_mle_esd(k, k_0, alpha=alpha)
+        plot_density(k=k, k_0=k_0, R_00=R_00, alpha_target=alpha, eigenvalues=esd_full_5.flatten(), d=d,
+                  clean_data_for_3=False, clean_data_for_5=True,\
+                  density_lower_bound=1e-2,z_real_lower_bound=0, emp_bins=150)
+        
+    if what_to_plot == 'density3':
+        R_00 = np.array([[1,1/2], [1/2,1]])
+        alpha = 3.0
+        d = 250
+        k = 2
+        k_0 = 2
+        esd_full_3 = read_mle_esd(k, k_0, alpha=alpha)
+        plot_density(k=k, k_0=k_0, R_00=R_00, alpha_target=alpha, eigenvalues=esd_full_3.flatten(), d=d,
+                  clean_data_for_3=True, clean_data_for_5=False,clean_data_for_10=False,\
+                  density_lower_bound=3*1e-3,z_real_lower_bound=0, emp_bins=150)
+        
+    if what_to_plot == 'density10':
+        R_00 = np.array([[1,1/2], [1/2,1]])
+        alpha = 10.0
+        d = 250
+        k = 2
+        k_0 = 2
+        esd_full_3 = read_mle_esd(k, k_0, alpha=alpha)
+        plot_density(k=k, k_0=k_0, R_00=R_00, alpha_target=alpha, eigenvalues=esd_full_3.flatten(), d=d,
+                  clean_data_for_3=False, clean_data_for_5=False, clean_data_for_10=True,\
+                  density_lower_bound=2*1e-2,z_real_lower_bound=1e-3,  emp_bins=150)
+        
+    if what_to_plot == 'density20':
+        R_00 = np.array([[1,1/2], [1/2,1]])
+        alpha = 20.0
+        d = 250
+        k = 2
+        k_0 = 2
+        esd_full_20 = read_mle_esd(k, k_0, alpha=alpha)
+        plot_density(k=k, k_0=k_0, R_00=R_00, alpha_target=20.0, eigenvalues=esd_full_20.flatten(), d=d, #fix alpha
+                  clean_data_for_3=False, clean_data_for_5=False, clean_data_for_10=False,\
+                  clean_data_for_20=True,
+                  density_lower_bound=2*1e-2,z_real_lower_bound=1e-3,  emp_bins=150)
+
+
+
+
+from state_evolution.full_recursion import state_evolution_full_recursion
+from multinomial_logistic.evaluation.misclassification_test_error import misclassification_test_error
+from multinomial_logistic.evaluation.log_loss_test_error import test_error
+from multinomial_logistic.evaluation.log_loss_train_eror import train_error
+from scipy.linalg import sqrtm
+from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
+from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
+
+def test_miscalss():
+    k=2
+    k_0=2
+    d=250
+    n_trials=30
+    R_00 = np.array([[1,0.5], [0.5,1]])
+    lambda_reg = 0
+    class_err_mean_skitlearn = []
+    class_err_std_skitlearn = []
+
+    class_err_mean = []
+    class_err_std = []
+    for alpha in [2.68]:
+        #schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0, k)),
+        #                            lambda_reg=1/2*lambda_reg, alpha=alpha, k=k, k_0=k_0, tol=1e-5)
+        #A = R_01.T @ sqrtm(np.linalg.inv(R_00))
+        #misclass_test_error_theoritical = misclassification_test_error(S, R_00, schur, A, alpha, k, k_0)
+        #log_loss_test_error_theoritical = test_error( R_00, schur, R_01, k, k_0, alpha)
+        #log_loss_train_error_theoritical = train_error(R_00, schur, R_01, S,alpha, k, k_0)
+        #print('theoritical misclassification test error:', misclass_test_error_theoritical  )
+        #print('[]theoritical log loss test error:', log_loss_test_error_theoritical)
+        #print('[]theoritical log loss train error:', log_loss_train_error_theoritical)  
+        results_10 = fit_mle_skitlearn(alpha=alpha, k=k, d=d, n_trials=n_trials,
+                                              R_00=R_00)
+        print('*****************************alpha=', alpha)
+        print('  mle misclassification test error:', np.mean(results_10['misclass_test_errors']), 'std:', np.std(results_10['misclass_test_errors']))
+        print('  mle log loss test error:', np.mean(results_10['test_errors']), 'std:', np.std(results_10['test_errors']))
+        print('  mle train error:', np.mean(results_10['train_errors']), 'std:', np.std(results_10['train_errors']))
+        print('  mle train error:', np.mean(results_10['train_errors']), 'std:', np.std(results_10['train_errors']))
+        print('*****************************')
+
+
+    
+
+
+
+
+
+
+   
+
+
+
+
+######################################
+from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle
+from multinomial_logistic.MLE_empirical.visualize_data import scatter_plot_data
 if __name__ == "__main__":
     print("Running main")
-    
     k = 2
     k_0 = 2
+    #test_miscalss()
+    #alpha = 3.0
+    #d = 250
+    run_and_log_fp_tests(k_0=k_0, k=k, non_symmetric=False, two_classes_close=False)
 
-    alpha = 3.1473684210526316
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #                max_iter=400, non_symmetric=True, two_classes_close=False)
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #                max_iter=400, non_symmetric=False, two_classes_close=False)
 
-    #run_and_log_esd(k_0=k_0, k=k, lambda_reg=0, alpha_input=alpha,\
-    #                R_00_input=R_00, S_input=S, schur_input=schur, R_01_input=R_01)
+    #run_and_log_esd(k_0=k_0, k=k, lambda_reg=0, alpha_input=20.0, R_00_input=np.array([[1,1/2], [1/2,1]]))
+    #plot_final_results('density3')
 
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0)
-    #run_and_log_mle(k=k, k_0=k_0, lambda_reg=0)
-    #run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0)
-    #run_and_log_fp_regularized(k_0=k_0, k=k)
-    plot_fp_test_results(k=k, k_0=k_0, empirical_mean_only=False, window_size=1, alpha_min=3)    
-    #results = read_fp_results(alpha=4.23333, k=k, k_0=k_0, R_00=np.eye(k))
-
-    #print(results)
+    #run_and_log_fp_classification_test_error(k_0=k_0, k=k, non_symmetric=False)
+    #run_and_log_mle(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=150, non_symmetric=False, two_classes_close=False)
     #R_00 = np.array([[1,1/2], [1/2,1]])
-    R_00 = np.eye(k)
-    alpha = 1.5
-    #phase_transition(R_00=R_00, k=k, k_0=k_0)
-    #alpha = phase_transition_exhaustive_search(R_00=R_00, k=k, k_0=k_0)
+    #plot_regularized_error(k, k_0, R_00, emp_window=0, lambda_reg_max=0.7, lambda_reg_min=0)
+    #plot_errors(k_0=k_0, k=k, empirical_window=0.001, alpha_min_emp=3.1, alpha_max=12)
 
-   # plot_train_log_loss_vs_alpha(R_00=R_00, alpha_min=4.3, alpha_max=20, k=k, k_0=k_0, max_iter=15,\
-   #                           save_path='multinomial_logistic/data/figures/train_error')
-    #phase_transition(R_00=R_00, k=k, k_0=k_0)
-    #phase_transition_minimization(R_00=R_00, k=k, k_0=k_0, C0=np.zeros(k*k).flatten())
-    #C_opt, alpha_opt = phase_transition_minimization(R_00=R_00, k=k, k_0=k_0)
-    #plot_phase_transition(k, k_0)
-   # _, empirical_density = esd_empirical(alpha=3.1, k=k, lambda_reg=0, R_00=R_00, max_iter=100, d=250)
-
-    #R_00 = np.eye(k)
-    #plot_norm_vs_lambda_reg(R_00, lambda_reg_min=0.2, lambda_reg_max=1.6, k=k, k_0=k_0, max_iter=20,\
-    #                         save_path='multinomial_logistic/data/F_norm/3_classes')
-
-    #plot_test_error_vs_lambda(R_00, lambda_reg_min=0.06, lambda_reg_max=1.2, k=k, k_0=k_0, max_iter=25,\
-    #                             save_path='multinomial_logistic/data/test_error/3_classes')
-    #plot_train_log_loss_vs_lambda(R_00, lambda_reg_min=0.06, lambda_reg_max=1, k=k, k_0=k_0, max_iter=15,\
-    #                             save_path='multinomial_logistic/data/train_error/3_classes')
-    #MP_iteration(R_00, schur, A, S, z_real, z_imag, alpha, k, k_0)
-    #density = recover_density(R_00=R_00, alpha=alpha, k=k, k_0=k_0)
-    #print(density)
-    #avg_Theta_hat, avg_esd = esd_empirical(alpha=alpha, k=k, lambda_reg=0,\
-    #                                       R_00=R_00, d=400, max_iter=10)
-
-    
-    #print(type(avg_esd))
-    #mle_test()
-    #plot_mle_vs_lambda_reg(lambda_reg_min=0.2, lambda_reg_max=0.2, R_00=R_00,\
-    #                        k=k, save_path='multinomial_logistic/data/mle/2_classes')
+    #run_and_log_fp_tests_regularized(k_0=k_0, k=k,R_00=R_00)
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-2, non_symmetric=False)
+    #run_and_log_mle_regularized(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=100)
+    #plot_regularized_error(k, k_0, R_00, emp_window=0.015, lambda_reg_max=0.55)
 
 
-
-    #R_00 =  4*np.eye(k)
-    #plot_test_error_vs_alpha(R_00, alpha_min=5, \
-    #                          alpha_max=20, k=k, k_0=k_0, max_iter=15, save_path='multinomial_logistic/data/test_error/2_classes')
+    #run_and_log_fp_regularized(k=k, k_0=k_0, alpha_values=[10])
 
 
-    #plot_misclass_test_error_vs_lambda(R_00, lambda_reg_min=0.05, lambda_reg_max=0.8, k=k, k_0=k_0,\
-    #                         max_iter=15, save_path='multinomial_logistic/data/misclassification_test_error/2_classes')
-
-    #plot_norm_vs_lambda_reg(R_00, lambda_reg_min=0.1, lambda_reg_max=1.5, k=k, k_0=k_0,\
-    #                         max_iter=15, save_path='multinomial_logistic/data/F_norm/3_classes')
-    #plot_classification_test_error_vs_alpha(mean_0, variance_0, R_00, alpha_min=10, alpha_max=100,\
-    #                          k=k, k_0=k_0, max_iter=20, \
-    #                          save_path='multinomial_logistic/data/classification_test_error/4_classes')
-    #plot_train_log_loss_vs_alpha(R_00, alpha_min=10, alpha_max=100,\
-    #                              k=k, k_0=k_0, max_iter=10, \
-   #                               save_path='multinomial_logistic/data/train_error/4_classes')
-    #plot_test_error_vs_alpha(mean_0, variance_0, R_00, alpha_min=15, alpha_max=100,\
-    #                           k=k, k_0=k_0, max_iter=10, \
-    #                           save_path='multinomial_logistic/data/test_error/4_classes')
-    #plot_test_error_vs_lambda_reg(mean_0, variance_0, R_00, lambda_reg_min=0.01, lambda_reg_max=2,\
-    #                          alpha=5, k=k, k_0=k_0, max_iter=10, save_path='multinomial_logistic/data/test_error/2_classes')
-
-    #R_01 = np.zeros((k_0,k))
-    #R_11 = R_00
-    #schur = R_11 - R_01 @ np.linalg.inv(R_00) @ R_01.T
-
-
-    #Z_theta = np.array([[0,0], [1,1], [2,2]]) #theta_0, theta_1
-    #Z_g = np.array([[1,1], [2,2], [0,0]])
-
-
-  
-    
-    
-    #theta_1, theta_0 = recover_theta(Z_theta, mean_0, variance_0, R_00, schur, R_01, k, k_0)
-    #print('theta_1=', theta_1)
-    #print('theta_0=', theta_0)
-    #g_1, g_0 = recover_g(Z_g, theta_1, theta_0, k, k_0)
-
-
-
-
-    #schur, R_01, S = state_evolution_full_recursion(R_00=R_00, schur_0=schur, R_01_0=R_01,\
-    #                                lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-    #
-    # 
-    # print(R_01)
-    #print(test_error(R_00, schur, R_01, alpha, k, k_0))
-
-    #plot_log_loss_vs_lambda_reg(R_00, lambda_reg_min=0, lambda_reg_max=4, alpha=alpha,\
-    #                             k=k, k_0=k_0, max_iter=5)
-    #plot_log_loss_vs_alpha(R_00=R_00, alpha_min=10, alpha_max=200, lambda_reg=lambda_reg, k=k, k_0=k_0,max_iter=30, 
-    #                       save_path='multinomial_logistic/data/log_loss/2_classes')     
-
-    #for lambda_reg in [0.1, 0.5, 1, 2, 5]:
-    #    plot_alpha_vs_bias(R_00, alpha_min=1.1, alpha_max=10, lambda_reg=lambda_reg, k=k, k_0=k_0)
-    #for alpha in [1.1, 2, 5, 10]:
-    #    plot_lambda_vs_bias(R_00, lambda_reg_min=0.1, lambda_reg_max=5, alpha=alpha, k=k, k_0=k_0)
-    #plot_alpha_vs_bias(R_00, lambda_reg=0, alpha_min=3.1, alpha_max=10, k=k, k_0=k_0)
-
+    #err = []
+    #for alpha in np.linspace(10, 2, 20):
+    #    results = fit_mle_skitlearn(alpha=alpha, k=k, d=d, n_trials=5, R_00=R_00_close, verbose=True)
+    #    err.append(np.mean(results['misclass_test_errors']))
+    #print('err=', err)
+    #print('alpha=', np.linspace(10, 2.6, 20))

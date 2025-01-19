@@ -4,10 +4,32 @@ import os
 from datetime import datetime
 from state_evolution.full_recursion import state_evolution_full_recursion
 
-def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200):     
+def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=False, two_classes_close=False):     
     # Create base filename without timestamp
-    base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
-    base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution", base_filename)
+
+    if non_symmetric:
+        R_00_values = np.array([[[1,-0.5], [-0.5,1]]])
+    elif two_classes_close:
+        R_00_values = np.array([[[1,0.9], [0.9,1]]])
+    else:
+        R_00_values = np.array([[[1,0.5], [0.5,1]]])
+    R_00_str = str(R_00_values[0].tolist())
+
+    if not non_symmetric and not two_classes_close:
+        print("Running symmetric FP")
+        base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
+        base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}"
+        base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution", base_filename)
+    elif non_symmetric:
+        print("Running non-symmetric FP")
+        base_filename =  f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
+        base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric"
+        base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution_nonsym", base_filename)
+    elif two_classes_close:
+        print("Running two classes close FP")
+        base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
+        base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close"
+        base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution_two_classes_close", base_filename)
     
     # Create data/fp_solution directory if it doesn't exist
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
@@ -19,28 +41,34 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200):
         if not filename.endswith('.json'):
             continue
         
-        if f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}" in filename:
+        if base_filename == filename:
             filepath = os.path.join(data_dir, filename)
             with open(filepath, 'r') as f:
                 data = json.load(f)
                 existing_files.append((filename, data))
     
     # If matching file exists, use it
+
+
     if existing_files:
         filename, existing_data = existing_files[0]
         filepath = os.path.join(data_dir, filename)
-        results = existing_data["results"]
-        print(f"Appending to existing file: {filename}")
+        results = existing_data["results"].copy()  # Create a copy of existing results
+        alphas_existing = np.array([float(alpha) for alpha in results[R_00_str]])
+        print(f"Appending to existing file: {filename}, alphas = {alphas_existing}")
     else:
         # Create new file
         filepath = base_filepath
         results = {}
         print(f"Creating new file: {os.path.basename(filepath)}")
 
-    R_00_values = np.array([np.eye(k), [[1,0.5], [0.5,1]]])  
-    alphas = np.concatenate([np.linspace(2.8, 5, 20), np.linspace(5, 20, 30)]).flatten()
-    alphas = np.sort(alphas)[::-1]
-  
+
+    alphas = np.sort(alphas_existing)[::-1]
+    print('running alphas', alphas)
+    #alphas = [20]
+    #alphas = np.array([10,9,8,7,6,5,4.5,4, 3.5, 3])
+
+
 
     for R_00 in R_00_values:
         schur = R_00
@@ -49,16 +77,19 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200):
         diverged_flag = False  # Track divergence for this R_00
     
         for alpha in alphas:  # Note: alphas are already sorted in decreasing order
+            if alpha>10:
+                continue
             alpha_str = str(alpha)
             R_00_str = str(R_00.tolist())
             
             # Skip if we already have results for this alpha and R_00
-            if R_00_str in results and alpha_str in results[R_00_str]:
-                print(f"Skipping alpha={alpha} for R_00={R_00} (already exists)")
-                continue
+           # if R_00_str in results and alpha_str in results[R_00_str] and results[R_00_str][alpha_str]["diverged"] == False:
+           #     print(f"Skipping alpha={alpha} for R_00={R_00} (already exists)")
+           #     continue
+
                 
             print(f"\nRunning alpha = {alpha}")
-            
+            """
             if diverged_flag:
                 # If already diverged for smaller alpha, just log divergence
                 results[R_00_str][alpha_str] = {
@@ -68,7 +99,20 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200):
                     "diverged": True
                 }
                 continue
-            
+            """
+            if alpha < 3:
+                tol = 5*1e-1
+            else:
+                tol = 1e-4
+
+
+            if R_00_str in results and alpha_str in results[R_00_str]: #and results[R_00_str][alpha_str]["diverged"] == True:
+                schur = np.array(results[R_00_str][alpha_str]["schur"])
+                R_01 = np.array(results[R_00_str][alpha_str]["R_01"])
+                S = np.array(results[R_00_str][alpha_str]["S"])
+                print("Using previous results for alpha=", alpha," to continues the state evolution")
+
+
             schur, R_01, S, diverged = state_evolution_full_recursion(
                 R_00=R_00,
                 schur_0=schur,
@@ -79,24 +123,29 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200):
                 k=k,
                 k_0=k_0,
                 tol=tol,
-                max_iter=max_iter
+                max_iter=50
             )
             
             # Initialize R_00 dict if it doesn't exist
             if R_00_str not in results:
                 results[R_00_str] = {}
             
-            results[R_00_str][alpha_str] = {
-                "schur": schur.tolist(),
-                "R_01": R_01.tolist(),
-                "S": S.tolist(),
-                "diverged": bool(diverged)
-            }
+            # Only update if we don't have results for this alpha or if previous result diverged
+            if (alpha_str not in results[R_00_str] or 
+                results[R_00_str][alpha_str].get("diverged", True)):
+                results[R_00_str][alpha_str] = {
+                    "schur": schur.tolist(),
+                    "R_01": R_01.tolist(),
+                    "S": S.tolist(),
+                    "diverged": bool(diverged)
+                }
             
             if diverged:
                 diverged_flag = True  # Mark as diverged for future alphas
 
-            with open(filepath, 'w') as f:
+            # Create a temporary file first, then rename it to avoid partial writes
+            temp_filepath = filepath + '.tmp'
+            with open(temp_filepath, 'w') as f:
                 json.dump({
                     "metadata": {
                         "k": k,
@@ -105,10 +154,11 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200):
                     },
                     "results": results
                 }, f, indent=2)
+            os.replace(temp_filepath, filepath)  # Atomic operation
             
     return filepath
 
-def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0):
+def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0, non_symmetric=False, two_classes_close=False):
     """
     Read results for the closest available alpha value from the matching file.
     
@@ -129,8 +179,18 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0):
         return None
     
     # Look for the specific file
-    filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
-    filepath = os.path.join(data_dir, filename)
+    if two_classes_close:
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution_two_classes_close")
+        filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
+        filepath = os.path.join(fp_data_dir, filename)
+    elif non_symmetric:
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution_nonsym")
+        filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
+        filepath = os.path.join(fp_data_dir, filename)
+    else:
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution")
+        filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
+        filepath = os.path.join(fp_data_dir, filename)
     
     if not os.path.exists(filepath):
         print(f"No file found matching parameters k={k}, k_0={k_0}, lambda={lambda_reg}")
@@ -159,7 +219,17 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0):
     closest_alpha = available_alphas[np.argmin(np.abs(available_alphas - alpha))]
     closest_alpha_str = str(closest_alpha)
     
-    result = data["results"][R_00_str][closest_alpha_str]
+    # Try both integer and float string formats for integer alphas
+    if False:#closest_alpha.is_integer():
+        
+        int_alpha_str = str(int(closest_alpha))
+        float_alpha_str = f"{closest_alpha}.0"
+        if int_alpha_str in data["results"][R_00_str]:
+            result = data["results"][R_00_str][int_alpha_str]
+        else:
+            result = data["results"][R_00_str][float_alpha_str]
+    else:
+        result = data["results"][R_00_str][closest_alpha_str]
     
     # Convert lists back to numpy arrays
     schur = np.array(result["schur"]).reshape(k,k)
@@ -167,6 +237,7 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0):
     S = np.array(result["S"]).reshape(k,k)
     diverged = result["diverged"]
     
-    print(f"Found results in file: {filename}")
+    print(f"Found FP results in file: {filename}")
     print(f"Using alpha={closest_alpha} (requested alpha={alpha} not found)")
+    print(f"R_00 = {R_00}, S = {S}, schur = {schur}")
     return schur, R_01, S, diverged, closest_alpha

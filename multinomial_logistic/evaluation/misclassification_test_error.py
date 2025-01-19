@@ -30,7 +30,7 @@ def plot_misclass_test_error_vs_alpha(R_00, alpha_min, alpha_max ,k, k_0, max_it
         for j, alpha in enumerate(alpha_values):
             schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
                                             lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-            A_t = R_01 @ np.linalg.inv(sqrtm(R_00))
+            A_t = R_01 @ np.linalg.inv(R_00)
             misclass_test_error_batches[i, j] = misclassification_test_error(S, R_00, schur, A_t, alpha, k, k_0)
             print('misclass_test_error_batches[i, j]', misclass_test_error_batches[i, j])
         
@@ -74,10 +74,9 @@ def plot_misclass_test_error_vs_lambda(R_00, lambda_reg_min, lambda_reg_max ,k, 
 
 
 def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
-    #print(' in misclassification_test_error')
-    integrand = integration(_misclassification_integrand, S, R_00, schur_t, A_t, alpha, k, k_0)
+    accuracy = integration(_misclassification_integrand, S, R_00, schur_t, A_t, alpha, k, k_0)
     #print('integrand.shape', integrand.shape)
-    return integrand
+    return 1-accuracy
 
 
 def _misclassification_integrand(Z_batch, S, R_00, schur_t, A_t, alpha, k, k_0):
@@ -85,19 +84,14 @@ def _misclassification_integrand(Z_batch, S, R_00, schur_t, A_t, alpha, k, k_0):
     N = Z_batch.shape[0]
     #print(Z_batch.shape)
     schur_root_t = sqrtm(schur_t)
-    g_1_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root_t  , alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
+    g_1_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root_t,
+                                               alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
     pdf = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0)).pdf(Z_batch)
     prob_y0_batch = batched_mlogit(g_0_batch)
-    prob_y1_batch = batched_mlogit(g_1_batch)
-
-    integrand = np.ones((N))
-
-    for i in range(-1, k):
-        integrand -= prob_y1_batch[:, i] * prob_y0_batch[:, i] # score @ score.T   
-
-    integrand = integrand * pdf
-    #print('integrand.shape', integrand.shape)
-
+    prob_y1_batch = np.hstack([g_1_batch, np.zeros((g_1_batch.shape[0], 1))])
+    y1_batch = np.argmax(prob_y1_batch, axis=1)
+    prob_y0_of_y1 = prob_y0_batch[np.arange(N), y1_batch]
+    integrand = prob_y0_of_y1 * pdf
     return integrand
 
 
@@ -108,9 +102,10 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, abserr=1e-4,
-                                  maxEval= 500_000, norm=2)
-    print('     integration error: ', err)
+                                  fdim= fdim ,xmin=[-3.5]*ndim, xmax=[3.5]*ndim, abserr=1e-5,
+                                  maxEval= 60_000_000, norm=2)
+    if err.item() > 1e-3:
+        print('     **[Warning] misclassification test error integration error is too large**', err)
     #for e in err:
     #   if e > 1e-3:
     #     print('     **[Warning] state evolution integration error is too large**')

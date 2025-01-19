@@ -32,7 +32,7 @@ D(v,u) = batched_mlogit_jacobian(Prox(g + Sy; S))
 """
 
 def recover_density( R_00, alpha, k, k_0, z_imag=1e-3,\
-                    save_path='multinomial_logistic/data/density/2_classes'):
+                    save_path='multinomial_logistic/data/New_ESD/2_classes'):
     """
     Recovers the full density indise the support of the ESD 
     from the solution of the fixed point equation
@@ -75,14 +75,18 @@ def recover_density( R_00, alpha, k, k_0, z_imag=1e-3,\
     return density
 
 
-def stieltjes_inversion(R_00, schur, A, S, z_real, alpha, k, k_0, z_imag, last_MP_S=None):
+def stieltjes_inversion(R_00, schur, A, S, z_real, alpha, k, k_0, z_imag, max_iter=350, last_MP_S=None):
     """
     Solves the fixed point equation: E_\nu [(I + D\bar S)^{-1} - z_MP I]^{-1} = 1/ alpha * \bar S
     """
-    MP_S, stieltjes_transform = MP_iteration(R_00=R_00, schur=schur, A=A, S=S, z_real=z_real, 
+    print('     starting stieltjes inversion for z_real = ', z_real + z_imag*1j, ' R_00 = ', R_00.flatten())
+    print('     schur = ', schur.flatten(), ' A = ', A.flatten(), ' S = ', S.flatten())
+    print('     alpha = ', alpha, ' k = ', k, ' k_0 = ', k_0)
+    print('     last_MP_S = ', last_MP_S.flatten())
+    MP_S, stieltjes_transform = MP_iteration(R_00=R_00, schur=schur, A=A, S=S, z_real=z_real, max_iter=max_iter,
                                           last_MP_S=last_MP_S, z_imag=z_imag, alpha=alpha, k=k, k_0=k_0)
     density = stieltjes_transform.imag / np.pi
-    print('     density at z_real = ', z_real, '     density = ', density)
+    print('     density at z_real = ', z_real + z_imag*1j, ' R_00 = ', R_00.flatten(), '     density = ', density)
     return MP_S, density
     
 

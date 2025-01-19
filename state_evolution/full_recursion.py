@@ -31,8 +31,8 @@ div_prox = False
 
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0,\
-                                    S_0=None,tol=1e-5, max_iter=200):
-    div_tol = np.linalg.norm(R_00)* 5 * 1e1
+                                    S_0=None,tol=1e-5, max_iter=300):
+    div_tol = np.linalg.norm(R_00)* 5 * 1e4
     print('*************state evolution iteration started*************')
     print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}','R_00: ', R_00)
     R_01_t = R_01_0
@@ -62,7 +62,7 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
                                           R_01_next, R_01_t, div_tol, t+1, errors)
         if divergence:
             print(' diverged for values: schur_t: ', schur_t, 'R_01_t: ', R_01_t, 'S_t: ', S_t)
-            return schur_t, R_01_t, S_t, divergence
+            #return schur_t, R_01_t, S_t, divergence
 
 
         if all(errors[t]<tol) :
@@ -77,7 +77,7 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
     #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
     #                                , R_00, lambda_reg, alpha, k, k_0)
     #print(f'** done with state evolution recursion. THE FP RESIDUAL {np.linalg.norm(equations)}**')
-    print(f'     **done with state evolution recursion. schur_t: {schur_t}**')
+    print(f'     **done with state evolution recursion. schur_t: {schur_t}, R_01_t: {R_01_t}, S_t: {S_t}, R_00: {R_00}, alpha: {alpha}, k: {k}, k_0: {k_0}**')
     return schur_t, R_01_t, S_t, divergence
 
 
@@ -214,8 +214,8 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
                                    fdim=fdim,
                                    xmin=[-3.4]*ndim, 
                                    xmax=[3.4]*ndim, 
-                                   abserr=1e-5,
-                                   maxEval=250_000, 
+                                   abserr=1e-4,
+                                   maxEval=800_000, 
                                    norm=2)
     if np.max(err) > 1e-4:
         print('     **Error in integration is too large**', np.max(err))
@@ -238,7 +238,7 @@ def check_for_divergence(S_next, S_t, schur_next, schur_t, R_01_next, R_01_t,\
         divergence = True
 
     for i in range(1, iter):
-        if all(errors[i,j] - errors[i-1,j] > 1e-5 for j in range(3)):
+        if all(errors[i,j] - errors[i-1,j] > 1e-5 for j in range(3)): #change
             print("[DIVERGENCE] Halting state evolution due to [all errors increase > 0]")
             print(f"Error jump detected: {errors[i] - errors[i-1]}")
             divergence = True

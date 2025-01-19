@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve, minimize
+
 from scipy.special import softmax, logsumexp, expit
 from scipy.integrate import nquad
 from scipy.stats import multivariate_normal
@@ -92,12 +93,20 @@ def batched_wrapper(integrand1, integrand2, integrand3, k, k_0):
 
 
 def log_sum_exp_batch(V): # I changed this recently. if face issues, revert to the old version
-    exp_V = np.exp(V - np.max(V, axis=-1, keepdims=True)) #stability trick
-    sum_exp_V = np.sum(exp_V, axis=1)
-    sum_exp_plus_1 = np.exp(-1*np.max(V, axis=-1)) + sum_exp_V
+    """
+    Compute log(1 + sum_j exp(V_j)) row by row in a numerically stable way.
+    V: shape (N, k).
+    """
+    # Append a column of zeros: shape => (N, k+1)
+    V_with_0 = np.hstack([np.zeros((V.shape[0], 1)), V])
+    return logsumexp(V_with_0, axis=1)
+
+    #exp_V = np.exp(V - np.max(V, axis=-1, keepdims=True)) #stability trick
+    #sum_exp_V = np.sum(exp_V, axis=1)
+    #sum_exp_plus_1 = np.exp(-1*np.max(V, axis=-1)) + sum_exp_V
     
-    result = np.log(sum_exp_plus_1) + np.max(V, axis=-1)
-    return result
+    #result = np.log(sum_exp_plus_1) + np.max(V, axis=-1)
+    #return result
 
 
 #######################################################################

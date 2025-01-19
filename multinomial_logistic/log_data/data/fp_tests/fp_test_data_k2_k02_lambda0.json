@@ -348,6 +348,76 @@
         "F_norm": null,
         "diverged": true,
         "actual_alpha": 2.8
+      },
+      "3.0": {
+        "test_error": 3.132169847283535,
+        "train_error": 0.45501208223134365,
+        "F_norm": 73.43335705959223,
+        "diverged": false,
+        "actual_alpha": 3.0315789473684207
+      },
+      "2.78": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "2.745": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "2.84": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "2.81": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "2.736": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "10.0": {
+        "test_error": 1.058901458891944,
+        "train_error": 0.8281648765317007,
+        "F_norm": 1.930924953151778,
+        "diverged": false,
+        "actual_alpha": 10.172413793103448
+      },
+      "2.7": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "19.0": {
+        "test_error": 0.9877512807043671,
+        "train_error": 0.8779026281599954,
+        "F_norm": 0.8063671955991101,
+        "diverged": false,
+        "actual_alpha": 18.96551724137931
+      },
+      "18.0": {
+        "test_error": 0.9918259599085945,
+        "train_error": 0.8746211018360528,
+        "F_norm": 0.8687426395443296,
+        "diverged": false,
+        "actual_alpha": 17.93103448275862
       }
     },
     "[[1.0, 0.5], [0.5, 1.0]]": {
@@ -686,6 +756,139 @@
         "F_norm": 83.31474741601295,
         "diverged": false,
         "actual_alpha": 2.9157894736842103
+      },
+      "3.0": {
+        "test_error": 2.939102730675497,
+        "train_error": 0.49021848677226154,
+        "F_norm": 60.64240106417786,
+        "diverged": false,
+        "actual_alpha": 3.0
+      },
+      "2.8": {
+        "test_error": null,
+        "train_error": null,
+        "F_norm": null,
+        "diverged": true,
+        "actual_alpha": 2.8
+      },
+      "2.78": {
+        "test_error": 5.016387999686391,
+        "train_error": 0.39773475697059374,
+        "F_norm": 193.04268992080193,
+        "diverged": false,
+        "actual_alpha": 2.78
+      },
+      "2.745": {
+        "test_error": 6.008422604322826,
+        "train_error": 0.3724140250325619,
+        "F_norm": 280.9047448504741,
+        "diverged": false,
+        "actual_alpha": 2.745
+      },
+      "2.84": {
+        "test_error": 4.057094771676807,
+        "train_error": 0.430498386242096,
+        "F_norm": 123.21004403719245,
+        "diverged": false,
+        "actual_alpha": 2.84
+      },
+      "2.81": {
+        "test_error": 4.4624203467552315,
+        "train_error": 0.4153198720135268,
+        "F_norm": 150.8993688745436,
+        "diverged": false,
+        "actual_alpha": 2.81
+      },
+      "2.736": {
+        "test_error": 6.370798549523784,
+        "train_error": 0.3645929867593753,
+        "F_norm": 316.98786934836335,
+        "diverged": false,
+        "actual_alpha": 2.736
+      },
+      "10.0": {
+        "test_error": 1.091766765006886,
+        "train_error": 0.8574317273653508,
+        "F_norm": 1.9228412192665445,
+        "diverged": false,
+        "actual_alpha": 10.0
+      },
+      "2.7": {
+        "test_error": 8.5276627800086,
+        "train_error": 0.32495176816036503,
+        "F_norm": 575.6216313806876,
+        "diverged": false,
+        "actual_alpha": 2.7
+      },
+      "19.0": {
+        "test_error": 1.0183968485046668,
+        "train_error": 0.9090215902927575,
+        "F_norm": 0.7855014503975131,
+        "diverged": false,
+        "actual_alpha": 19.0
+      },
+      "18.0": {
+        "test_error": 1.0222766594263286,
+        "train_error": 0.9058740660281172,
+        "F_norm": 0.8436917875479182,
+        "diverged": false,
+        "actual_alpha": 18.0
+      },
+      "17.0": {
+        "test_error": 1.0266969171759435,
+        "train_error": 0.9023425796389815,
+        "F_norm": 0.9103440038890378,
+        "diverged": false,
+        "actual_alpha": 17.0
+      },
+      "16.0": {
+        "test_error": 1.0317788884743613,
+        "train_error": 0.8983520067930262,
+        "F_norm": 0.9874344290379922,
+        "diverged": false,
+        "actual_alpha": 16.0
+      },
+      "15.0": {
+        "test_error": 1.0376828824741684,
+        "train_error": 0.8938060497282407,
+        "F_norm": 1.0776154714265207,
+        "diverged": false,
+        "actual_alpha": 15.0
+      },
+      "14.0": {
+        "test_error": 1.0446225969439331,
+        "train_error": 0.8885797013394852,
+        "F_norm": 1.1844665365015166,
+        "diverged": false,
+        "actual_alpha": 14.0
+      },
+      "13.0": {
+        "test_error": 1.0528959545510213,
+        "train_error": 0.8825068560057162,
+        "F_norm": 1.313048385058802,
+        "diverged": false,
+        "actual_alpha": 13.0
+      },
+      "12.0": {
+        "test_error": 1.0629277834370505,
+        "train_error": 0.8753628110647058,
+        "F_norm": 1.470681998714272,
+        "diverged": false,
+        "actual_alpha": 12.0
+      },
+      "11.0": {
+        "test_error": 1.075338880246775,
+        "train_error": 0.8668343349880907,
+        "F_norm": 1.668301268660878,
+        "diverged": false,
+        "actual_alpha": 11.0
+      },
+      "2.695": {
+        "test_error": 9.538186109556092,
+        "train_error": 0.31072578805968043,
+        "F_norm": 724.7331364733307,
+        "diverged": false,
+        "actual_alpha": 2.695
       }
     }
   }
