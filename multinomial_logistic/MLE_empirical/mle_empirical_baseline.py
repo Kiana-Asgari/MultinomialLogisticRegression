@@ -39,7 +39,7 @@ def negative_log_likelihood_and_gradient(theta, X, Y, lambda_reg):
 def lbfgs_multinomial(X, Y, lambda_reg, 
                       theta_init=None,
                       max_iter=5000, 
-                      tol=1e-8,
+                      tol=1e-6,
                       verbose=True):
     """
     Perform L-BFGS optimization to minimize the negative log-likelihood of 

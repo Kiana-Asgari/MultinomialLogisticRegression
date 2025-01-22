@@ -109,7 +109,7 @@ def _get_Theta_hat(model):
 def _fit_logistic_regression(X_train, y_train):
     model = LogisticRegression(penalty=None,
                                 fit_intercept=False,
-                                max_iter=500,
+                                max_iter=1000,
                                 solver='lbfgs')
     model.fit(X_train, y_train)
     return model

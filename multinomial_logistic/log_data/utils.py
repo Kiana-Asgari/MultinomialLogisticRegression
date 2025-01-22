@@ -321,14 +321,14 @@ def plot_regularized_error(k,
         'mathtext.fontset': 'cm',       # Use Computer Modern math font
         'figure.dpi': 120,              
         'figure.figsize': (7, 5),       
-        'axes.labelsize': 16,           
-        'axes.titlesize': 16,           
-        'xtick.labelsize': 14,          
-        'ytick.labelsize': 14,          
-        'legend.fontsize': 14,          
+        'axes.labelsize': 18,           
+        'axes.titlesize': 18,           
+        'xtick.labelsize': 18,          
+        'ytick.labelsize': 18,          
+        'legend.fontsize': 18,          
         'lines.linewidth': 2,
         'axes.linewidth': 1.2,
-        'font.size': 14,                
+        'font.size': 18,                
         'text.latex.preamble': r'\usepackage{amsmath} \usepackage{amssymb} \usepackage{bm}', # Added bm package
         'mathtext.default': 'regular',   # Use regular (serif) font for math
         'axes.formatter.use_mathtext': True,  # Use mathtext for axis formatting
@@ -534,41 +534,36 @@ def _plot_empirical_errors(ax,
 from multinomial_logistic.log_data.log_fp_tests import get_fp_misclassification_statistics
 
 
-def plot_errors(k, k_0, alpha_min_fp=2.5, alpha_max = 20,
-                 alpha_min_emp=2.5, empirical_mean_std=True, 
+def plot_errors_vs_alpha(k, k_0, alpha_min_fp=1, alpha_max = 15,
+                 alpha_min_emp=1, empirical_mean_std=True, 
                  empirical_mean_only=False, empirical_window=0.4):
-    # Get theoretical (FP) results for input R_00
 
 
     fp_results_two_classes_close = get_fp_statistics(k, k_0, two_classes_close=True)
-
-    fp_results = get_fp_statistics(k, k_0, non_symmetric=False, two_classes_close=False)
-    fp_results_misclassification = get_fp_misclassification_statistics(k, k_0, two_classes_close=False, non_symmetric=False)
-
+    fp_results_symmetric = get_fp_statistics(k, k_0, non_symmetric=False, two_classes_close=False)
     fp_results_non_symmetric = get_fp_statistics(k, k_0, two_classes_close=False, non_symmetric=True)
 
 
-    if fp_results is None or fp_results_misclassification is None:
+    if fp_results_symmetric is None or fp_results_two_classes_close is None or fp_results_non_symmetric is None:
         print("No FP results found")
         return
     
     # Process input R_00 results
-    alphas_fp, test_errors_fp, train_errors_fp, F_norms_fp = fp_results
-    alphas_fp_misclassification, misclassification_test_errors_fp = fp_results_misclassification
+    alphas_fp_symmetric, test_errors_fp_symmetric, train_errors_fp_symmetric, F_norms_fp_symmetric, misclassification_test_errors_fp_symmetric = fp_results_symmetric
     #process two_classes_close results
     alphas_fp_two_classes_close, test_errors_fp_two_classes_close, train_errors_fp_two_classes_close, F_norms_fp_two_classes_close, misclassification_test_errors_fp_two_classes_close = fp_results_two_classes_close
-
     #process non_symmetric results
     alphas_fp_non_symmetric, test_errors_fp_non_symmetric, train_errors_fp_non_symmetric, F_norms_fp_non_symmetric, misclassification_test_errors_fp_non_symmetric = fp_results_non_symmetric
 
 
     # Filter FP results by alpha_min
  
-    fp_mask = (alphas_fp >= alpha_min_fp) & (alphas_fp < alpha_max)
-    alphas_fp = alphas_fp[fp_mask]
-    test_errors_fp = test_errors_fp[fp_mask]
-    train_errors_fp = train_errors_fp[fp_mask]
-    F_norms_fp = np.array(F_norms_fp)[fp_mask]
+    fp_mask_symmetric = (alphas_fp_symmetric >= alpha_min_fp) & (alphas_fp_symmetric < alpha_max)
+    alphas_fp_symmetric = alphas_fp_symmetric[fp_mask_symmetric]
+    test_errors_fp_symmetric = test_errors_fp_symmetric[fp_mask_symmetric]
+    train_errors_fp_symmetric = train_errors_fp_symmetric[fp_mask_symmetric]
+    F_norms_fp_symmetric = np.array(F_norms_fp_symmetric)[fp_mask_symmetric]
+    misclassification_test_errors_fp_symmetric = misclassification_test_errors_fp_symmetric[fp_mask_symmetric]
 
 
     #filter two_classes_close data by alpha_min
@@ -578,7 +573,6 @@ def plot_errors(k, k_0, alpha_min_fp=2.5, alpha_max = 20,
     train_errors_fp_two_classes_close = train_errors_fp_two_classes_close[fp_mask_two_classes_close]
     F_norms_fp_two_classes_close = np.array(F_norms_fp_two_classes_close)[fp_mask_two_classes_close]
     misclassification_test_errors_fp_two_classes_close = misclassification_test_errors_fp_two_classes_close[fp_mask_two_classes_close]
-
     
     #filter non_symmetric data by alpha_min
     fp_mask_non_symmetric = (alphas_fp_non_symmetric >= alpha_min_fp) & (alphas_fp_non_symmetric < alpha_max)
@@ -587,155 +581,244 @@ def plot_errors(k, k_0, alpha_min_fp=2.5, alpha_max = 20,
     train_errors_fp_non_symmetric = train_errors_fp_non_symmetric[fp_mask_non_symmetric]
     F_norms_fp_non_symmetric = np.array(F_norms_fp_non_symmetric)[fp_mask_non_symmetric]
     misclassification_test_errors_fp_non_symmetric = misclassification_test_errors_fp_non_symmetric[fp_mask_non_symmetric]
-    
+
+
     # Read MLE data for both d=50 and d=250
-    mle_data_sets = []
+    mle_data_sets_symmetric = []
     mle_data_sets_two_classes_close = []
-    for d in [250]:    #, 250]:
-        try:
-            with open(f'multinomial_logistic/log_data/newdata/mle_empirical/mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150.json', 'r') as f:
-                mle_data = json.load(f)
+    mle_data_sets_non_symmetric = []
+    d = 250
+    try:
+        with open(f'multinomial_logistic/log_data/newdata/mle_empirical/mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150.json', 'r') as f:
+            mle_data_symmetric = json.load(f)
 
-            with open(f'multinomial_logistic/log_data/newdata/mle_empirical/mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_two_classes_close.json', 'r') as f:
-                mle_data_two_classes_close = json.load(f)
-                
-            # Extract empirical values for the symmetric case
-            R_00 = np.array([[1,1/2], [1/2,1]])
-            R_00_str = str(R_00.tolist())
-            alpha_emp_vals = []
-            test_error_emp = []
-            train_error_emp = []
-            misclassification_test_error_emp = []
+        with open(f'multinomial_logistic/log_data/newdata/mle_empirical/mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_two_classes_close.json', 'r') as f:
+            mle_data_two_classes_close = json.load(f)
 
-
+        with open(f'multinomial_logistic/log_data/newdata/mle_empirical/mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_non_symmetric.json', 'r') as f:
+            mle_data_non_symmetric = json.load(f)
             
-            for alpha_str in mle_data['results'][R_00_str].keys():
-                alpha = float(alpha_str)
-                if alpha >= alpha_min_emp and alpha < alpha_max:
-                    data = mle_data['results'][R_00_str][alpha_str]
-                    if not data.get('div', False):  # Skip if diverged
-                        alpha_emp_vals.append(alpha)
-                        test_error_emp.append(data['test_errors'])
-                        train_error_emp.append(data['train_errors'])
-                        misclassification_test_error_emp.append(data['misclassification_test_errors'])
-            mle_data_sets.append({
-                'd': d,
-                'alphas': alpha_emp_vals,
-                'test_errors': test_error_emp,
-                'train_errors': train_error_emp,
-                'misclassification_test_errors': misclassification_test_error_emp
-            })
+        # Extract empirical values for the symmetric case
+        R_00 = np.array([[1,1/2], [1/2,1]])
+        R_00_str = str(R_00.tolist())
+        alpha_emp_vals = []
+        test_error_emp = []
+        train_error_emp = []
+        misclassification_test_error_emp = []
+        
+        for alpha_str in mle_data_symmetric['results'][R_00_str].keys():
+            alpha = float(alpha_str)
+            if alpha >= alpha_min_emp and alpha < alpha_max:
+                data = mle_data_symmetric['results'][R_00_str][alpha_str]
+                if not data.get('div', False):  # Skip if diverged
+                    alpha_emp_vals.append(alpha)
+                    test_error_emp.append(data['test_errors'])
+                    train_error_emp.append(data['train_errors'])
+                    misclassification_test_error_emp.append(data['misclassification_test_errors'])
+        mle_data_sets_symmetric.append({
+            'd': 250,
+            'alphas': alpha_emp_vals,
+            'test_errors': test_error_emp,
+            'train_errors': train_error_emp,
+            'misclassification_test_errors': misclassification_test_error_emp
+        })
 
 
-            # two classes close emp
-            R_00 = np.array([[1,0.9], [0.9,1]])
-            R_00_str = str(R_00.tolist())
-            alpha_emp_vals_two_classes_close = []
-            test_error_emp_two_classes_close = []
-            train_error_emp_two_classes_close = []
-            misclassification_test_error_emp_two_classes_close = []
 
-            
-            
-            for alpha_str in mle_data_two_classes_close['results'][R_00_str].keys():
-                alpha = float(alpha_str)
-                if alpha >= alpha_min_emp and alpha < alpha_max:
-                    data = mle_data_two_classes_close['results'][R_00_str][alpha_str]
-                    if not data.get('div', False):  # Skip if diverged
-                        alpha_emp_vals_two_classes_close.append(alpha)
-                        test_error_emp_two_classes_close.append(data['test_errors'])
-                        train_error_emp_two_classes_close.append(data['train_errors'])
-                        misclassification_test_error_emp_two_classes_close.append(data['misclassification_test_errors'])
-            mle_data_sets_two_classes_close.append({
-                'd': d,
-                'alphas': alpha_emp_vals_two_classes_close,
-                'test_errors': test_error_emp_two_classes_close,
-                'train_errors': train_error_emp_two_classes_close,
-                'misclassification_test_errors': misclassification_test_error_emp_two_classes_close
-            })
-        except Exception as e:
-            print(f"Error reading MLE data for d={d}: {e}")
+        # two classes close emp
+        R_00 = np.array([[1,0.9], [0.9,1]])
+        R_00_str = str(R_00.tolist())
+        alpha_emp_vals_two_classes_close = []
+        test_error_emp_two_classes_close = []
+        train_error_emp_two_classes_close = []
+        misclassification_test_error_emp_two_classes_close = []
+
+        
+        
+        for alpha_str in mle_data_two_classes_close['results'][R_00_str].keys():
+            alpha = float(alpha_str)
+            if alpha >= alpha_min_emp and alpha < alpha_max:
+                data = mle_data_two_classes_close['results'][R_00_str][alpha_str]
+                if not data.get('div', False):  # Skip if diverged
+                    alpha_emp_vals_two_classes_close.append(alpha)
+                    test_error_emp_two_classes_close.append(data['test_errors'])
+                    train_error_emp_two_classes_close.append(data['train_errors'])
+                    misclassification_test_error_emp_two_classes_close.append(data['misclassification_test_errors'])
+        mle_data_sets_two_classes_close.append({
+            'd': d,
+            'alphas': alpha_emp_vals_two_classes_close,
+            'test_errors': test_error_emp_two_classes_close,
+            'train_errors': train_error_emp_two_classes_close,
+            'misclassification_test_errors': misclassification_test_error_emp_two_classes_close
+        })
+
+
+        # extract empirical results for non_symmetric
+        R_00 = np.array([[1,-1/2], [-1/2,1]])
+        R_00_str = str(R_00.tolist())
+        alpha_emp_vals_non_symmetric = []
+        test_error_emp_non_symmetric = []
+        train_error_emp_non_symmetric = []
+        misclassification_test_error_emp_non_symmetric = []
+
+        for alpha_str in mle_data_non_symmetric['results'][R_00_str].keys():
+            alpha = float(alpha_str)
+            if alpha >= alpha_min_emp and alpha < alpha_max:
+                data = mle_data_non_symmetric['results'][R_00_str][alpha_str]
+                if not data.get('div', False):  # Skip if diverged
+                    alpha_emp_vals_non_symmetric.append(alpha)
+                    test_error_emp_non_symmetric.append(data['test_errors'])
+                    train_error_emp_non_symmetric.append(data['train_errors'])
+                    misclassification_test_error_emp_non_symmetric.append(data['misclassification_test_errors'])
+        mle_data_sets_non_symmetric.append({
+            'd': d,
+            'alphas': alpha_emp_vals_non_symmetric,
+            'test_errors': test_error_emp_non_symmetric,
+            'train_errors': train_error_emp_non_symmetric,
+            'misclassification_test_errors': misclassification_test_error_emp_non_symmetric
+        })
+
+    except Exception as e:
+        print(f"Error reading MLE data for d={d}: {e}")
     
     # Create figure directory if it doesn't exist
     fig_dir = os.path.join(os.path.dirname(__file__), "figures", "errors", "no_reg_alpha")
     os.makedirs(fig_dir, exist_ok=True)
     
     # Plot settings
-    sns.set_theme()
+    # --------------------------------------
+    # 3. Configure matplotlib & Seaborn RC
+    # --------------------------------------
+    sns.set_style("whitegrid", {'axes.edgecolor': 'darkgray',
+                               'axes.linewidth': 0.7}) 
+    mpl.rcParams.update({
+        'text.usetex': True,            # For LaTeX rendering
+        'font.family': 'serif',         # Use serif font family
+        'font.serif': ['Computer Modern Roman'],  # Specific serif font
+        'mathtext.fontset': 'cm',       # Use Computer Modern math font
+        'figure.dpi': 120,              
+        'figure.figsize': (7, 5),      
+        'font.size': 18, 
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 18,
+        'ytick.labelsize': 18,
+        'legend.fontsize': 18,
+        'lines.linewidth': 2,
+        'axes.linewidth': 1.2,
+        'text.latex.preamble': r'\usepackage{amsmath} \usepackage{amssymb} \usepackage{bm}', # Added bm package
+        'mathtext.default': 'regular',   # Use regular (serif) font for math
+        'axes.formatter.use_mathtext': True,  # Use mathtext for axis formatting
+    })
 
-    colors = {
-        'fp': 'darkblue',
-        'fp_two_classes_close': 'darkred',
-        50: 'darkblue',
-        250: 'darkred'
-    }
-    print('non sym error:', len(misclassification_test_errors_fp_non_symmetric), len(test_errors_fp_non_symmetric), 
-          len(train_errors_fp_non_symmetric), len(F_norms_fp_non_symmetric), len(alphas_fp_non_symmetric))
     
     # Create plots
     metrics = [
         ('test_error', 
-         [test_errors_fp, test_errors_fp_two_classes_close, test_errors_fp_non_symmetric],
-         [alphas_fp, alphas_fp_two_classes_close, alphas_fp_non_symmetric],
-         ['FP solution (sym)', 'FP solution (two classes close)', 'FP solution (non-symmetric)']),
+         [test_errors_fp_symmetric, test_errors_fp_two_classes_close, test_errors_fp_non_symmetric],
+         [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric],
+         [r'$\bold{R}_{00}= \bold{R}_{00}^{(1)}$', r'$\bold{R}_{00}= \bold{R}_{00}^{(2)}$', r'$\bold{R}_{00}= \bold{R}_{00}^{(3)}$']),
         ('train_error',
-         [train_errors_fp, train_errors_fp_two_classes_close, train_errors_fp_non_symmetric], 
-         [alphas_fp, alphas_fp_two_classes_close, alphas_fp_non_symmetric],
-         ['FP solution (sym)', 'FP solution (two classes close)', 'FP solution (non-symmetric)']),
+         [train_errors_fp_symmetric, train_errors_fp_two_classes_close, train_errors_fp_non_symmetric], 
+         [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric],
+         [r'$\bold{R}_{00}= \bold{R}_{00}^{(1)}$', r'$\bold{R}_{00}= \bold{R}_{00}^{(2)}$', r'$\bold{R}_{00}= \bold{R}_{00}^{(3)}$']),
         ('misclassification_test_error',
-         [misclassification_test_errors_fp, misclassification_test_errors_fp_two_classes_close, misclassification_test_errors_fp_non_symmetric],
-         [alphas_fp_misclassification, alphas_fp_two_classes_close, alphas_fp_non_symmetric],
-        ['FP solution (sym)', 'FP solution (two classes close)', 'FP solution (non-symmetric)'])
+         [misclassification_test_errors_fp_symmetric, misclassification_test_errors_fp_two_classes_close, misclassification_test_errors_fp_non_symmetric],
+         [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric],
+        [r'$\bold{R}_{00}= \bold{R}_{00}^{(1)}$', r'$\bold{R}_{00}= \bold{R}_{00}^{(2)}$', r'$\bold{R}_{00}= \bold{R}_{00}^{(3)}$'])
     ]
 
     
     for metric_name, fp_values, alphas_fp, legends in metrics:
-        print('plotting', metric_name, 'alpha shape:', len(alphas_fp), 'fp_values shape:', len(fp_values))
+        print('plotting', metric_name)
         plt.figure(figsize=(10, 6))
-        plt.title(f'{metric_name.replace("_", " ").title()} vs α')
-        if metric_name == 'test_error':
-            alpha_min = 2.71
-            alpha_max = 6
-        else:
-            alpha_min = 0
-            alpha_max = 16
         
+        # Change this line to use proper LaTeX syntax for alpha
+        alpha_min_test = alpha_min_fp
+        alpha_max_test = alpha_max
+        if metric_name == 'test_error':
+            plt.title(r'Test Error vs $\alpha$')  # Use r prefix and proper LaTeX math mode
+            alpha_min_test = 3
+            alpha_max_test = 6
+        elif metric_name == 'train_error':
+            plt.title(r'Train Error vs $\alpha$')
+        elif metric_name == 'misclassification_test_error':
+            plt.title(r'Classification Error vs $\alpha$')
+        elif metric_name == 'norms':
+            plt.title(r'Norm vs $\alpha$')
+
         # Plot each FP solution separately
         for i in range(len(alphas_fp)):
-            plt.plot(alphas_fp[i][(alphas_fp[i] >= alpha_min) & (alphas_fp[i] <= alpha_max)], 
-                    fp_values[i][(alphas_fp[i] >= alpha_min) & (alphas_fp[i] <= alpha_max)], 
-                    color=['darkblue', 'darkred', 'darkgreen'][i], 
+            plt.plot(alphas_fp[i][(alphas_fp[i] >= alpha_min_test) & (alphas_fp[i] <= alpha_max_test)], 
+                    fp_values[i][(alphas_fp[i] >= alpha_min_test) & (alphas_fp[i] <= alpha_max_test)], 
+                    color=['darkblue', 'black', '#3E7893'][i], 
                     label=legends[i], 
                     linestyle='-', 
                     linewidth=2)
         
         # Plot empirical results for both d=50 and d=250
-        for mle_data in mle_data_sets:
+        for mle_data in mle_data_sets_symmetric:
             d = mle_data['d']
             # Convert lists to numpy arrays
             alphas = np.array(mle_data['alphas'])
             
             if metric_name == 'test_error':
-                emp_means = [np.mean([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
-                emp_stds = [np.std([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
+                errors_list = [np.array([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                # Calculate standard error instead of standard deviation
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
             elif metric_name == 'train_error':
-                emp_means = [np.mean([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
-                emp_stds = [np.std([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
+                errors_list = [np.array([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
             elif metric_name == 'misclassification_test_error':
-                emp_means = [np.mean([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
-                emp_stds = [np.std([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
+                errors_list = [np.array([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
             
-            # Convert means and stds to numpy arrays as well
+            # Convert means and stds to numpy arrays
             emp_means = np.array(emp_means)
             emp_stds = np.array(emp_stds)
             
             # Now use boolean indexing with numpy arrays
-            mask = (alphas >= alpha_min) & (alphas <= alpha_max)
+            mask = (alphas >= alpha_min_emp) & (alphas <= alpha_max_test)
             plt.errorbar(alphas[mask], 
                         emp_means[mask], 
                         yerr=emp_stds[mask],
-                        color=colors[d], fmt='s',
-                        label=f'Empirical d={d}', markersize=3, alpha=0.7,
+                        color='darkblue', fmt='s',
+                        markersize=3, alpha=0.7,
+                        capsize=3, elinewidth=1)
+            
+
+        # plot empirical result for nonsymmetric    
+        for mle_data in mle_data_sets_non_symmetric:
+            d = mle_data['d']
+            # Convert lists to numpy arrays
+            alphas = np.array(mle_data['alphas'])
+            
+            if metric_name == 'test_error':
+                errors_list = [np.array([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
+            elif metric_name == 'train_error':
+                errors_list = [np.array([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
+            elif metric_name == 'misclassification_test_error':
+                errors_list = [np.array([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
+            
+            emp_means = np.array(emp_means)
+            emp_stds = np.array(emp_stds)
+            
+            # Now use boolean indexing with numpy arrays
+            mask = (alphas >= alpha_min_emp) & (alphas <= alpha_max_test)
+            plt.errorbar(alphas[mask], 
+                        emp_means[mask], 
+                        yerr=emp_stds[mask],
+                        color='#3E7893', fmt='s',
+                        markersize=3, alpha=0.7,
                         capsize=3, elinewidth=1)
             
         # Plot empirical results for both d=50 and d=250 for two classes close
@@ -745,36 +828,44 @@ def plot_errors(k, k_0, alpha_min_fp=2.5, alpha_max = 20,
             alphas = np.array(mle_data['alphas'])
             
             if metric_name == 'test_error':
-                emp_means = [np.mean([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
-                emp_stds = [np.std([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
+                y_label = r'Test error'
+                errors_list = [np.array([e for e in errors if e < 10]) for errors in mle_data['test_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
             elif metric_name == 'train_error':
-                emp_means = [np.mean([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
-                emp_stds = [np.std([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
+                y_label = r'Train error'
+                errors_list = [np.array([e for e in errors if e < 5]) for errors in mle_data['train_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
             elif metric_name == 'misclassification_test_error':
-                emp_means = [np.mean([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
-                emp_stds = [np.std([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
+                y_label = r'Classification error'
+                errors_list = [np.array([e for e in errors if e < 10]) for errors in mle_data['misclassification_test_errors']]
+                emp_means = [np.mean(errors) for errors in errors_list]
+                emp_stds = [np.std(errors) / np.sqrt(len(errors)) for errors in errors_list]
             
-            # Convert means and stds to numpy arrays as well
             emp_means = np.array(emp_means)
             emp_stds = np.array(emp_stds)
             
             # Now use boolean indexing with numpy arrays
-            mask = (alphas >= alpha_min) & (alphas <= alpha_max)
+            mask = (alphas >= alpha_min_emp) & (alphas <= alpha_max_test)
             plt.errorbar(alphas[mask], 
                         emp_means[mask], 
                         yerr=emp_stds[mask],
-                        color=colors[d], fmt='s',
-                        label=f'Empirical d={d}', markersize=3, alpha=0.7,
+                        color='black', fmt='s',
+                        markersize=3, alpha=0.7,
                         capsize=3, elinewidth=1)
         
-        plt.xlabel('α')
-        plt.ylabel(metric_name.replace('_', ' ').title())
-        plt.title(f'{metric_name.replace("_", " ").title()} vs α')
+
+
+
+        plt.xlabel(r'$\alpha$', fontsize=22)
+        plt.ylabel(y_label, fontsize=22)  # Increased font size for y-label
+        plt.title('')
         plt.legend()
         plt.grid(True)
         
         # Save plot
-        filename = (f'{metric_name}_k{k}_k0{k_0}.png')
+        filename = (f'{metric_name}_k{k}_k0{k_0}.pdf')
         plt.savefig(os.path.join(fig_dir, filename))
         plt.close()
         print(f'saved the errors plot at {os.path.join(fig_dir, filename)}')

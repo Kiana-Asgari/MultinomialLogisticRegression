@@ -282,7 +282,7 @@ def run_and_log_mle(k_0, k, lambda_reg=0, d=250, n_trials=100, two_classes_close
     elif non_symmetric:
         R_00_values = np.array([[[1,-0.5], [-0.5,1]]])
 
-    alphas =(np.linspace(2.6, 15, 30)).flatten()
+    alphas =np.concatenate(([2.1724, 1.744827586206898], np.linspace(2.6, 15, 30))).flatten()
     #alphas = np.sort(alphas)[::-1]  # Sort in decreasing order
     #alphas = [2.9]
     for R_00 in R_00_values:

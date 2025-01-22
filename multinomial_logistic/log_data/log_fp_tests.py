@@ -447,7 +447,7 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         if R_00.tolist() == [[1,0], [0,1]]:
             continue
         for _alpha in alphas:
-            if _alpha > 15:
+            if _alpha > 15:   #fix this later
                 continue
             alpha_str = str(_alpha)
             R_00_str = str(R_00.tolist())
@@ -541,7 +541,7 @@ def read_fp_test_results(alpha, k, k_0, R_00, lambda_reg=0):
         tuple: (test_error, train_error, F_norm, R_01, diverged) if found, None if not found
                where R_01 is the cross-correlation matrix (always zeros in current implementation)
     """
-    data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_tests")
+    data_dir = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests")
     
     if not os.path.exists(data_dir):
         print("No data directory found")
@@ -604,18 +604,18 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
     """
     # Get the filepath
     if non_symmetric:
-        print('non_symmetric')
+        print('getting fp stats for non_symmetric')
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
         R_00 = np.array([[1,-1/2], [-1/2,1]])
     elif two_classes_close:
-        print('two_classes_close')
+        print('getting fp stats for two_classes_close')
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
         R_00 = np.array([[1,0.9], [0.9,1]])
     else:
-        print('symmetric')
+        print('getting fp stats for symmetric')
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         R_00 = np.array([[1,1/2], [1/2,1]])
-    filepath = os.path.join(os.path.dirname(__file__), "data", "fp_tests", filename)
+    filepath = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests", filename)
     if not os.path.exists(filepath):
         print(f"No FP test file found: {filename}")
         return None
@@ -635,8 +635,7 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
     test_errors = []
     train_errors = []
     F_norms = []
-    if two_classes_close or non_symmetric:
-        misclassification_test_errors = []
+    misclassification_test_errors = []
     # Process each alpha value
     for alpha_str, alpha_data in data["results"][R_00_str].items():
         # Skip if diverged
@@ -648,27 +647,24 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
         test_error = alpha_data["test_error"]
         train_error = alpha_data["train_error"]
         F_norm = alpha_data["F_norm"]
-        if two_classes_close or non_symmetric:
-            misclassification_test_error = alpha_data["misclassification_test_error"]
+        misclassification_test_error = alpha_data["misclassification_test_error"]
 
         # Store values
         alphas.append(alpha)
         test_errors.append(test_error)
         train_errors.append(train_error)
         F_norms.append(F_norm)
-        if two_classes_close or non_symmetric:
-            misclassification_test_errors.append(misclassification_test_error)
+        misclassification_test_errors.append(misclassification_test_error)
     # Sort everything by alpha values
     sorted_indices = np.argsort(alphas)
     alphas = np.array(alphas)[sorted_indices]
     test_errors = np.array(test_errors)[sorted_indices]
     train_errors = np.array(train_errors)[sorted_indices]
     F_norms = np.array(F_norms)[sorted_indices]
-    if two_classes_close or non_symmetric:
-        misclassification_test_errors = np.array(misclassification_test_errors)[sorted_indices]
-        return alphas, test_errors, train_errors, F_norms, misclassification_test_errors
-    else:
-        return alphas, test_errors, train_errors, F_norms
+    misclassification_test_errors = np.array(misclassification_test_errors)[sorted_indices]
+
+    return alphas, test_errors, train_errors, F_norms, misclassification_test_errors
+
 
 
 def get_fp_misclassification_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_close=False):

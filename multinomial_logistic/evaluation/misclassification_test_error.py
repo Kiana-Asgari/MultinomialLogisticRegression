@@ -103,8 +103,8 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
                                   fdim= fdim ,xmin=[-3.5]*ndim, xmax=[3.5]*ndim, abserr=1e-5,
-                                  maxEval= 60_000_000, norm=2)
-    if err.item() > 1e-3:
+                                  maxEval= 70_000_000, norm=2)
+    if err.item() > 1e-4:
         print('     **[Warning] misclassification test error integration error is too large**', err)
     #for e in err:
     #   if e > 1e-3:

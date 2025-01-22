@@ -353,13 +353,13 @@
       "3.0": {
         "test_error": 2.9250091906962394,
         "train_error": 0.48632230854689373,
-        "misclassification_test_error": 0.5886042708763828,
+        "misclassification_test_error": 0.5886010460449174,
         "F_norm": 60.64240106417786,
         "diverged": false,
         "actual_alpha": 3.0
       },
       "2.9157894736842103": {
-        "test_error": 3.3713061197371315,
+        "test_error": 3.3713078416976847,
         "train_error": 0.457966864946269,
         "misclassification_test_error": 0.5910447895394446,
         "F_norm": 83.31474741601295,
@@ -367,15 +367,23 @@
         "actual_alpha": 2.9157894736842103
       },
       "2.84": {
-        "test_error": 4.037137677084899,
+        "test_error": 4.037136390962592,
         "train_error": 0.42610557849665287,
         "misclassification_test_error": 0.5935521462882183,
         "F_norm": 123.21004403719245,
         "diverged": false,
         "actual_alpha": 2.84
       },
+      "2.83": {
+        "test_error": 4.069079962212742,
+        "train_error": 0.4226371176524584,
+        "misclassification_test_error": 0.5936903186926452,
+        "F_norm": 125.24856624825314,
+        "diverged": false,
+        "actual_alpha": 2.83
+      },
       "2.81": {
-        "test_error": 4.4403691638285885,
+        "test_error": 4.440366343438041,
         "train_error": 0.41078276489677357,
         "misclassification_test_error": 0.5946003207430154,
         "F_norm": 150.8993688745436,
@@ -383,7 +391,7 @@
         "actual_alpha": 2.81
       },
       "2.8": {
-        "test_error": 4.589777659469487,
+        "test_error": 4.589765254627125,
         "train_error": 0.4053241319304483,
         "misclassification_test_error": 0.5949661435883113,
         "F_norm": 161.82367140202905,
@@ -391,7 +399,7 @@
         "actual_alpha": 2.8
       },
       "2.78": {
-        "test_error": 4.991478883807025,
+        "test_error": 4.991472076643755,
         "train_error": 0.39304955956973636,
         "misclassification_test_error": 0.5957976030183705,
         "F_norm": 193.04268992080193,
@@ -399,7 +407,7 @@
         "actual_alpha": 2.78
       },
       "2.745": {
-        "test_error": 5.978434854767841,
+        "test_error": 5.978407647210124,
         "train_error": 0.36745543387084884,
         "misclassification_test_error": 0.5973598994172173,
         "F_norm": 280.9047448504741,
@@ -407,7 +415,7 @@
         "actual_alpha": 2.745
       },
       "2.736": {
-        "test_error": 6.3389855983069845,
+        "test_error": 6.338941398561687,
         "train_error": 0.35954816228309766,
         "misclassification_test_error": 0.5977765043694212,
         "F_norm": 316.98786934836335,
@@ -415,7 +423,7 @@
         "actual_alpha": 2.736
       },
       "2.7": {
-        "test_error": 8.484953323751785,
+        "test_error": 8.48472196658176,
         "train_error": 0.3196657604329814,
         "misclassification_test_error": 0.5996716305058651,
         "F_norm": 575.6216313806876,
@@ -423,20 +431,36 @@
         "actual_alpha": 2.7
       },
       "2.695": {
-        "test_error": 9.501438972523907,
-        "train_error": 0.3079494709293317,
+        "test_error": 9.501139538801722,
+        "train_error": 0.30794947092942354,
         "misclassification_test_error": 0.600161088604064,
         "F_norm": 724.7331364733307,
         "diverged": false,
         "actual_alpha": 2.695
       },
       "2.685": {
-        "test_error": 10.288048016221373,
-        "train_error": 0.29421731097358295,
+        "test_error": 10.28760747242825,
+        "train_error": 0.2942173109764604,
         "misclassification_test_error": 0.6005687691750199,
         "F_norm": 851.250635285355,
         "diverged": false,
         "actual_alpha": 2.685
+      },
+      "2.68": {
+        "test_error": 11.48759031770538,
+        "train_error": 0.2807860984540623,
+        "misclassification_test_error": 0.6009707759166445,
+        "F_norm": 1064.2387564235469,
+        "diverged": false,
+        "actual_alpha": 2.68
+      },
+      "2.67": {
+        "test_error": 15.142498590493858,
+        "train_error": 0.24485641841305741,
+        "misclassification_test_error": 0.6019031245242412,
+        "F_norm": 1857.9224110207233,
+        "diverged": false,
+        "actual_alpha": 2.67
       }
     }
   }

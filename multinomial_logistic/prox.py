@@ -29,7 +29,7 @@ def prox_fp_iteration(g_batch, S, max_iter=15000, tol=1e-4, verbose=False):
             
             error_new = np.max(np.linalg.norm(F_next, axis=1))
             if error_new > error - 1e-5:
-                alpha = max(alpha/2, 1e-3)
+                alpha = max(alpha/2, 2*1e-4)
 
                 # Check for convergence: if the prox_val is small enough, stop
             prox_t = prox_next

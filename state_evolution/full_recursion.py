@@ -17,10 +17,14 @@ from multinomial_logistic.utils import wrapper
     State Evoltion Recursion for the Regularized Multinomial Logistic Regression.
     The state evolution recursion is used to compute the fixed point of the state evolution equations.
     The state evolution equations are:
-        S_{t+1} = 1/alpha * (I - E[(I + S @ Jp(prox(g + yS; S)))^{-1}] + 2*lambda_reg*S_t)^{-1} @ S_t
+
+        S_{t+1} = 1/alpha * ((I - E[(I + S @ Jp(prox(g + yS; S)))^{-1}] + 2*lambda_reg*S_t))^{-1} @ S_t
         R_01_{t+1} = (I - alpha*2*lambda_reg * S_{t+1}) @ R_01_t - alpha * S_{t+1} @ E[(p(prox(g + yS; S)) - y)g_0.T] 
         schur_{t+1} = alpha * S_{t+1} @ E[(p(v)-y) @ (p(v)-y).T] @ S_{t+1}
+
+    Note that the prox is computed at the S_t.
     This recursion is used to compute the fixed point of the state evolution equations
+    
         (1/alpha - 1) * I + (2*lambda_reg) * S =  E[(I + S @ Jp(v))^{-1}] 
         (-2*lambda_reg) @ R_01 = E[(p(v) - y)g_0.T] 
         schur = alpha * S @ E[(p(v)-y) @ (p(v)-y).T] @ S
@@ -35,6 +39,8 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
     div_tol = np.linalg.norm(R_00)* 5 * 1e4
     print('*************state evolution iteration started*************')
     print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}','R_00: ', R_00)
+
+    R_00_sqrtm_inv = np.linalg.inv(sqrtm(R_00))
     R_01_t = R_01_0
     schur_t = schur_0
     if S_0 is None:
@@ -46,9 +52,12 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
     
     for t in range(max_iter):
         print(f'     state evolution iteration {t+1} started... ')
-        S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-        schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-        R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
+        S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
+                             lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, R_00_sqrtm_inv=R_00_sqrtm_inv)
+        schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
+                                     lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, R_00_sqrtm_inv=R_00_sqrtm_inv)
+        R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
+                                   lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, R_00_sqrtm_inv=R_00_sqrtm_inv)
         errors[t] = np.array([np.linalg.norm(R_01_next - R_01_t), np.linalg.norm(schur_next - schur_t), np.linalg.norm(S_next - S_t)])
 
             
@@ -73,10 +82,6 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 
     if divergence:
         print('     **Divergence detected due to reaching max_iter**')
-
-    #equations = fixed_point_system(wrapper(S_next, R_01_next @ np.linalg.inv(sqrtm(R_00)), schur_next)\
-    #                                , R_00, lambda_reg, alpha, k, k_0)
-    #print(f'** done with state evolution recursion. THE FP RESIDUAL {np.linalg.norm(equations)}**')
     print(f'     **done with state evolution recursion. schur_t: {schur_t}, R_01_t: {R_01_t}, S_t: {S_t}, R_00: {R_00}, alpha: {alpha}, k: {k}, k_0: {k_0}**')
     return schur_t, R_01_t, S_t, divergence
 
@@ -84,21 +89,30 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 
 
 
-def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0, R_00_sqrtm_inv=None):
+    if R_00_sqrtm_inv is None:
+        A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+    else:
+        A_t = R_01_t @ R_00_sqrtm_inv
     integrand = integration(_S_fp_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     S = 1/alpha * np.linalg.inv(np.eye(k) - integrand + 2*lambda_reg*S_t) @ S_t
     return S
 
-def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+def R_01_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0, R_00_sqrtm_inv=None):
+    if R_00_sqrtm_inv is None:
+        A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+    else:
+        A_t = R_01_t @ R_00_sqrtm_inv
     integrand = integration(_R_01_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     R_01 =  (np.eye(k) - alpha*2*lambda_reg * S_next) @ R_01_t \
             - alpha * S_next @ integrand 
     return R_01
 
-def schur_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0):
-    A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+def schur_recursion(S_t, S_next, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0, R_00_sqrtm_inv=None):
+    if R_00_sqrtm_inv is None:
+        A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+    else:
+        A_t = R_01_t @ R_00_sqrtm_inv
     integrand = integration(_schur_integrand, S_t, R_00, schur_t, A_t, alpha, k, k_0)
     schur = alpha * S_next @ integrand @ S_next
     return schur

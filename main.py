@@ -5,7 +5,7 @@ from multinomial_logistic.MLE_empirical.ESD_empirical import esd_empirical
 from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
 import matplotlib.pyplot as plt
 import os
-from multinomial_logistic.log_data.utils import plot_density, plot_regularized_error, plot_errors, plot_regularized_error_vs_d
+from multinomial_logistic.log_data.utils import plot_density, plot_regularized_error, plot_errors_vs_alpha, plot_regularized_error_vs_d
 from multinomial_logistic.log_data.log_fp import run_and_log_fp
 from multinomial_logistic.log_data.log_esd import run_and_log_esd
 from multinomial_logistic.ESD.Marchenko_Pastur_FP import recover_density
@@ -86,33 +86,41 @@ from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_s
 def test_miscalss():
     k=2
     k_0=2
-    d=250
-    n_trials=30
-    R_00 = np.array([[1,0.5], [0.5,1]])
+    d=100
+    n_trials=50
+    R_00 = np.array([[1,1/2], [1/2,1]])
     lambda_reg = 0
-    class_err_mean_skitlearn = []
-    class_err_std_skitlearn = []
+    for alpha in [30]:
+        schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0, k)),
+                                    lambda_reg=1/2*lambda_reg, alpha=alpha, k=k, k_0=k_0, tol=1e-4)
+        A = R_01.T @ (np.linalg.inv(sqrtm(R_00)))
+        R_11 = schur + R_01 @ np.linalg.inv(R_00) @ R_01.T
 
-    class_err_mean = []
-    class_err_std = []
-    for alpha in [2.68]:
-        #schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0, k)),
-        #                            lambda_reg=1/2*lambda_reg, alpha=alpha, k=k, k_0=k_0, tol=1e-5)
-        #A = R_01.T @ sqrtm(np.linalg.inv(R_00))
-        #misclass_test_error_theoritical = misclassification_test_error(S, R_00, schur, A, alpha, k, k_0)
+        misclass_test_error_theoritical = misclassification_test_error(S, R_00, schur, A, alpha, k, k_0)
+        test_error_theoritical = test_error(R_00, schur, R_01, k, k_0, alpha)
+        print('theoritical misclassification test error:', misclass_test_error_theoritical  )
+        print('theoritical test error:', test_error_theoritical  )
+
         #log_loss_test_error_theoritical = test_error( R_00, schur, R_01, k, k_0, alpha)
         #log_loss_train_error_theoritical = train_error(R_00, schur, R_01, S,alpha, k, k_0)
-        #print('theoritical misclassification test error:', misclass_test_error_theoritical  )
         #print('[]theoritical log loss test error:', log_loss_test_error_theoritical)
         #print('[]theoritical log loss train error:', log_loss_train_error_theoritical)  
-        results_10 = fit_mle_skitlearn(alpha=alpha, k=k, d=d, n_trials=n_trials,
-                                              R_00=R_00)
+        result_skitlearn = fit_mle_skitlearn(alpha=alpha,k=k, d=d, n_trials=n_trials, R_00=R_00)
+        _, norms_mle, mle_test_errors, mle_train_errors, mle_misclassification_test_errors = fit_mle_baseline(alpha=alpha,
+                                                                                                               k=k, d=d, n_trials=n_trials,
+                                                                                                               lambda_reg=lambda_reg, R_00=R_00, return_full_results=True)
+
         print('*****************************alpha=', alpha)
-        print('  mle misclassification test error:', np.mean(results_10['misclass_test_errors']), 'std:', np.std(results_10['misclass_test_errors']))
-        print('  mle log loss test error:', np.mean(results_10['test_errors']), 'std:', np.std(results_10['test_errors']))
-        print('  mle train error:', np.mean(results_10['train_errors']), 'std:', np.std(results_10['train_errors']))
-        print('  mle train error:', np.mean(results_10['train_errors']), 'std:', np.std(results_10['train_errors']))
-        print('*****************************')
+        print('  mle misclassification test error:', np.mean(mle_misclassification_test_errors), 'std:', np.std(mle_misclassification_test_errors))
+        print('  skitlearn misclassification test error:', np.mean(result_skitlearn['misclass_test_errors']), 'std:', np.std(result_skitlearn['misclass_test_errors']))
+        print('theoritical misclassification test error:', misclass_test_error_theoritical)
+        print('  mle test error:', np.mean(mle_test_errors), 'std:', np.std(mle_test_errors))
+        print('  skitlearn test error:', np.mean(result_skitlearn['test_errors']), 'std:', np.std(result_skitlearn['test_errors']))
+        print('theoritical test error:', test_error_theoritical)
+        print(' mle norms:', np.mean(norms_mle), 'std:', np.std(norms_mle))
+        print(' theoritical norms:',np.sqrt(np.trace(R_00) + np.trace(R_11) - np.trace(R_01) - np.trace(R_01.T) ) )
+        print(' skitlearn norms:', np.mean(result_skitlearn['norms']), 'std:', np.std(result_skitlearn['norms']))
+
 
 
     
@@ -137,10 +145,13 @@ if __name__ == "__main__":
     #test_miscalss()
     #alpha = 3.0
     #d = 250
-    run_and_log_fp_tests(k_0=k_0, k=k, non_symmetric=False, two_classes_close=False)
+    #run_and_log_fp_tests(k_0=k_0, k=k, non_symmetric=True, two_classes_close=False)
+    #plot_errors_vs_alpha(k, k_0, alpha_min_fp=1, alpha_max = 14.11,
+    #             alpha_min_emp=2.7, empirical_mean_std=True, 
+   #              empirical_mean_only=False, empirical_window=0.4)
 
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=True, two_classes_close=False)
+    run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+                    max_iter=400, non_symmetric=True, two_classes_close=False)
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
     #                max_iter=400, non_symmetric=False, two_classes_close=False)
 
@@ -148,10 +159,10 @@ if __name__ == "__main__":
     #plot_final_results('density3')
 
     #run_and_log_fp_classification_test_error(k_0=k_0, k=k, non_symmetric=False)
-    #run_and_log_mle(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=150, non_symmetric=False, two_classes_close=False)
-    #R_00 = np.array([[1,1/2], [1/2,1]])
+    #run_and_log_mle(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=150, 
+    #                non_symmetric=False, two_classes_close=True)
+    R_00 = np.array([[1,1/2], [1/2,1]])
     #plot_regularized_error(k, k_0, R_00, emp_window=0, lambda_reg_max=0.7, lambda_reg_min=0)
-    #plot_errors(k_0=k_0, k=k, empirical_window=0.001, alpha_min_emp=3.1, alpha_max=12)
 
     #run_and_log_fp_tests_regularized(k_0=k_0, k=k,R_00=R_00)
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-2, non_symmetric=False)

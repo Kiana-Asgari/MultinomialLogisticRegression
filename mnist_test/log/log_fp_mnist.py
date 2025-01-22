@@ -12,9 +12,171 @@ from multinomial_logistic.evaluation.log_loss_test_error import test_error
 from multinomial_logistic.evaluation.log_loss_train_eror import train_error
 
 
-def run_state_evolution_and_save(R_00, Theta_0, k, k_0, n_hidden,
+
+def edit_theoretical_errors(R_00, k, k_0, n_hidden,
+                                     feature_name='ReLU', name_data="fashion_mnist",
+                                     classes_to_keep=[2,4,6], tol=1e-5, max_iter=200):
+    # Define the directory and filename for saving results
+    print('  editing results for n_hidden = ', n_hidden, 'R_00 = ', R_00)
+    full_dir = os.path.join("mnist_test", "log", "fp+errors")
+    os.makedirs(full_dir, exist_ok=True)  # Create all necessary subdirectories
+    results_file = os.path.join(full_dir, f"fp_n_hidden_{n_hidden}_data_{name_data}_feature_{feature_name}.json")
+
+    # Load existing results if the file exists
+    if os.path.exists(results_file):
+        with open(results_file, 'r') as f:
+            results = json.load(f)
+    else:
+        results = {}
+
+
+    schur_0 = R_00
+    R_01_0 = np.zeros((k, k_0))
+    S_0 = np.eye(k)
+    alpha_list = np.concatenate((np.linspace(12, 5, num=40), np.linspace(5, 3.5, num=5)))
+    alphas_available = list(results.keys())
+    print('alphas_available: ', alphas_available)
+
+    # Iterate over alpha values
+    for alpha_str in alphas_available:  # Adjust num for more granularity if needed
+        print('alpha_str: ', alpha_str)
+        alpha = float(alpha_str)
+        if alpha>12:
+            continue
+
+        # Check if this alpha and n_hidden combination is already logged
+        print(f" alpha={alpha} exists. editing the theoretical errors")
+        schur_0 = np.array(results[alpha_str]["schur_t"])
+        R_01_0 = np.array(results[alpha_str]["R_01_t"])
+        S_0 = np.array(results[alpha_str]["S_t"])
+
+        #mle_test_errors = np.array(results[alpha_str]["mle_test_errors"])
+        #mle_train_errors = np.array(results[alpha_str]["mle_train_errors"])
+        #mle_misclass_test_errors = np.array(results[alpha_str]["mle_misclass_test_errors"])
+        #mle_f_norms = np.array(results[alpha_str]["mle_f_norms"])
+
+            
+        if alpha < 5:
+            tol = 1e-2
+        else:
+            tol = 1e-4
+
+        # Run the state evolution recursion
+        print(' continuing the state evolution with the logged data')
+        schur_0, R_01_0, S_0, divergence = state_evolution_full_recursion(
+                        R_00=R_00, schur_0=schur_0, R_01_0=R_01_0,
+                        alpha=alpha, k=k, k_0=k_0, lambda_reg=0, S_0=S_0,
+                        tol=tol, max_iter=max_iter
+        )
+        A = R_01_0 @ np.linalg.inv(sqrtm(R_00))
+        test_error_theoretical = test_error(R_00=R_00, schur=schur_0, R_01=R_01_0, k=k, k_0=k_0, alpha=alpha)
+        misclass_test_error_theoretical = misclassification_test_error(S=None, R_00=R_00, schur_t=schur_0, A_t=A, alpha=alpha, k=k, k_0=k_0)
+        train_error_theoretical = train_error(R_00=R_00, schur=schur_0, R_01=R_01_0, S=S_0, alpha=alpha, k=k, k_0=k_0)
+
+      
+        # Save the results
+
+
+
+
+        results[alpha] = {
+            "schur_t": schur_0.tolist(),
+            "R_01_t": R_01_0.tolist(),
+            "S_t": S_0.tolist(),
+            "divergence": divergence,
+            "R_00": R_00.tolist(),
+            "n_hidden": n_hidden,
+            "name_data": name_data,
+            "classes_to_keep": classes_to_keep,
+            "missclass_test_error": misclass_test_error_theoretical.tolist(),
+            "train_error": train_error_theoretical.tolist(),
+            "test_error": test_error_theoretical.tolist(),
+            "new_computation": True
+           # "mle_test_errors": mle_test_errors.tolist(),
+           # "mle_train_errors": mle_train_errors.tolist(),
+           # "mle_misclass_test_errors": mle_misclass_test_errors.tolist(),
+           # "mle_f_norms": mle_f_norms.tolist()
+        }
+
+        # Write results to file
+        with open(results_file, 'w') as f:
+            json.dump(results, f, indent=4)
+        print( 'theoretical misclass: ', misclass_test_error_theoretical)
+        print(   'theoretical train: ', train_error_theoretical)
+        print( 'theoretical test: ', test_error_theoretical)
+        print(f"Results for alpha={alpha_str} saved.")
+
+
+
+
+
+
+
+def run_mle_and_save(R_00, Theta_0, k, k_0, n_hidden,
                                      X_train, y_train, X_test, y_test,
                                      n_iter=10, y_train_full=None, y_test_full=None,
+                                     feature_name='ReLU', name_data="fashion_mnist",
+                                     classes_to_keep=[2,4,6], tol=1e-5, max_iter=200):
+    # Define the directory and filename for saving results
+    print('  logging the fp solution for n_hidden = ', n_hidden, 'R_00 = ', R_00)
+    full_dir = os.path.join("mnist_test", "log", "fp+errors")
+    os.makedirs(full_dir, exist_ok=True)  # Create all necessary subdirectories
+    results_file = os.path.join(full_dir, f"mle_n_hidden_{n_hidden}_data_{name_data}_feature_{feature_name}.json")
+
+    # Load existing results if the file exists
+    if os.path.exists(results_file):
+        with open(results_file, 'r') as f:
+            results = json.load(f)
+    else:
+        results = {}
+
+
+    alpha_list = (np.linspace(20, 5, num=40)).flatten()[::-1]
+
+    # Iterate over alpha values
+    for alpha in alpha_list:  # Adjust num for more granularity if needed
+        alpha_str = f"{alpha}"
+        
+        # Check if this alpha and n_hidden combination is already logged
+        if alpha_str in results and results[alpha_str].get("n_hidden") == n_hidden and results[alpha_str].get("classes_to_keep") == classes_to_keep:
+            print(f"Skipping alpha={alpha_str}, n_hidden={n_hidden}, classes_to_keep={classes_to_keep} as this combination is already logged.")
+            continue
+        if alpha < 5:
+            tol = 1
+        else:
+            tol = 1e-4
+        mle_test_errors, mle_train_errors, mle_misclass_test_errors, mle_f_norms = evaluate_mle(alpha=alpha, n_hidden=n_hidden,\
+                                                R_00=R_00, Theta_0=Theta_0, k=k, k_0=k_0, \
+                                                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, \
+                                                n_iter=n_iter, tol=tol, y_train_full=y_train_full, y_test_full=y_test_full, plot_esd=False)
+
+
+      
+        # Save the results
+
+
+        results[alpha_str] = {
+            "R_00": R_00.tolist(),
+            "n_hidden": n_hidden,
+            "name_data": name_data,
+            "classes_to_keep": classes_to_keep,
+            "mle_test_errors": mle_test_errors.tolist(),
+            "mle_train_errors": mle_train_errors.tolist(),
+            "mle_misclass_test_errors": mle_misclass_test_errors.tolist(),
+            "mle_f_norms": mle_f_norms.tolist()
+        }
+
+        # Write results to file
+        with open(results_file, 'w') as f:
+            json.dump(results, f, indent=4)
+        print('**the mle mean misclass: ', np.mean(mle_misclass_test_errors))
+        print('**the mle mean train: ', np.mean(mle_train_errors))
+        print('**the mle mean test: ', np.mean(mle_test_errors))
+        print(f"Results for alpha={alpha_str} saved.")
+
+
+
+def run_state_evolution_and_save(R_00, k, k_0, n_hidden,
                                      feature_name='ReLU', name_data="fashion_mnist",
                                      classes_to_keep=[2,4,6], tol=1e-5, max_iter=200):
     # Define the directory and filename for saving results
@@ -34,26 +196,22 @@ def run_state_evolution_and_save(R_00, Theta_0, k, k_0, n_hidden,
     schur_0 = R_00
     R_01_0 = np.zeros((k, k_0))
     S_0 = np.eye(k)
-    alpha_list = np.linspace(12, 5, num=20)
+    alpha_list = np.concatenate((np.linspace(20, 9, num=20), np.linspace(9, 4.5, num=30)))
+    alpha_list = np.sort(alpha_list)[::-1]
 
 
     # Iterate over alpha values
     for alpha in alpha_list:  # Adjust num for more granularity if needed
-        alpha_str = f"{alpha:.2f}"
+        alpha_str = f"{alpha}"
         
         # Check if this alpha and n_hidden combination is already logged
         if alpha_str in results and results[alpha_str].get("n_hidden") == n_hidden and results[alpha_str].get("classes_to_keep") == classes_to_keep:
             print(f"Skipping alpha={alpha_str}, n_hidden={n_hidden}, classes_to_keep={classes_to_keep} as this combination is already logged.")
             continue
         if alpha < 5:
-            tol = 1e-2
+            tol = 1e-4
         else:
             tol = 1e-4
-        mle_test_errors, mle_train_errors, mle_misclass_test_errors, mle_f_norms = evaluate_mle(alpha=alpha, n_hidden=n_hidden,\
-                                                R_00=R_00, Theta_0=Theta_0, k=k, k_0=k_0, \
-                                                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, \
-                                                n_iter=n_iter, tol=tol, y_train_full=y_train_full, y_test_full=y_test_full, plot_esd=False)
-
         # Run the state evolution recursion
         schur_0, R_01_0, S_0, divergence = state_evolution_full_recursion(
                         R_00=R_00, schur_0=schur_0, R_01_0=R_01_0,
@@ -83,18 +241,14 @@ def run_state_evolution_and_save(R_00, Theta_0, k, k_0, n_hidden,
             "missclass_test_error": misclass_test_error_theoretical.tolist(),
             "train_error": train_error_theoretical.tolist(),
             "test_error": test_error_theoretical.tolist(),
-            "mle_test_errors": mle_test_errors.tolist(),
-            "mle_train_errors": mle_train_errors.tolist(),
-            "mle_misclass_test_errors": mle_misclass_test_errors.tolist(),
-            "mle_f_norms": mle_f_norms.tolist()
         }
 
         # Write results to file
         with open(results_file, 'w') as f:
             json.dump(results, f, indent=4)
-        print('**the mle mean misclass: ', np.mean(mle_misclass_test_errors), 'theoretical misclass: ', misclass_test_error_theoretical)
-        print(  '**the mle mean train: ', np.mean(mle_train_errors), 'theoretical train: ', train_error)
-        print('**the mle mean test: ', np.mean(mle_test_errors), 'theoretical test: ', test_error_theoretical)
+        print('theoretical misclass: ', misclass_test_error_theoretical)
+        print( 'theoretical train: ', train_error)
+        print('theoretical test: ', test_error_theoretical)
         print(f"Results for alpha={alpha_str} saved.")
 
 def evaluate_mle(alpha, n_hidden, Theta_0, R_00, k, k_0, X_train,
@@ -130,7 +284,7 @@ def evaluate_mle(alpha, n_hidden, Theta_0, R_00, k, k_0, X_train,
                 fit_intercept=False,
                 penalty=None,
                 solver='lbfgs',       # can also use 'sag' or 'saga' if data is large
-                max_iter=2000,
+                max_iter=10000,
         )   
 
         logreg.fit(X_train_subset, y_train_full_subset)
@@ -229,14 +383,14 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
         'mathtext.fontset': 'cm',       # Use Computer Modern math font
         'figure.dpi': 120,              
         'figure.figsize': (7, 5),       
-        'axes.labelsize': 16,           
-        'axes.titlesize': 16,           
-        'xtick.labelsize': 14,          
-        'ytick.labelsize': 14,          
-        'legend.fontsize': 14,          
+        'axes.labelsize': 17,           
+        'axes.titlesize': 17,           
+        'xtick.labelsize': 15,          
+        'ytick.labelsize': 15,          
+        'legend.fontsize': 15,          
         'lines.linewidth': 2,
         'axes.linewidth': 1.2,
-        'font.size': 14,                
+        'font.size': 16,                
         'text.latex.preamble': r'\usepackage{amsmath} \usepackage{amssymb} \usepackage{bm}', # Added bm package
         'mathtext.default': 'regular',   # Use regular (serif) font for math
         'axes.formatter.use_mathtext': True,  # Use mathtext for axis formatting
@@ -244,8 +398,18 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
     # Read the data
     with open(results_file, 'r') as f:
         results = json.load(f)
-    
+
+    # getting mle
+    full_dir = os.path.join("mnist_test", "log", "fp+errors")
+    results_file = os.path.join(full_dir, f"mle_n_hidden_{n_hidden}_data_{name_data}_feature_{feature_name}.json")
+    print('plotting test errors vs alpha for ', results_file)
+    if not os.path.exists(results_file):
+        print(f"No mle results file found at {results_file}")
+        return
+    with open(results_file, 'r') as f:
+        mle_results = json.load(f)
     # Extract alphas and errors
+
 
 
     for error_type in ["test_error", "train_error", "missclass_test_error"]:
@@ -256,30 +420,46 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
             mle_errors_type = "mle_"+error_type+"s"
 
         alphas = []
+        mle_alphas = []
         mle_errors = []
         mle_stds = []
         theoretical_errors = []
         for alpha_str, data in results.items():
             # Skip if this data point doesn't match our parameters
+            alpha = float(alpha_str)
             if data.get("n_hidden") != n_hidden or data.get("classes_to_keep") != classes_to_keep:
                 continue
+            if error_type == "test_error" and alpha<4.5:
+                continue
                 
-            alpha = float(alpha_str)
             alphas.append(alpha)
+            theoretical_errors.append(data[error_type])
+
+        for alpha_str, data in mle_results.items():
+            alpha = float(alpha_str)
+            if data.get("n_hidden") != n_hidden or data.get("classes_to_keep") != classes_to_keep:
+                continue
+            if error_type == "test_error" and alpha<5:
+                continue
+
+            mle_alphas.append(alpha)
             mle_errors.append(np.mean(data[mle_errors_type]))
             mle_stds.append(np.std(data[mle_errors_type]))
-            theoretical_errors.append(data[error_type])
         
         # Sort by alpha
         sorted_indices = np.argsort(alphas)
         alphas = np.array(alphas)[sorted_indices]
-        mle_errors = np.array(mle_errors)[sorted_indices]
-        mle_stds = np.array(mle_stds)[sorted_indices]
         theoretical_errors = np.array(theoretical_errors)[sorted_indices]
+
+        sorted_indices_mle = np.argsort(mle_alphas)
+        mle_alphas = np.array(mle_alphas)[sorted_indices_mle]
+        mle_errors = np.array(mle_errors)[sorted_indices_mle]
+        mle_stds = np.array(mle_stds)[sorted_indices_mle]
         
         # Create the plot
         
         # Plot both curves
+        print('theoretical alphas: ', alphas)
         ax.plot(alphas,
                  theoretical_errors, 
                  '-', 
@@ -287,23 +467,30 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
                  label='Theoretical test error', 
                  linewidth=2)
         ax.errorbar(
-            x=alphas,
+            x=mle_alphas,
             y=mle_errors,
-            yerr=mle_stds,
+            yerr=mle_stds/np.sqrt(len(mle_stds)),  # Standard error instead of standard deviation
             color='blue',
             fmt='o',  # square markers
             markersize=3,
             capsize=2.5,
             capthick=1,
             elinewidth=1.5,
-            alpha=0.7
+            alpha=0.5
         )
         # Axis labels, title, legend
+        if error_type == "missclass_test_error":
+            y_label = "Classification error"
+        elif error_type == "train_error":
+            y_label = "Train error"
+        else:
+            y_label = "Test error"
         ax.set_xlabel(r'$\alpha$')
-        ax.set_ylabel(error_type)
+        ax.set_ylabel(y_label)
+        ax.set_title(f"Tangent hyperbolic with, {n_hidden} hidden units")
 
 
-        ax.legend()
+        #ax.legend()
         ax.grid(True)
         plt.tight_layout()
 
