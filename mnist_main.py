@@ -42,12 +42,12 @@ if __name__ == "__main__":
     run_state_evolution_and_save(n_hidden=n_hidden, R_00=R_tan_500, k=2, k_0=2,
                                 feature_name='tanh', name_data="fashion_mnist", max_iter=100,
                                 classes_to_keep=[2,4,6])
-    sys.exit()
+   # sys.exit()
     #plot_errors_vs_alpha(n_hidden=n_hidden, name_data="fashion_mnist", 
-    #                          feature_name="ReLU", classes_to_keep=[2,4,6])
+    #                          feature_name="tanh", classes_to_keep=[2,4,6])
     #sys.exit()
     #edit_theoretical_errors(R_00=R_relu_250, k=2, k_0=2, n_hidden=n_hidden, feature_name='ReLU',
-    #                         name_data='fashion_mnist', max_iter=50)
+     #                        name_data='fashion_mnist', max_iter=50)
 
 
     #sys.exit()
