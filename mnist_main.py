@@ -35,6 +35,8 @@ if __name__ == "__main__":
 
     R_tan_250 = np.array([[6.71719346, 3.59088112],
                           [3.59088112, 8.03657686]])
+    R_tan_500 = np.array([[14.22400185, 6.83863084],
+                          [6.83863084, 16.28519788]])
 
 
     #run_state_evolution_and_save(n_hidden=n_hidden, R_00=R_relu_500, k=2, k_0=2,
@@ -59,16 +61,16 @@ if __name__ == "__main__":
     
     R_00_rf, Theta_0, H_train, H_test = learn_mle_on_data(x_train, x_test, y_train, y_test,\
                                                   y_train_one_hot, y_test_one_hot,\
-                                                  n_hidden, feature_name='ReLU', data_name='fashion_mnist')
+                                                  n_hidden, feature_name='tanh', data_name='fashion_mnist')
     R_00_rf = R_00_rf[1:, 1:]
     Theta_0 = Theta_0[1:, :]
 
 
 
-    run_mle_and_save(n_hidden=n_hidden, R_00=R_relu_500, Theta_0=Theta_0, k=2, k_0=2,
+    run_mle_and_save(n_hidden=n_hidden, R_00=R_tan_500, Theta_0=Theta_0, k=2, k_0=2,
                                 X_train=H_train, y_train=y_train_one_hot, X_test=H_test, y_test=y_test_one_hot,
                                 n_iter=100,  max_iter=100, y_train_full=y_train, y_test_full=y_test,
-                                feature_name='ReLU', name_data="fashion_mnist",
+                                feature_name='tanh', name_data="fashion_mnist",
                                 classes_to_keep=[2,4,6])
 
     

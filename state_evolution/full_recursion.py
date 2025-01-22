@@ -226,10 +226,10 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
                                    ndim=ndim,
                                    vectorized=True,
                                    fdim=fdim,
-                                   xmin=[-3.4]*ndim, 
-                                   xmax=[3.4]*ndim, 
+                                   xmin=[-3.6]*ndim, 
+                                   xmax=[3.6]*ndim, 
                                    abserr=1e-4,
-                                   maxEval=800_000, 
+                                   maxEval=1_500_000, 
                                    norm=2)
     if np.max(err) > 1e-4:
         print('     **Error in integration is too large**', np.max(err))

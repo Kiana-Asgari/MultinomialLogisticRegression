@@ -63,7 +63,8 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
         print(f"Creating new file: {os.path.basename(filepath)}")
 
 
-    alphas = np.sort(np.append(alphas_existing, [3.0,3.2,3.3,3.6,4.3,4.85]))
+    #alphas = np.sort(np.append(alphas_existing, [3.0,3.2,3.3,3.6,4.3,4.85]))
+    alphas = alphas_existing
     alphas = np.unique(alphas)[::-1]
     print('running alphas', alphas)
     #alphas = [2.7]
@@ -78,8 +79,8 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
         diverged_flag = False  # Track divergence for this R_00
     
         for alpha in alphas:  # Note: alphas are already sorted in decreasing order
-            if alpha<3:
-                continue
+            #if alpha<3:
+            #    continue
             alpha_str = str(alpha)
             R_00_str = str(R_00.tolist())
             

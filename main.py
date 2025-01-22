@@ -150,8 +150,8 @@ if __name__ == "__main__":
     #             alpha_min_emp=2.7, empirical_mean_std=True, 
    #              empirical_mean_only=False, empirical_window=0.4)
 
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=True, two_classes_close=False)
+    run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+                    max_iter=400, non_symmetric=False, two_classes_close=False)
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
     #                max_iter=400, non_symmetric=False, two_classes_close=False)
 
