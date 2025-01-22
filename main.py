@@ -150,8 +150,8 @@ if __name__ == "__main__":
     #             alpha_min_emp=2.7, empirical_mean_std=True, 
    #              empirical_mean_only=False, empirical_window=0.4)
 
-    run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-                    max_iter=400, non_symmetric=True, two_classes_close=False)
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #                max_iter=400, non_symmetric=True, two_classes_close=False)
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
     #                max_iter=400, non_symmetric=False, two_classes_close=False)
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     #run_and_log_fp_classification_test_error(k_0=k_0, k=k, non_symmetric=False)
     #run_and_log_mle(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=150, 
     #                non_symmetric=False, two_classes_close=True)
-    R_00 = np.array([[1,1/2], [1/2,1]])
+    #R_00 = np.array([[1,1/2], [1/2,1]])
     #plot_regularized_error(k, k_0, R_00, emp_window=0, lambda_reg_max=0.7, lambda_reg_min=0)
 
     #run_and_log_fp_tests_regularized(k_0=k_0, k=k,R_00=R_00)
