@@ -125,7 +125,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
                 k=k,
                 k_0=k_0,
                 tol=tol,
-                max_iter=50
+                max_iter=20
             )
             
             # Initialize R_00 dict if it doesn't exist
