@@ -27,7 +27,7 @@ R_00 for tanh 250 = [[6.71719346 3.59088112]
 
 
 if __name__ == "__main__":
-    n_hidden = 250
+    n_hidden = 500
     R_relu_250 = np.array([[7.50788306, 4.3675718 ],
                           [4.3675718, 9.05999091]])
     R_relu_350 = np.array([[ 8.1515383,   4.74415228],
@@ -52,11 +52,11 @@ if __name__ == "__main__":
     #plot_errors_vs_alpha(n_hidden=n_hidden, name_data="fashion_mnist", 
     #                          feature_name="tanh", classes_to_keep=[2,4,6])
     #sys.exit()
-    #edit_theoretical_errors(R_00=R_relu_250, k=2, k_0=2, n_hidden=n_hidden, feature_name='ReLU',
-    #                         name_data='fashion_mnist', max_iter=50)
+    edit_theoretical_errors(R_00=R_relu_500, k=2, k_0=2, n_hidden=n_hidden, feature_name='ReLU',
+                             name_data='fashion_mnist', max_iter=50)
 
 
-    #sys.exit()
+    sys.exit()
     #now doing relu
 
     (x_train, y_train, y_train_one_hot),\

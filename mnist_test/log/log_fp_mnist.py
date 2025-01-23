@@ -41,8 +41,8 @@ def edit_theoretical_errors(R_00, k, k_0, n_hidden,
     for alpha_str in alphas_available:  # Adjust num for more granularity if needed
         print('alpha_str: ', alpha_str)
         alpha = float(alpha_str)
-        if alpha>12:
-            continue
+        #if alpha>12:
+        #    continue
 
         # Check if this alpha and n_hidden combination is already logged
         print(f" alpha={alpha} exists. editing the theoretical errors")
