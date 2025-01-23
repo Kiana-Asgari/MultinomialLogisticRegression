@@ -108,6 +108,8 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
             else:
                 tol = 1e-4
                 max_iter = 100
+            if alpha > 15 or alpha < 3:
+                continue
 
 
             if R_00_str in results and alpha_str in results[R_00_str]: #and results[R_00_str][alpha_str]["diverged"] == True:
