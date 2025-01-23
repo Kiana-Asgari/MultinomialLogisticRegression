@@ -104,8 +104,10 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
             """
             if alpha < 3:
                 tol = 1e-4
+                max_iter = 15
             else:
                 tol = 1e-4
+                max_iter = 100
 
 
             if R_00_str in results and alpha_str in results[R_00_str]: #and results[R_00_str][alpha_str]["diverged"] == True:
@@ -125,7 +127,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
                 k=k,
                 k_0=k_0,
                 tol=tol,
-                max_iter=20
+                max_iter=max_iter
             )
             
             # Initialize R_00 dict if it doesn't exist

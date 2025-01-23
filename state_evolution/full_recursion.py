@@ -226,8 +226,8 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
                                    ndim=ndim,
                                    vectorized=True,
                                    fdim=fdim,
-                                   xmin=[-3.6]*ndim, 
-                                   xmax=[3.6]*ndim, 
+                                   xmin=[-3.5]*ndim, 
+                                   xmax=[3.5]*ndim, 
                                    abserr=1e-4,
                                    maxEval=1_500_000, 
                                    norm=2)
