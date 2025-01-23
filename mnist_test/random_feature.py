@@ -100,7 +100,7 @@ def random_fourier_features(X_train, X_test, n_features, gamma=0.1):
 
 
 
-def random_relu_features(X_train, X_test, n_features, scale=.1):
+def random_relu_features(X_train, X_test, n_features):
     """
     Apply Random ReLU Features transformation to data.
     Parameters:
@@ -114,13 +114,11 @@ def random_relu_features(X_train, X_test, n_features, scale=.1):
     """
     np.random.seed(42)
     # Random projection matrix W
-    W = np.random.normal(0, scale/np.sqrt(n_features), size=(X_train.shape[1], n_features))
-    # Random bias term b
-    #b = np.random.normal(0, scale/np.sqrt(n_features), size=n_features)
-    b = np.zeros(n_features)
+    W = np.random.normal(0, 1/np.sqrt(n_features), size=(X_train.shape[1], n_features))
+
     # Apply ReLU transformation
-    Z_train = np.maximum(0, X_train @ W + b)
-    Z_test = np.maximum(0, X_test @ W + b)
+    Z_train = np.maximum(0, X_train @ W)
+    Z_test = np.maximum(0, X_test @ W)
     
     # Normalize by sqrt(n_features) to maintain variance
     # Standardize features

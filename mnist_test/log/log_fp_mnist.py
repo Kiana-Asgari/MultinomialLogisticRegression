@@ -18,7 +18,7 @@ def edit_theoretical_errors(R_00, k, k_0, n_hidden,
                                      classes_to_keep=[2,4,6], tol=1e-5, max_iter=200):
     # Define the directory and filename for saving results
     print('  editing results for n_hidden = ', n_hidden, 'R_00 = ', R_00)
-    full_dir = os.path.join("mnist_test", "log", "fp+errors")
+    full_dir = os.path.join("mnist_test", "log", "new_fp+errors")
     os.makedirs(full_dir, exist_ok=True)  # Create all necessary subdirectories
     results_file = os.path.join(full_dir, f"fp_n_hidden_{n_hidden}_data_{name_data}_feature_{feature_name}.json")
 
@@ -181,7 +181,7 @@ def run_state_evolution_and_save(R_00, k, k_0, n_hidden,
                                      classes_to_keep=[2,4,6], tol=1e-5, max_iter=200):
     # Define the directory and filename for saving results
     print('  logging the fp solution for n_hidden = ', n_hidden, 'R_00 = ', R_00)
-    full_dir = os.path.join("mnist_test", "log", "fp+errors")
+    full_dir = os.path.join("mnist_test", "log", "new_fp+errors")
     os.makedirs(full_dir, exist_ok=True)  # Create all necessary subdirectories
     results_file = os.path.join(full_dir, f"fp_n_hidden_{n_hidden}_data_{name_data}_feature_{feature_name}.json")
 
@@ -361,7 +361,8 @@ def read_state_evolution_results(n_hidden, R_00, alpha, k=2, k_0=2, results_dir=
 import seaborn as sns
 import matplotlib as mpl
 
-def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU", classes_to_keep=[2,4,6]):
+def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", 
+                         feature_name="ReLU", classes_to_keep=[2,4,6], alpha_min=4.5):
     """
     Reads the fixed point solution data and plots test errors vs alpha.
     """
@@ -424,12 +425,15 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
         mle_errors = []
         mle_stds = []
         theoretical_errors = []
+        color = 'darkblue' if feature_name == "tanh" else 'darkgreen'
         for alpha_str, data in results.items():
             # Skip if this data point doesn't match our parameters
             alpha = float(alpha_str)
             if data.get("n_hidden") != n_hidden or data.get("classes_to_keep") != classes_to_keep:
                 continue
-            if error_type == "test_error" and alpha<4.5:
+            if alpha < alpha_min:
+                continue
+            if error_type == "test_error" and alpha < 4.9:
                 continue
                 
             alphas.append(alpha)
@@ -439,7 +443,9 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
             alpha = float(alpha_str)
             if data.get("n_hidden") != n_hidden or data.get("classes_to_keep") != classes_to_keep:
                 continue
-            if error_type == "test_error" and alpha<5:
+            if alpha < alpha_min:
+                continue
+            if error_type == "test_error" and alpha < 5.4:
                 continue
 
             mle_alphas.append(alpha)
@@ -458,26 +464,32 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
         
         # Create the plot
         
-        # Plot both curves
-        print('theoretical alphas: ', alphas)
+        # Plot theoretical curve
         ax.plot(alphas,
-                 theoretical_errors, 
-                 '-', 
-                 color='blue',
-                 label='Theoretical test error', 
-                 linewidth=2)
+                theoretical_errors, 
+                '-', 
+                color=color,
+                label='Theoretical prediction', 
+                linewidth=2)
+        
+        # Plot empirical results with error bars
         ax.errorbar(
             x=mle_alphas,
             y=mle_errors,
-            yerr=mle_stds/np.sqrt(len(mle_stds)),  # Standard error instead of standard deviation
+            yerr=mle_stds/10,  # Standard error
             color='blue',
-            fmt='o',  # square markers
+            fmt='o',  # markers
             markersize=3,
-            capsize=2.5,
+            capsize=2,
             capthick=1,
             elinewidth=1.5,
-            alpha=0.5
+            alpha=0.5,
+            label=r'Empirical (mean $\pm$ s.e.)'  # Added legend
         )
+        
+        # Add legend
+        ax.legend()
+        
         # Axis labels, title, legend
         if error_type == "missclass_test_error":
             y_label = "Classification error"
@@ -486,11 +498,13 @@ def plot_errors_vs_alpha(n_hidden, name_data="fashion_mnist", feature_name="ReLU
         else:
             y_label = "Test error"
         ax.set_xlabel(r'$\alpha$')
-        ax.set_ylabel(y_label)
-        ax.set_title(f"Tangent hyperbolic with, {n_hidden} hidden units")
+       # ax.set_ylabel(y_label)
+        if feature_name == "tanh":
+            ax.set_title(f"Random Tanh Features ({n_hidden} units)")
+        else:
+            ax.set_title(f"Random ReLU Features ({n_hidden} units)")
+        ax.legend()
 
-
-        #ax.legend()
         ax.grid(True)
         plt.tight_layout()
 
