@@ -27,7 +27,7 @@ R_00 for tanh 250 = [[6.71719346 3.59088112]
 
 
 if __name__ == "__main__":
-    n_hidden = 250
+    n_hidden = 350
     R_relu_250 = np.array([[7.50788306, 4.3675718 ],
                           [4.3675718, 9.05999091]])
     R_relu_500 = np.array([[14.293405, 8.92488684],
@@ -38,19 +38,22 @@ if __name__ == "__main__":
     R_tan_500 = np.array([[14.22400185, 6.83863084],
                           [6.83863084, 16.28519788]])
 
+    R_tan_350 = np.array([[10.4325381, 5.95547334],
+                          [5.95547334, 12.61983397]])
 
-    #run_state_evolution_and_save(n_hidden=n_hidden, R_00=R_relu_500, k=2, k_0=2,
-    #                            feature_name='ReLU', name_data="fashion_mnist", max_iter=100,
+
+    #run_state_evolution_and_save(n_hidden=n_hidden, R_00=R_tan_350, k=2, k_0=2,
+    #                            feature_name='tanh', name_data="fashion_mnist", max_iter=100,
     #                            classes_to_keep=[2,4,6])
-   # sys.exit()
+    #sys.exit()
     #plot_errors_vs_alpha(n_hidden=n_hidden, name_data="fashion_mnist", 
     #                          feature_name="tanh", classes_to_keep=[2,4,6])
     #sys.exit()
-    edit_theoretical_errors(R_00=R_relu_250, k=2, k_0=2, n_hidden=n_hidden, feature_name='ReLU',
-                             name_data='fashion_mnist', max_iter=50)
+    #edit_theoretical_errors(R_00=R_relu_250, k=2, k_0=2, n_hidden=n_hidden, feature_name='ReLU',
+    #                         name_data='fashion_mnist', max_iter=50)
 
 
-    sys.exit()
+    #sys.exit()
     #now doing relu
 
     (x_train, y_train, y_train_one_hot),\
@@ -67,7 +70,7 @@ if __name__ == "__main__":
 
 
 
-    run_mle_and_save(n_hidden=n_hidden, R_00=R_tan_500, Theta_0=Theta_0, k=2, k_0=2,
+    run_mle_and_save(n_hidden=n_hidden, R_00=R_tan_350, Theta_0=Theta_0, k=2, k_0=2,
                                 X_train=H_train, y_train=y_train_one_hot, X_test=H_test, y_test=y_test_one_hot,
                                 n_iter=100,  max_iter=100, y_train_full=y_train, y_test_full=y_test,
                                 feature_name='tanh', name_data="fashion_mnist",
