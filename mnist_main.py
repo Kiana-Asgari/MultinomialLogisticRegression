@@ -27,7 +27,7 @@ R_00 for tanh 250 = [[6.71719346 3.59088112]
 
 
 if __name__ == "__main__":
-    n_hidden = 350
+    n_hidden = 250
     R_relu_250 = np.array([[7.50788306, 4.3675718 ],
                           [4.3675718, 9.05999091]])
     R_relu_350 = np.array([[ 8.1515383,   4.74415228],
@@ -45,10 +45,10 @@ if __name__ == "__main__":
                           [5.95547334, 12.61983397]])
 
 
-   # run_state_evolution_and_save(n_hidden=n_hidden, R_00=R_relu_350, k=2, k_0=2,
-   #                             feature_name='ReLU', name_data="fashion_mnist", max_iter=100,
-   #                             classes_to_keep=[2,4,6])
-   # sys.exit()
+    #run_state_evolution_and_save(n_hidden=n_hidden, R_00=R_relu_250, k=2, k_0=2,
+    #                            feature_name='ReLU', name_data="fashion_mnist", max_iter=100,
+    #                            classes_to_keep=[2,4,6])
+    #sys.exit()
     #plot_errors_vs_alpha(n_hidden=n_hidden, name_data="fashion_mnist", 
     #                          feature_name="tanh", classes_to_keep=[2,4,6])
     #sys.exit()
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
 
 
-    run_mle_and_save(n_hidden=n_hidden, R_00=R_relu_350, Theta_0=Theta_0, k=2, k_0=2,
+    run_mle_and_save(n_hidden=n_hidden, R_00=R_relu_250, Theta_0=Theta_0, k=2, k_0=2,
                                 X_train=H_train, y_train=y_train_one_hot, X_test=H_test, y_test=y_test_one_hot,
                                 n_iter=100,  max_iter=100, y_train_full=y_train, y_test_full=y_test,
                                 feature_name='ReLU', name_data="fashion_mnist",
