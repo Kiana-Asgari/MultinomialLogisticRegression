@@ -51,7 +51,7 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
     errors = np.zeros((max_iter, 3))
     
     for t in range(max_iter):
-        print(f'     state evolution iteration {t+1} started... ')
+        print(f'     state evolution iteration {t+1} started for alpha: {alpha}... ')
         S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
                              lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, R_00_sqrtm_inv=R_00_sqrtm_inv)
         schur_next = schur_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
@@ -229,9 +229,9 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
                                    xmin=[-3.5]*ndim, 
                                    xmax=[3.5]*ndim, 
                                    abserr=1e-6,
-				   relerr=1e-4,
+                                   relerr=1e-4,
                                    maxEval=1_500_000, 
-                                   norm=2)
+                                   norm=1)
     if np.max(err) > 1e-4:
         print('     **Error in integration is too large**', np.max(err))
 

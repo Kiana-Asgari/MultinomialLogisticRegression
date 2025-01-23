@@ -152,6 +152,8 @@ if __name__ == "__main__":
 
     run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
                     max_iter=400, non_symmetric=False, two_classes_close=False)
+    run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+                    max_iter=400, non_symmetric=False, two_classes_close=False)
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
     #                max_iter=400, non_symmetric=False, two_classes_close=False)
 

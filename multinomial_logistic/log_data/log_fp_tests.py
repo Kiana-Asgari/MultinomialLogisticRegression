@@ -447,7 +447,7 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         if R_00.tolist() == [[1,0], [0,1]]:
             continue
         for _alpha in alphas:
-            if _alpha > 15:   #fix this later
+            if _alpha > 15 or _alpha < 3:   #fix this later
                 continue
             alpha_str = str(_alpha)
             R_00_str = str(R_00.tolist())
