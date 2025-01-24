@@ -14,6 +14,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from mnist_test.log.log_fp_mnist import plot_errors_vs_alpha, edit_theoretical_errors, run_mle_and_save
 import sys
+from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
 
 
 """
@@ -47,6 +48,7 @@ if __name__ == "__main__":
     feature_name = 'ReLU'
     R_00 = R_relu_250
 
+    #fit_mle_skitlearn(alpha=10.0, k=2, d=250, n_trials=20, R_00=R_00, verbose=True)
 
 
     

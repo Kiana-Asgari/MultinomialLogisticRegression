@@ -152,32 +152,14 @@ if __name__ == "__main__":
 
     run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
                     max_iter=400, non_symmetric=False, two_classes_close=False)
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #                max_iter=400, non_symmetric=True, two_classes_close=False)
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #                max_iter=400, non_symmetric=False, two_classes_close=True)
     run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
                     max_iter=400, non_symmetric=False, two_classes_close=False)
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=False, two_classes_close=False)
+    #                max_iter=400, non_symmetric=True, two_classes_close=False)
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #                max_iter=400, non_symmetric=False, two_classes_close=True)
 
-    #run_and_log_esd(k_0=k_0, k=k, lambda_reg=0, alpha_input=20.0, R_00_input=np.array([[1,1/2], [1/2,1]]))
-    #plot_final_results('density3')
-
-    #run_and_log_fp_classification_test_error(k_0=k_0, k=k, non_symmetric=False)
-    #run_and_log_mle(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=150, 
-    #                non_symmetric=False, two_classes_close=True)
-    #R_00 = np.array([[1,1/2], [1/2,1]])
-    #plot_regularized_error(k, k_0, R_00, emp_window=0, lambda_reg_max=0.7, lambda_reg_min=0)
-
-    #run_and_log_fp_tests_regularized(k_0=k_0, k=k,R_00=R_00)
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-2, non_symmetric=False)
-    #run_and_log_mle_regularized(k_0=k_0, k=k, lambda_reg=0, d=250, n_trials=100)
-    #plot_regularized_error(k, k_0, R_00, emp_window=0.015, lambda_reg_max=0.55)
-
-
-    #run_and_log_fp_regularized(k=k, k_0=k_0, alpha_values=[10])
-
-
-    #err = []
-    #for alpha in np.linspace(10, 2, 20):
-    #    results = fit_mle_skitlearn(alpha=alpha, k=k, d=d, n_trials=5, R_00=R_00_close, verbose=True)
-    #    err.append(np.mean(results['misclass_test_errors']))
-    #print('err=', err)
-    #print('alpha=', np.linspace(10, 2.6, 20))

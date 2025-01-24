@@ -108,7 +108,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
             else:
                 tol = 1e-4
                 max_iter = 100
-            if alpha > 15 or alpha < 3:
+            if alpha > 15:
                 continue
 
 
