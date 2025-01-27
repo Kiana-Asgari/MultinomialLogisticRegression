@@ -5,12 +5,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, log_loss
 from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
+from mnist_test.testing_features_dimension import _apply_pca
 
 
 
 
-def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot, y_test_one_hot, n_features,\
-                          data_name='fashion_mnist', n_trials=1, alpha=None, feature_name='RFF'):
+def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
+                       y_test_one_hot, n_features, effective_dim=None,\
+                       data_name='fashion_mnist', n_trials=1, alpha=None, feature_name='RFF'):
     
     if feature_name == 'RFF':
         H_train, H_test = random_fourier_features(X_train, X_test, n_features)
@@ -22,6 +24,10 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot, y_test_
         H_train, H_test = random_tanh_features(X_train, X_test, n_features)
     elif feature_name == 'box_cox':
         H_train, H_test = box_cox_features(X_train, X_test)
+    elif feature_name == 'tanh+PCA':
+        H_train, H_test = random_tanh_features_PCA(X_train, X_test, n_features, effective_dim)
+    elif feature_name == 'ReLU+PCA':
+        H_train, H_test = random_relu_features_PCA(X_train, X_test, n_features, effective_dim)
     else:
         H_train, H_test = X_train, X_test
 
@@ -45,6 +51,18 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot, y_test_
     print(f'      for feature {feature_name},test error: {test_error:.4f}\n   with sklearn: R_00: {R_00_skit} ')
     return R_00_skit, np.array(Theta_hat_skit), H_train, H_test
 
+
+
+def random_relu_features_PCA(X_train, X_test, n_features, effective_dim):
+    H_train, H_test = random_relu_features(X_train, X_test, n_features)
+    H_train, H_test = _apply_pca(H_train, H_test, effective_dim)
+    return H_train, H_test
+
+
+def random_tanh_features_PCA(X_train, X_test, n_features, effective_dim):
+    H_train, H_test = random_tanh_features(X_train, X_test, n_features)
+    H_train, H_test = _apply_pca(H_train, H_test, effective_dim)
+    return H_train, H_test
 
 
 
