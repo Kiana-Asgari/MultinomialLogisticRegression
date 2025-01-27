@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, log_loss
 from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
-from mnist_test.testing_features_dimension import _apply_pca
+from mnist_test.testing_features_dimension import _remove_main_component
 
 
 
@@ -55,13 +55,13 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
 
 def random_relu_features_PCA(X_train, X_test, n_features, effective_dim):
     H_train, H_test = random_relu_features(X_train, X_test, n_features)
-    H_train, H_test = _apply_pca(H_train, H_test, effective_dim)
+    H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
     return H_train, H_test
 
 
 def random_tanh_features_PCA(X_train, X_test, n_features, effective_dim):
     H_train, H_test = random_tanh_features(X_train, X_test, n_features)
-    H_train, H_test = _apply_pca(H_train, H_test, effective_dim)
+    H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
     return H_train, H_test
 
 

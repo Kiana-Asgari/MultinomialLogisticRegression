@@ -52,11 +52,11 @@ if __name__ == "__main__":
                           [5.95547334, 12.61983397]])
     
 
-    n_hidden = 500
-    effective_dim = 50
+    n_hidden = 250
 
-    for effective_dim in [400]:
-        alphas = [4,4.5,5,6,7,8,9,10,11,12,13,14]
+
+    for n_lower_components in [200]:
+        alphas = [3.8,4,4.5,5,6,7,8,9,10,11,12,13,14]
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
         theoretical_train_errors = []
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
             R_00, Theta_0, H_train, H_test = learn_mle_on_data(x_train, x_test, y_train, y_test,\
                                                     y_train_one_hot, y_test_one_hot,\
-                                                    n_hidden, feature_name='tanh+PCA',effective_dim=effective_dim,
+                                                    n_hidden, feature_name='ReLU+PCA',effective_dim=n_lower_components,
                                                     data_name='fashion_mnist')
 
             R_00 = R_00[1:,1:]
@@ -98,11 +98,11 @@ if __name__ == "__main__":
             A = R_01_0 @ np.linalg.inv(sqrtm(R_00))
             misclass_test_error_theoretical = misclassification_test_error(S=None, R_00=R_00, schur_t=schur_0, A_t=A, alpha=alph, k=2, k_0=2)
             train_error_theoretical = train_error(R_00=R_00, schur=schur_0, R_01=R_01_0, S=S_0, alpha=alph, k=2, k_0=2)
-            print('for eff dim ', effective_dim, ' theoretical train error', train_error_theoretical)
-            print('for eff dim ', effective_dim, ' theoretical train error', train_error_theoretical)
-            print('for eff dim ', effective_dim, ' mle train error', np.mean(mle_train_errors))
-            print('for eff dim ', effective_dim, ' theoretical misclass error', misclass_test_error_theoretical)
-            print('for eff dim ', effective_dim, ' mle misclass error', np.mean(mle_misclass_test_errors))
+            print('for dim ', n_lower_components, ' theoretical train error', train_error_theoretical)
+            print('for  dim ', n_lower_components, ' theoretical train error', train_error_theoretical)
+            print('for  dim ', n_lower_components, ' mle train error', np.mean(mle_train_errors))
+            print('for  dim ', n_lower_components, ' theoretical misclass error', misclass_test_error_theoretical)
+            print('for  dim ', n_lower_components, ' mle misclass error', np.mean(mle_misclass_test_errors))
             theoretical_train_errors.append(train_error_theoretical)
             theoretical_misclass_test_errors.append(misclass_test_error_theoretical)
         print('all_mle_train_errors', all_mle_train_errors)
@@ -123,9 +123,10 @@ if __name__ == "__main__":
         os.makedirs(save_dir, exist_ok=True)
         
         # Save plot
-        save_path = os.path.join(save_dir, f"tanh500_train_errors_comparison_effdim_{effective_dim}.pdf")
+        save_path = os.path.join(save_dir, f"relu_train_errors_comparison_removing_{n_lower_components}.pdf")
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
+
 
     sys.exit()
     run_mle_and_save(n_hidden=n_hidden, R_00=R_00, Theta_0=Theta_0, k=2, k_0=2,

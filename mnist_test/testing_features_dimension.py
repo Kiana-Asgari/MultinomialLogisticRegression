@@ -14,16 +14,11 @@ from sklearn.preprocessing import StandardScaler
 
 def plot_esd_for_feature(H_train, H_test):
 
-    H_reduced, effective_dim = _apply_pca(H_train, H_test, 50)
-    print('reduced shape', H_reduced.shape)
-    print('effective dim', effective_dim)
-    print('H_train shape', H_train.shape)
-    print('H_test shape', H_test.shape)
-    print('H_train mean', np.mean(H_train, axis=0))
-    print('H_train std', np.std(H_train, axis=0))
-    print('H_test mean', np.mean(H_test, axis=0))
-    print('H_test std', np.std(H_test, axis=0))
-    # Calculate H^T H
+    H_train_reduced, H_test_reduced = _remove_main_component(H_train, H_test, 50)
+    print('reduced shape', H_train_reduced.shape)
+    print('mean each row', np.mean(H_train_reduced, axis=1))
+    print('std each row', np.std(H_train_reduced, axis=1))
+
     d = H_train.shape[1]
     m = H_train.shape[0]
     H = 1/m * H_train.T @ H_train
@@ -46,7 +41,7 @@ def plot_esd_for_feature(H_train, H_test):
     # Add labels and title
     plt.xlabel('Eigenvalue')
     plt.ylabel('Density')
-    plt.title(r'ESD of $\frac{1}{m} \hat{H_{train}}^T \hat{H_{train}}; H_{train} \in \mathbb{R}^{m \times 250} drived from Relu$')
+    plt.title(r'ESD of $\frac{1}{m} \hat{H_{train}}^T \hat{H_{train}}; H_{train} \in \mathbb{R}^{m \times 500} drived from tnah$')
     plt.grid(True, alpha=0.3)
     
     # Create directory if it doesn't exist
@@ -81,6 +76,37 @@ def _apply_pca(H_train, H_test, n_components=100):
     
     return H_train_reduced, H_test_reduced
 
+
+
+def _remove_main_component(H_train, H_test, n_lower_components=10):
+    """
+    Reduces the dimensionality of the feature matrix by projecting onto the top k singular eigenvectors.
+    
+    Parameters:
+        feature_matrix (numpy.ndarray): The input feature matrix of shape (n_samples, n_features).
+        k (int): The number of top singular vectors to project onto.
+        
+    Returns:
+        numpy.ndarray: The reduced-dimensionality feature matrix of shape (n_samples, k).
+    """
+    # Perform Singular Value Decomposition
+    #U, S, Vt = np.linalg.svd(H_train, full_matrices=False)
+
+
+
+    pca = PCA()
+    pca.fit(H_train)
+
+    #singular_values = pca.singular_values_
+    all_components = pca.components_
+    lower_components = all_components[-n_lower_components:]
+    
+
+    # Project the feature matrix onto the bottom k singular vectors
+    H_train_reduced = np.dot(H_train, lower_components.T)
+    H_test_reduced = np.dot(H_test, lower_components.T)
+    
+    return H_train_reduced, H_test_reduced
 
 
 
