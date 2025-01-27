@@ -55,8 +55,8 @@ if __name__ == "__main__":
     n_hidden = 250
     effective_dim = 50
 
-    for effective_dim in [20,50,100,150,200]:
-        alphas = [3.5,3.8,4,4.5,5,6,7,8,9,10,11,12,13,14]
+    for effective_dim in [200]:
+        alphas = [4,4.5,5,6,7,8,9,10,11,12,13,14]
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
         theoretical_train_errors = []
