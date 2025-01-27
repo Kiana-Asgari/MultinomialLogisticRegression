@@ -55,7 +55,7 @@ if __name__ == "__main__":
     n_hidden = 250
 
 
-    for n_lower_components in [200]:
+    for n_lower_components in [220]:
         alphas = [3.8,4,4.5,5,6,7,8,9,10,11,12,13,14]
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
