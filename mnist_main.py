@@ -52,10 +52,10 @@ if __name__ == "__main__":
                           [5.95547334, 12.61983397]])
     
 
-    n_hidden = 250
+    n_hidden = 500
     effective_dim = 50
 
-    for effective_dim in [200]:
+    for effective_dim in [50]:
         alphas = [4,4.5,5,6,7,8,9,10,11,12,13,14]
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
             R_00, Theta_0, H_train, H_test = learn_mle_on_data(x_train, x_test, y_train, y_test,\
                                                     y_train_one_hot, y_test_one_hot,\
-                                                    n_hidden, feature_name='ReLU+PCA',effective_dim=effective_dim,
+                                                    n_hidden, feature_name='tanh+PCA',effective_dim=effective_dim,
                                                     data_name='fashion_mnist')
 
             R_00 = R_00[1:,1:]
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         os.makedirs(save_dir, exist_ok=True)
         
         # Save plot
-        save_path = os.path.join(save_dir, f"train_errors_comparison_effdim_{effective_dim}.pdf")
+        save_path = os.path.join(save_dir, f"tanh500_train_errors_comparison_effdim_{effective_dim}.pdf")
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
 

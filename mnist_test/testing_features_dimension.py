@@ -26,7 +26,7 @@ def plot_esd_for_feature(H_train, H_test):
     # Calculate H^T H
     d = H_train.shape[1]
     m = H_train.shape[0]
-    H = 1/m * H_reduced.T @ H_reduced
+    H = 1/m * H_train.T @ H_train
     print('H shape', H.shape)
     print('d, m', d, m)
     
@@ -46,7 +46,7 @@ def plot_esd_for_feature(H_train, H_test):
     # Add labels and title
     plt.xlabel('Eigenvalue')
     plt.ylabel('Density')
-    plt.title('Empirical Spectrum Distribution of H^T H')
+    plt.title(r'ESD of $\frac{1}{m} \hat{H_{train}}^T \hat{H_{train}}; H_{train} \in \mathbb{R}^{m \times 250} drived from Relu$')
     plt.grid(True, alpha=0.3)
     
     # Create directory if it doesn't exist
