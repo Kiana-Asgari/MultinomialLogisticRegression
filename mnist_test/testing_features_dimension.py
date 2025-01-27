@@ -15,6 +15,12 @@ from sklearn.preprocessing import StandardScaler
 def plot_esd_for_feature(H_train, H_test):
 
     H_train_reduced, H_test_reduced = _remove_main_component(H_train, H_test, 50)
+    H_temp = truncated_svd(H_train, 50)
+
+    print('first:', H_temp[0, :])
+    print('second:', H_train_reduced[0, :])
+
+
     print('reduced shape', H_train_reduced.shape)
     print('mean each row', np.mean(H_train_reduced, axis=1))
     print('std each row', np.std(H_train_reduced, axis=1))
@@ -107,6 +113,34 @@ def _remove_main_component(H_train, H_test, n_lower_components=10):
     H_test_reduced = np.dot(H_test, lower_components.T)
     
     return H_train_reduced, H_test_reduced
+
+import numpy as np
+from scipy.linalg import svd
+
+def truncated_svd(matrix, rank):
+    """
+    Perform truncated SVD for low-rank approximation.
+
+    Parameters:
+    - matrix (np.ndarray): The input matrix to approximate.
+    - rank (int): The target rank for the approximation.
+
+    Returns:
+    - approx_matrix (np.ndarray): The low-rank approximation of the input matrix.
+    """
+    
+    # Perform SVD decomposition
+    U, S, VT = svd(matrix, full_matrices=False)
+    
+    # Keep only the top 'rank' singular values/vectors
+    U_truncated = U[:, -rank:]
+    S_truncated = np.diag(S[-rank:])
+    VT_truncated = VT[-rank:, :]
+    
+    # Construct the low-rank approximation
+    approx_matrix = U_truncated @ S_truncated @ VT_truncated
+    
+    return approx_matrix
 
 
 

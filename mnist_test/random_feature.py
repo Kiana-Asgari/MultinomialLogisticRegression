@@ -56,12 +56,22 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
 def random_relu_features_PCA(X_train, X_test, n_features, effective_dim):
     H_train, H_test = random_relu_features(X_train, X_test, n_features)
     H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
+        # Standardize features
+    scaler = StandardScaler()
+    H_train = scaler.fit_transform(H_train)
+    H_test = scaler.transform(H_test)
+
     return H_train, H_test
 
 
 def random_tanh_features_PCA(X_train, X_test, n_features, effective_dim):
     H_train, H_test = random_tanh_features(X_train, X_test, n_features)
     H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
+    # Standardize features
+    scaler = StandardScaler()
+    H_train = scaler.fit_transform(H_train)
+    H_test = scaler.transform(H_test)
+
     return H_train, H_test
 
 

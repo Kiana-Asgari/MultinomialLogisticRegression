@@ -55,7 +55,7 @@ if __name__ == "__main__":
     n_hidden = 500
 
 
-    for n_lower_components in [450]:
+    for n_lower_components in [50]:
         alphas = [3.8,4,4.5,5,6,7,8,9,10,11,12,13,14]
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
@@ -78,6 +78,8 @@ if __name__ == "__main__":
             print('R_00', R_00)
             print('H_train', H_train.shape)
             print('H_test', H_test.shape)
+            print('mean each column', np.mean(H_train, axis=0))
+            print('std each column', np.std(H_train, axis=0))
 
             _, mle_train_errors, mle_misclass_test_errors, _ = evaluate_mle(alpha=alph,
                                                             n_hidden=n_hidden,\
