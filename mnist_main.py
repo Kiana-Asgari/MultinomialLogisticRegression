@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 
 
-    for n_hidden in [500]:
+    for n_hidden in [250]:
         alphas = [5.8,6,6.5,7,8,9,10,11,12,13,14]
 
         all_mle_train_errors = []  # List to store mean train errors for each alpha
