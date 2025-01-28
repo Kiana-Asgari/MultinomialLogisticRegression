@@ -52,11 +52,17 @@ if __name__ == "__main__":
                           [5.95547334, 12.61983397]])
     
 
-    n_hidden = 500
 
 
-    for n_lower_components in [100]:
-        alphas = [3.8,4,4.5,5,6,7,8,9,10,11,12,13,14]
+    #plot_esd_for_feature(H_train, H_test)
+
+
+
+
+    for n_hidden in [500]:
+        n_lower_components = n_hidden
+        alphas = [6,6.5,7,7.5,8,9,10,11,12,13,14]
+
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
         theoretical_train_errors = []
@@ -100,20 +106,18 @@ if __name__ == "__main__":
             A = R_01_0 @ np.linalg.inv(sqrtm(R_00))
             misclass_test_error_theoretical = misclassification_test_error(S=None, R_00=R_00, schur_t=schur_0, A_t=A, alpha=alph, k=2, k_0=2)
             train_error_theoretical = train_error(R_00=R_00, schur=schur_0, R_01=R_01_0, S=S_0, alpha=alph, k=2, k_0=2)
-            print('for dim ', n_lower_components, ' theoretical train error', train_error_theoretical)
-            print('for  dim ', n_lower_components, ' theoretical train error', train_error_theoretical)
-            print('for  dim ', n_lower_components, ' mle train error', np.mean(mle_train_errors))
-            print('for  dim ', n_lower_components, ' theoretical misclass error', misclass_test_error_theoretical)
-            print('for  dim ', n_lower_components, ' mle misclass error', np.mean(mle_misclass_test_errors))
+            print('for dim ', n_hidden, ' theoretical train error', train_error_theoretical)
+            print('for  dim ', n_hidden, ' mle train error', np.mean(mle_train_errors))
+            print('for  dim ', n_hidden, ' theoretical misclass error', misclass_test_error_theoretical)
+            print('for  dim ', n_hidden, ' mle misclass error', np.mean(mle_misclass_test_errors))
             theoretical_train_errors.append(train_error_theoretical)
             theoretical_misclass_test_errors.append(misclass_test_error_theoretical)
-        print('all_mle_train_errors', all_mle_train_errors)
-        print('theoretical_train_errors', theoretical_train_errors)
+
         
 
         plt.figure(figsize=(10, 6))
-        plt.plot(alphas, all_mle_train_errors, 'o-', label='MLE Train Error')
-        plt.plot(alphas, theoretical_train_errors, 's-', label='Theoretical Train Error')
+        plt.plot(alphas, all_mle_train_errors, 'o', label='MLE Train Error')
+        plt.plot(alphas, theoretical_train_errors, '-', label='Theoretical Train Error')
         plt.xlabel('Alpha')
         plt.ylabel('Train Error')
         plt.title('MLE vs Theoretical Train Error')
@@ -121,11 +125,30 @@ if __name__ == "__main__":
         plt.grid(True)
         
         # Create directory if it doesn't exist
-        save_dir = os.path.join("mnist_test", "log", "figures", "temporary")
+        save_dir = os.path.join("mnist_test", "log", "figures", "pcaappliednew")
         os.makedirs(save_dir, exist_ok=True)
         
         # Save plot
-        save_path = os.path.join(save_dir, f"tanh_train_errors_comparison_removing_{n_lower_components}.pdf")
+        save_path = os.path.join(save_dir, f"tanh_train_errors_nhidden_{n_hidden}.pdf")
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
+        #misclass
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(alphas, all_mle_misclass_test_errors, 'o', label='MLE Misclassification Test Error')
+        plt.plot(alphas, theoretical_misclass_test_errors, '-', label='Theoretical Misclassification Test Error')
+        plt.xlabel('Alpha')
+        plt.ylabel('Misclassification Test Error')
+        plt.title('MLE vs Theoretical Misclassification Test Error')
+        plt.legend()
+        plt.grid(True)
+        
+        # Create directory if it doesn't exist
+        save_dir = os.path.join("mnist_test", "log", "figures", "pcaappliednew")
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Save plot
+        save_path = os.path.join(save_dir, f"tanh_misclass_errors_nhidden_{n_hidden}.pdf")
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
 

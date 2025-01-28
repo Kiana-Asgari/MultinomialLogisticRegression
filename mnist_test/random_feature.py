@@ -56,7 +56,7 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
 def random_relu_features_PCA(X_train, X_test, n_features, effective_dim):
     H_train, H_test = random_relu_features(X_train, X_test, n_features)
     H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
-        # Standardize features
+    # Standardize features
     scaler = StandardScaler()
     H_train = scaler.fit_transform(H_train)
     H_test = scaler.transform(H_test)
@@ -144,11 +144,9 @@ def random_relu_features(X_train, X_test, n_features, scale=.1):
     # Random projection matrix W
     W = np.random.normal(0, scale/np.sqrt(X_train.shape[1]), size=(X_train.shape[1], n_features))
     # Random bias term b
-    #b = np.random.normal(0, scale/np.sqrt(n_features), size=n_features)
-    b = np.zeros(n_features)
     # Apply ReLU transformation
-    Z_train = np.maximum(0, X_train @ W + b)
-    Z_test = np.maximum(0, X_test @ W + b)
+    Z_train = np.maximum(0, X_train @ W)
+    Z_test = np.maximum(0, X_test @ W)
     
     # Normalize by sqrt(n_features) to maintain variance
     # Standardize features
@@ -161,7 +159,7 @@ def random_relu_features(X_train, X_test, n_features, scale=.1):
 
 
 
-def random_tanh_features(X_train, X_test, n_features, scale=1):
+def random_tanh_features(X_train, X_test, n_features):
     """
     Apply Random Tanh Features transformation to data.
     Parameters:
@@ -182,10 +180,9 @@ def random_tanh_features(X_train, X_test, n_features, scale=1):
     W = np.random.normal(0, input_scale, size=(X_train.shape[1], n_features))
     # Random bias term b
     #b = np.random.normal(0, input_scale, size=n_features)
-    b = np.zeros(n_features)
-    # Apply tanh transformation
-    Z_train = np.tanh(scale * (X_train @ W + b))
-    Z_test = np.tanh(scale * (X_test @ W + b))
+
+    Z_train = np.tanh( (X_train @ W ))
+    Z_test = np.tanh( (X_test @ W ))
     
     # Standardize features
     scaler = StandardScaler()
@@ -197,31 +194,3 @@ def random_tanh_features(X_train, X_test, n_features, scale=1):
 
 
 
-def box_cox_features(X_train, X_test, epsilon=1e-8):
-    """
-    Apply Box-Cox transformation using sklearn's PowerTransformer.
-    
-    Parameters:
-    - X_train: Training data
-    - X_test: Test data
-    - epsilon: Small constant to add to make data positive
-    
-    Returns:
-    - X_train_transformed, X_test_transformed: Transformed data
-    """
-    from sklearn.preprocessing import PowerTransformer
-    
-    # Make data positive
-    X_train_pos = X_train - np.min(X_train, axis=0) + epsilon
-    X_test_pos = X_test - np.min(X_test, axis=0) + epsilon
-    
-    # Apply Box-Cox
-    pt = PowerTransformer(method='box-cox')
-    X_train_transformed = pt.fit_transform(X_train_pos)
-    X_test_transformed = pt.transform(X_test_pos)
-
-    scaler = StandardScaler()
-    X_train_transformed = scaler.fit_transform(X_train_transformed)
-    X_test_transformed = scaler.transform(X_test_transformed)
-    
-    return X_train_transformed, X_test_transformed

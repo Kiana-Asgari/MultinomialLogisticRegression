@@ -14,11 +14,14 @@ from sklearn.preprocessing import StandardScaler
 
 def plot_esd_for_feature(H_train, H_test):
 
-    H_train_reduced, H_test_reduced = _remove_main_component(H_train, H_test, 50)
-    H_temp = truncated_svd(H_train, 50)
+    H_train_reduced, H_test_reduced = _remove_main_component(H_train, H_test, 250)
+    H_svd,_ = _apply_pca(H_train, H_test, 250)
+    #scaler = StandardScaler()
+    #H_train_reduced = scaler.fit_transform(H_train_reduced)
+   # H_test_reduced = scaler.transform(H_test_reduced)
 
-    print('first:', H_temp[0, :])
-    print('second:', H_train_reduced[0, :])
+    #scaler = StandardScaler()
+    #H_svd = scaler.fit_transform(H_svd)
 
 
     print('reduced shape', H_train_reduced.shape)
@@ -27,22 +30,21 @@ def plot_esd_for_feature(H_train, H_test):
 
     d = H_train.shape[1]
     m = H_train.shape[0]
-    H = 1/m * H_train.T @ H_train
-    print('H shape', H.shape)
-    print('d, m', d, m)
-    
-    # Get eigenvalues and filter for those less than 5
-    eigenvalues = np.linalg.eigvals(H)
-    print('len eigenvalues', len(eigenvalues))
-    eigenvalues = eigenvalues[(eigenvalues < 8) & (eigenvalues > 1e-2)]
-    print('len eigenvalues', len(eigenvalues))
+    H_reduced = 1/m * H_train_reduced.T @ H_train_reduced
+    H_svd = 1/m * H_svd.T @ H_svd
+
+    eigenvalues_reduced = np.linalg.eigvals(H_reduced)
+    eigenvalues_svd = np.linalg.eigvals(H_svd)
+    print('reduced eigenvalues', (eigenvalues_reduced))
+    print('svd eigenvalues', (eigenvalues_svd))
+
 
 
     
     
     # Create histogram
     plt.figure(figsize=(10, 6))
-    plt.hist(eigenvalues.real, bins=100, density=True, alpha=0.7, color='blue')
+    plt.hist(eigenvalues_reduced.real, bins=100, density=True, alpha=0.7, color='blue')
     
     # Add labels and title
     plt.xlabel('Eigenvalue')
@@ -61,7 +63,7 @@ def plot_esd_for_feature(H_train, H_test):
     
     print(f"ESD plot saved to {save_path}")
     print(f"Matrix shape: {H_train.shape}")
-    print(f"Eigenvalue range: [{eigenvalues.real.min():.2f}, {eigenvalues.real.max():.2f}]")
+    print(f"Eigenvalue range: [{eigenvalues_reduced.real.min():.2f}, {eigenvalues_reduced.real.max():.2f}]")
 
 
 
@@ -97,9 +99,6 @@ def _remove_main_component(H_train, H_test, n_lower_components=10):
     """
     # Perform Singular Value Decomposition
     #U, S, Vt = np.linalg.svd(H_train, full_matrices=False)
-
-
-
     pca = PCA()
     pca.fit(H_train)
 
@@ -114,33 +113,7 @@ def _remove_main_component(H_train, H_test, n_lower_components=10):
     
     return H_train_reduced, H_test_reduced
 
-import numpy as np
-from scipy.linalg import svd
 
-def truncated_svd(matrix, rank):
-    """
-    Perform truncated SVD for low-rank approximation.
-
-    Parameters:
-    - matrix (np.ndarray): The input matrix to approximate.
-    - rank (int): The target rank for the approximation.
-
-    Returns:
-    - approx_matrix (np.ndarray): The low-rank approximation of the input matrix.
-    """
-    
-    # Perform SVD decomposition
-    U, S, VT = svd(matrix, full_matrices=False)
-    
-    # Keep only the top 'rank' singular values/vectors
-    U_truncated = U[:, -rank:]
-    S_truncated = np.diag(S[-rank:])
-    VT_truncated = VT[-rank:, :]
-    
-    # Construct the low-rank approximation
-    approx_matrix = U_truncated @ S_truncated @ VT_truncated
-    
-    return approx_matrix
 
 
 
