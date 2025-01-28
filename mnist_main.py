@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
 
 
-    for n_hidden in [500]:
+    for n_hidden in [250]:
         n_lower_components = n_hidden
         alphas = [6,6.5,7,7.5,8,9,10,11,12,13,14]
 
