@@ -61,7 +61,12 @@ def new_feature(X_train, X_test, n_features):
     H_train = scaler.fit_transform(H_train)
     H_test = scaler.transform(H_test)
 
-    H_train, H_test = random_tanh_features(H_train, H_test, n_features)
+    H_train, H_test = random_feature(H_train, H_test, n_features)
+
+    scaler = StandardScaler()
+    H_train = scaler.fit_transform(H_train)
+    H_test = scaler.transform(H_test)
+
 
     return H_train, H_test
 
