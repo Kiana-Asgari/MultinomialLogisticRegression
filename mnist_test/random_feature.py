@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, log_loss
 from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
 from mnist_test.testing_features_dimension import _remove_main_component
+from sklearn.decomposition import PCA
 
 
 
@@ -22,8 +23,8 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
         H_train, H_test = random_relu_features(X_train, X_test, n_features)
     elif feature_name == 'tanh':
         H_train, H_test = random_tanh_features(X_train, X_test, n_features)
-    elif feature_name == 'box_cox':
-        H_train, H_test = box_cox_features(X_train, X_test)
+    elif feature_name == 'test':
+        H_train, H_test = new_feature(X_train, X_test, n_features)
     elif feature_name == 'tanh+PCA':
         H_train, H_test = random_tanh_features_PCA(X_train, X_test, n_features, effective_dim)
     elif feature_name == 'ReLU+PCA':
@@ -50,6 +51,20 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
     R_00_skit = Theta_hat_skit @ Theta_hat_skit.T
     print(f'      for feature {feature_name},test error: {test_error:.4f}\n   with sklearn: R_00: {R_00_skit} ')
     return R_00_skit, np.array(Theta_hat_skit), H_train, H_test
+
+
+#testing
+def new_feature(X_train, X_test, n_features):
+    H_train, H_test = _remove_main_component(X_train, X_test, n_lower_components=X_train.shape[1])
+        # Standardize features
+    scaler = StandardScaler()
+    H_train = scaler.fit_transform(H_train)
+    H_test = scaler.transform(H_test)
+
+    H_train, H_test = random_tanh_features(H_train, H_test, n_features)
+
+    return H_train, H_test
+
 
 
 
@@ -190,6 +205,36 @@ def random_tanh_features(X_train, X_test, n_features):
     Z_test = scaler.transform(Z_test)
 
     return Z_train, Z_test
+
+
+
+
+def remove_main_component(H_train, H_test, n_lower_components=10):
+    """
+    Reduces the dimensionality of the feature matrix by projecting onto the top k singular eigenvectors.
+    
+    Parameters:
+        feature_matrix (numpy.ndarray): The input feature matrix of shape (n_samples, n_features).
+        k (int): The number of top singular vectors to project onto.
+        
+    Returns:
+        numpy.ndarray: The reduced-dimensionality feature matrix of shape (n_samples, k).
+    """
+    # Perform Singular Value Decomposition
+    #U, S, Vt = np.linalg.svd(H_train, full_matrices=False)
+    pca = PCA()
+    pca.fit(H_train)
+
+    #singular_values = pca.singular_values_
+    all_components = pca.components_
+    lower_components = all_components[:n_lower_components]
+    
+
+    # Project the feature matrix onto the bottom k singular vectors
+    H_train_reduced = np.dot(H_train, lower_components.T)
+    H_test_reduced = np.dot(H_test, lower_components.T)
+    
+    return H_train_reduced, H_test_reduced
 
 
 

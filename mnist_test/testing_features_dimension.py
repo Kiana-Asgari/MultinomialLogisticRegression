@@ -12,31 +12,19 @@ from sklearn.preprocessing import StandardScaler
 
 
 
-def plot_esd_for_feature(H_train, H_test):
-
-    H_train_reduced, H_test_reduced = _remove_main_component(H_train, H_test, 250)
-    H_svd,_ = _apply_pca(H_train, H_test, 250)
-    #scaler = StandardScaler()
-    #H_train_reduced = scaler.fit_transform(H_train_reduced)
-   # H_test_reduced = scaler.transform(H_test_reduced)
-
-    #scaler = StandardScaler()
-    #H_svd = scaler.fit_transform(H_svd)
+def plot_esd_for_feature(H_train):
+    # Randomly select 1000 rows from H_train to create H_test
+    np.random.seed(42)  # For reproducibility
+    indices = np.random.choice(H_train.shape[0], size=5000, replace=False)
+    H_train_reduced = H_train[indices]
 
 
-    print('reduced shape', H_train_reduced.shape)
-    print('mean each row', np.mean(H_train_reduced, axis=1))
-    print('std each row', np.std(H_train_reduced, axis=1))
-
-    d = H_train.shape[1]
-    m = H_train.shape[0]
+    d = H_train_reduced.shape[1]
+    m = H_train_reduced.shape[0]
     H_reduced = 1/m * H_train_reduced.T @ H_train_reduced
-    H_svd = 1/m * H_svd.T @ H_svd
 
     eigenvalues_reduced = np.linalg.eigvals(H_reduced)
-    eigenvalues_svd = np.linalg.eigvals(H_svd)
     print('reduced eigenvalues', (eigenvalues_reduced))
-    print('svd eigenvalues', (eigenvalues_svd))
 
 
 
@@ -49,7 +37,7 @@ def plot_esd_for_feature(H_train, H_test):
     # Add labels and title
     plt.xlabel('Eigenvalue')
     plt.ylabel('Density')
-    plt.title(r'ESD of $\frac{1}{m} \hat{H_{train}}^T \hat{H_{train}}; H_{train} \in \mathbb{R}^{m \times 500} drived from tnah$')
+    plt.title(r'ESD of $\frac{1}{m} \hat{H}_{\text{train}}^T \hat{H}_{\text{train}}$ from subsample of 2000')
     plt.grid(True, alpha=0.3)
     
     # Create directory if it doesn't exist
@@ -104,7 +92,7 @@ def _remove_main_component(H_train, H_test, n_lower_components=10):
 
     #singular_values = pca.singular_values_
     all_components = pca.components_
-    lower_components = all_components[-n_lower_components:]
+    lower_components = all_components[:n_lower_components]
     
 
     # Project the feature matrix onto the bottom k singular vectors

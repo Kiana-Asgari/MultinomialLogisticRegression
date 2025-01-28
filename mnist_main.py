@@ -50,18 +50,13 @@ if __name__ == "__main__":
 
     R_tan_350 = np.array([[10.4325381, 5.95547334],
                           [5.95547334, 12.61983397]])
-    
-
-
-
-    #plot_esd_for_feature(H_train, H_test)
 
 
 
 
-    for n_hidden in [250]:
-        n_lower_components = n_hidden
-        alphas = [6,6.5,7,7.5,8,9,10,11,12,13,14]
+
+    for n_hidden in [500]:
+        alphas = [5.8,6,6.5,7,8,9,10,11,12,13,14]
 
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
@@ -76,7 +71,7 @@ if __name__ == "__main__":
 
             R_00, Theta_0, H_train, H_test = learn_mle_on_data(x_train, x_test, y_train, y_test,\
                                                     y_train_one_hot, y_test_one_hot,\
-                                                    n_hidden, feature_name='tanh+PCA',effective_dim=n_lower_components,
+                                                    n_hidden, feature_name='test',
                                                     data_name='fashion_mnist')
 
             R_00 = R_00[1:,1:]
@@ -92,8 +87,7 @@ if __name__ == "__main__":
                                                             R_00=R_00, Theta_0=Theta_0, k=2, k_0=2, \
                                                             X_train=H_train, y_train=y_train, X_test=H_test, y_test=y_test, \
                                                             n_iter=50, tol=1e-4, y_train_full=y_train, y_test_full=y_test, plot_esd=False)
-            print('mle misclass error', np.mean(mle_misclass_test_errors))
-            print('mle train error', np.mean(mle_train_errors))
+
             all_mle_train_errors.append(np.mean(mle_train_errors))
             all_mle_misclass_test_errors.append(np.mean(mle_misclass_test_errors))
 
@@ -114,7 +108,6 @@ if __name__ == "__main__":
             theoretical_misclass_test_errors.append(misclass_test_error_theoretical)
 
         
-
         plt.figure(figsize=(10, 6))
         plt.plot(alphas, all_mle_train_errors, 'o', label='MLE Train Error')
         plt.plot(alphas, theoretical_train_errors, '-', label='Theoretical Train Error')
@@ -125,7 +118,7 @@ if __name__ == "__main__":
         plt.grid(True)
         
         # Create directory if it doesn't exist
-        save_dir = os.path.join("mnist_test", "log", "figures", "pcaappliednew")
+        save_dir = os.path.join("mnist_test", "log", "figures", "decorolated")
         os.makedirs(save_dir, exist_ok=True)
         
         # Save plot
@@ -144,7 +137,7 @@ if __name__ == "__main__":
         plt.grid(True)
         
         # Create directory if it doesn't exist
-        save_dir = os.path.join("mnist_test", "log", "figures", "pcaappliednew")
+        save_dir = os.path.join("mnist_test", "log", "figures", "decorolated")
         os.makedirs(save_dir, exist_ok=True)
         
         # Save plot
