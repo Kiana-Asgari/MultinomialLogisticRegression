@@ -126,7 +126,7 @@ def log_error_empirical(n_hidden, feature_name='tanh', file_number=1):
                                                              decorrelate=True, 
                                                              n_features=n_hidden, 
                                                              classes_to_keep=[2,4,6])   
-    eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter=100,
+    eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter=50,
                           feature_name=feature_name, n_hidden=n_hidden, 
                           file_number=file_number, seed=42)
     print("******logged error empirical!******")

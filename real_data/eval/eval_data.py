@@ -28,8 +28,9 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
         # Initialize the nested structure
         results = {}
 
-    alpha_values = np.linspace(20, 5, 30)
+    alpha_values = np.linspace(5, 20, 30)
     for alpha in alpha_values:
+        alpha_str = str(float(alpha))  # Convert to float first to ensure proper string conversion
         n_samples = int(alpha * X_train.shape[1])
         test_errors = []
         train_errors = []
@@ -41,37 +42,40 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
             X_train_sampled = X_train[sample_indices]
             y_train_sampled = y_train[sample_indices]
             results = fit_data(X_train_sampled, y_train_sampled, X_test=X_test, y_test=y_test, compute_esd=True, seed=i)
-            test_errors.append(results['test_error'])
-            train_errors.append(results['train_error'])
-            classification_errors.append(results['classification_error'])
+            test_errors.append(float(results['test_error']))  # Convert to float
+            train_errors.append(float(results['train_error']))  # Convert to float
+            classification_errors.append(float(results['classification_error']))  # Convert to float
             print('iter: ', i, 'train error: ', results['train_error'])
 
         # Calculate mean and std of errors
-        results[str(alpha)] = {
+        results[alpha_str] = {
             'test_error_mean': float(np.mean(test_errors)),
             'test_error_std': float(np.std(test_errors)),
             'train_error_mean': float(np.mean(train_errors)),
             'train_error_std': float(np.std(train_errors)),
             'classification_error_mean': float(np.mean(classification_errors)),
             'classification_error_std': float(np.std(classification_errors)),
-            'n_samples': int(n_samples)
+            'n_samples': int(n_samples),
+            'test_errors': [float(x) for x in test_errors],  # Store all errors as lists of floats
+            'train_errors': [float(x) for x in train_errors],
+            'classification_errors': [float(x) for x in classification_errors]
         }
         print('for alpha: ', alpha)
-        print('     mean test error: ', results[str(alpha)]['test_error_mean'])
-        print('     std test error: ', results[str(alpha)]['test_error_std'])
-        print('     mean train error: ', results[str(alpha)]['train_error_mean'])
-        print('     std train error: ', results[str(alpha)]['train_error_std'])
-        print('mean classification error: ', results[str(alpha)]['classification_error_mean'])
-        print('std classification error: ', results[str(alpha)]['classification_error_std'])
+        print('     mean test error: ', results[alpha_str]['test_error_mean'])
+        print('     std test error: ', results[alpha_str]['test_error_std'])
+        print('     mean train error: ', results[alpha_str]['train_error_mean'])
+        print('     std train error: ', results[alpha_str]['train_error_std'])
+        print('mean classification error: ', results[alpha_str]['classification_error_mean'])
+        print('std classification error: ', results[alpha_str]['classification_error_std'])
 
         # Save after each alpha computation
         with open(base_filepath, 'w') as f:
             json.dump({
                 "metadata": {
                     "feature_name": feature_name,
-                    "n_hidden": n_hidden,
-                    "n_iter": n_iter,
-                    "file_number": file_number
+                    "n_hidden": int(n_hidden),  # Convert to int just in case
+                    "n_iter": int(n_iter),
+                    "file_number": int(file_number)
                 },
                 "results": results
             }, f, indent=2)
