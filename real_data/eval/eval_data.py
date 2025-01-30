@@ -50,6 +50,7 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
             test_errors[i] = float(results_iter['test_error'])
             train_errors[i] = float(results_iter['train_error'])
             classification_errors[i] = float(results_iter['classification_error'])
+            print('iter: ', i, 'test error: ', test_errors[i], 'train error: ', train_errors[i], 'classification error: ', classification_errors[i])
 
         # Store results for this alpha
         results[alpha_str] = {
@@ -76,6 +77,9 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
             json.dump(data_to_save, f, indent=4)
         
         print(f"Saved results for alpha={alpha_str}")
+        print('     mean test error: ', np.mean(test_errors), 'std test error: ', np.std(test_errors))
+        print('     mean train error: ', np.mean(train_errors), 'std train error: ', np.std(train_errors))
+        print('     mean classification error: ', np.mean(classification_errors), 'std classification error: ', np.std(classification_errors))
 
     return results
 
