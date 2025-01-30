@@ -58,6 +58,7 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
     print('*****processing z_real min = ', z_real_values[0], ' max = ', z_real_values[-1], ' len = ', len(z_real_values))
 
     A = R_01 @ np.linalg.inv(sqrtm(R_00))
+
     for z_real in z_real_values:
         # choose z_imag based on z_real
         if z_real < 0.11:
@@ -117,4 +118,5 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
         print('final density list', density_list)
         print('final z_real values', z_real_values)
         print(' for alpha = ', alpha, ' and R_00 = ', R_00)
-        return base_filepath
+    
+    return base_filepath
