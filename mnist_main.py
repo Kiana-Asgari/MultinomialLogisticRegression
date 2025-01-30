@@ -2,7 +2,7 @@ import os
 
 from mnist_test.data_manipulation import get_cleaned_mnist_data, get_cleaned_fashion_mnist_data
 from mnist_test.random_feature import learn_mle_on_data
-from mnist_test.testing_features_dimension import plot_esd_for_feature
+from mnist_test.testing_features_dimension import plot_esd_for_feature, plot_esd_for_hessian
 import numpy as np
 from scipy.linalg import sqrtm
 from state_evolution.full_recursion import state_evolution_full_recursion
@@ -50,13 +50,38 @@ if __name__ == "__main__":
 
     R_tan_350 = np.array([[10.4325381, 5.95547334],
                           [5.95547334, 12.61983397]])
+    
+
+
+
+    (x_train, y_train, y_train_one_hot),\
+    (x_test, y_test, y_test_one_hot) = get_cleaned_fashion_mnist_data(classes_to_keep=[2,4,6],\
+                                                                    normalize=True, pca=False)
+    print('Y_train_one_hot: ', y_train_one_hot[0:10])
+    print('Y_train: ', y_train[0:10])
+
+    n_hidden = 250
+    R_00, Theta_0, H_train, H_test = learn_mle_on_data(x_train, x_test, y_train, y_test,\
+                                            y_train_one_hot, y_test_one_hot,\
+                                            n_hidden, feature_name='tanh+PCA', effective_dim=n_hidden,
+                                            data_name='fashion_mnist')
+    R_00 = R_00[1:,1:]
+    Theta_0 = Theta_0[1:,:]
+    print('full R_00: ', R_00)
+    print('full Theta_0 shape and norm: ', Theta_0.shape, np.linalg.norm(Theta_0))
+    #plot_esd_for_feature(H_train, H_test)
+    #plot_esd_for_hessian(alpha=4,
+    #                    n_hidden=n_hidden,\
+    ##                  H_train=H_train, y_train=y_train, H_test=H_test, y_test=y_test, \
+     #                   n_iter=50, tol=1e-4, y_train_full=y_train, y_test_full=y_test,)
+    #sys.exit()
 
 
 
 
 
     for n_hidden in [250]:
-        alphas = [5.8,6,6.5,7,8,9,10,11,12,13,14]
+        alphas = [12,13,14]
 
         all_mle_train_errors = []  # List to store mean train errors for each alpha
         all_mle_misclass_test_errors = []  # List to store mean misclass test errors for each alpha
@@ -71,23 +96,23 @@ if __name__ == "__main__":
 
             R_00, Theta_0, H_train, H_test = learn_mle_on_data(x_train, x_test, y_train, y_test,\
                                                     y_train_one_hot, y_test_one_hot,\
-                                                    n_hidden, feature_name='test',
+                                                    n_hidden, feature_name='tanh+PCA',
                                                     data_name='fashion_mnist')
 
             R_00 = R_00[1:,1:]
             Theta_0 = Theta_0[1:,:]
             print('R_00', R_00)
-            print('H_train', H_train.shape)
-            print('H_test', H_test.shape)
-            print('mean each column', np.mean(H_train, axis=0))
-            print('std each column', np.std(H_train, axis=0))
 
-            _, mle_train_errors, mle_misclass_test_errors, _ = evaluate_mle(alpha=alph,
+
+            _, mle_train_errors, mle_misclass_test_errors, eigvals = evaluate_mle(alpha=alph,
                                                             n_hidden=n_hidden,\
                                                             R_00=R_00, Theta_0=Theta_0, k=2, k_0=2, \
                                                             X_train=H_train, y_train=y_train, X_test=H_test, y_test=y_test, \
-                                                            n_iter=50, tol=1e-4, y_train_full=y_train, y_test_full=y_test, plot_esd=False)
-
+                                                            n_iter=50, tol=1e-4, y_train_full=y_train, y_test_full=y_test, 
+                                                            plot_esd=True)
+            print('mle_train_errors: ', mle_train_errors)
+            print('mle_misclass_test_errors: ', mle_misclass_test_errors)
+            print('eigvals: ', eigvals)
             all_mle_train_errors.append(np.mean(mle_train_errors))
             all_mle_misclass_test_errors.append(np.mean(mle_misclass_test_errors))
 

@@ -76,6 +76,7 @@ def recover_density( R_00, alpha, k, k_0, z_imag=1e-3,\
 
 
 def stieltjes_inversion(R_00, schur, A, S, z_real, alpha, k, k_0, z_imag, max_iter=350, last_MP_S=None):
+    np.random.seed(42)
     """
     Solves the fixed point equation: E_\nu [(I + D\bar S)^{-1} - z_MP I]^{-1} = 1/ alpha * \bar S
     """
@@ -200,7 +201,7 @@ def complex_integration(integrand, R_00, schur, A, S, MP_S_inv, alpha, k, k_0):
                                   fdim=fdim,
                                   xmin=[-3.4]*ndim, xmax=[3.4]*ndim, 
                                   abserr=1e-5,
-                                  maxEval=300_000, norm=1)
+                                  maxEval=300_000, norm=1, seed=42)
     
     # Check errors element by element and print problematic components
     problem_indices = np.where(err > 1e-4)[0]

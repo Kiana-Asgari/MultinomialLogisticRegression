@@ -10,7 +10,7 @@ from state_evolution.full_recursion import state_evolution_full_recursion
 from multinomial_logistic.evaluation.misclassification_test_error import misclassification_test_error
 from multinomial_logistic.evaluation.log_loss_test_error import test_error
 from multinomial_logistic.evaluation.log_loss_train_eror import train_error
-
+from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import _batched_hessian
 
 
 def edit_theoretical_errors(R_00, k, k_0, n_hidden,
@@ -251,6 +251,12 @@ def run_state_evolution_and_save(R_00, k, k_0, n_hidden,
         print('theoretical test: ', test_error_theoretical)
         print(f"Results for alpha={alpha_str} saved.")
 
+
+
+
+
+
+
 def evaluate_mle(alpha, n_hidden, Theta_0, R_00, k, k_0, X_train,
                   y_train, X_test, y_test, n_iter=10, tol=1e-2, 
                   y_train_full=None, y_test_full=None, plot_esd=True):
@@ -260,7 +266,7 @@ def evaluate_mle(alpha, n_hidden, Theta_0, R_00, k, k_0, X_train,
     misclass_test_errors = []
     train_errors = []
     f_norms = []
-    esd_full = None
+    eigvals = []
     # Determine the number of training samples to use
     n_samples = int(alpha * n_hidden)
         
@@ -302,7 +308,13 @@ def evaluate_mle(alpha, n_hidden, Theta_0, R_00, k, k_0, X_train,
         train_errors.append(train_error)
         f_norms.append(f_norm)
 
-    return np.array(test_errors), np.array(train_errors), np.array(misclass_test_errors), np.array(f_norms)
+        if plot_esd:
+            eigvals.append(np.linalg.eigvals(_batched_hessian(Theta_hat, X_train)))
+
+    if plot_esd:
+        return np.array(test_errors), np.array(train_errors), np.array(misclass_test_errors), np.array(f_norms), np.array(eigvals)  
+    else:
+        return np.array(test_errors), np.array(train_errors), np.array(misclass_test_errors), np.array(f_norms)
 
 
 

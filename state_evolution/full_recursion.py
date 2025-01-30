@@ -35,7 +35,10 @@ div_prox = False
 
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0,\
-                                    S_0=None,tol=1e-5, max_iter=300):
+                                    S_0=None,tol=1e-5, max_iter=300, seed=42):
+    np.random.seed(seed)
+
+
     div_tol = np.linalg.norm(R_00)* 5 * 1e4
     print('*************state evolution iteration started*************')
     print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}','R_00: ', R_00)
@@ -218,7 +221,7 @@ def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
 
 #####################################################################################
 
-def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
+def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
     fdim = k*k
     ndim = k+k_0
     expectations, err = cubature(integrand, 
@@ -231,7 +234,8 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
                                    abserr=1e-5,
                                    relerr=1e-4,
                                    maxEval=500_000, 
-                                   norm=1)
+                                   norm=1,
+                                   seed=seed)
     if np.max(err) > 1e-4:
         print('     **Error in integration is too large**', np.max(err))
 

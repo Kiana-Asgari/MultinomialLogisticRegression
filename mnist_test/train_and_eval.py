@@ -33,8 +33,29 @@ def theoretical_test_error(alpha, R_00, k, k_0, tol, lambda_reg):
     return test_error_theoretical.item(), misclass_test_error_theoretical.item()
 
 
-def esd_empirical(Theta_hat, X_train, Y_train, alpha, lambda_reg):
-    Hessian = batched_hessian(Theta_hat, X_train, Y_train, alpha, lambda_reg)
+def esd_empirical(X_train, Y_train_one_hot, alpha):
+    Y_train = np.argmax(Y_train_one_hot, axis=1)+1
+    logreg = LogisticRegression(           
+                fit_intercept=False,
+                penalty=None,
+                solver='lbfgs',       # can also use 'sag' or 'saga' if data is large
+                max_iter=1000,
+        )   
+
+    logreg.fit(X_train, Y_train)
+
+    Theta_hat = logreg.coef_
+    Theta_hat = (Theta_hat - Theta_hat[0])[1:,:]
+    train_error = log_loss(Y_train, logreg.predict_proba(X_train))
+    print('train error: ', train_error)
+    print('Theta_hat shape: ', Theta_hat.shape)
+    print('X_train shape: ', X_train.shape)
+    print('Y_train shape: ', Y_train.shape)
+    print('Theta_hat norm: ', np.linalg.norm(Theta_hat))
+    print('X_train column norm: ', np.mean(np.linalg.norm(X_train, axis=0)))
+    print('X_train column std: ', np.std(X_train, axis=0))
+    print('first y_train: ', Y_train[0])
+    Hessian = batched_hessian(Theta_hat, X_train, Y_train, alpha, lambda_reg=0  )
     print('norm of X_train: ', np.mean(np.linalg.norm(X_train, axis=1)))
     print('Hessian shape: ', Hessian.shape)
     print('first diagonal: ', np.diag(Hessian))

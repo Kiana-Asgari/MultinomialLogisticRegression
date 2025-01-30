@@ -5,7 +5,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, log_loss
 from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
-from mnist_test.testing_features_dimension import _remove_main_component
 from sklearn.decomposition import PCA
 
 
@@ -23,13 +22,12 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
         H_train, H_test = random_relu_features(X_train, X_test, n_features)
     elif feature_name == 'tanh':
         H_train, H_test = random_tanh_features(X_train, X_test, n_features)
-    elif feature_name == 'test':
-        H_train, H_test = new_feature(X_train, X_test, n_features)
     elif feature_name == 'tanh+PCA':
         H_train, H_test = random_tanh_features_PCA(X_train, X_test, n_features, effective_dim)
     elif feature_name == 'ReLU+PCA':
         H_train, H_test = random_relu_features_PCA(X_train, X_test, n_features, effective_dim)
     else:
+        print(f"******* no feature applied*******")
         H_train, H_test = X_train, X_test
 
     
@@ -53,27 +51,11 @@ def learn_mle_on_data(X_train, X_test, y_train, y_test, y_train_one_hot,
     return R_00_skit, np.array(Theta_hat_skit), H_train, H_test
 
 
-#testing
-def new_feature(X_train, X_test, n_features):
-    H_train, H_test = _remove_main_component(X_train, X_test, n_lower_components=X_train.shape[1])
-        # Standardize features
-    scaler = StandardScaler()
-    H_train = scaler.fit_transform(H_train)
-    H_test = scaler.transform(H_test)
-
-    H_train, H_test = random_feature(H_train, H_test, n_features)
-
-    scaler = StandardScaler()
-    H_train = scaler.fit_transform(H_train)
-    H_test = scaler.transform(H_test)
-
-
-    return H_train, H_test
-
 
 
 
 def random_relu_features_PCA(X_train, X_test, n_features, effective_dim):
+    print(f"******* random_relu_features_PCA, effective_dim: {effective_dim}, n_features: {n_features}*******")
     H_train, H_test = random_relu_features(X_train, X_test, n_features)
     H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
     # Standardize features
@@ -85,6 +67,7 @@ def random_relu_features_PCA(X_train, X_test, n_features, effective_dim):
 
 
 def random_tanh_features_PCA(X_train, X_test, n_features, effective_dim):
+    print(f"******* random_tanh_features_PCA, effective_dim: {effective_dim}, n_features: {n_features}*******")
     H_train, H_test = random_tanh_features(X_train, X_test, n_features)
     H_train, H_test = _remove_main_component(H_train, H_test, n_lower_components=effective_dim)
     # Standardize features
@@ -97,9 +80,7 @@ def random_tanh_features_PCA(X_train, X_test, n_features, effective_dim):
 
 
 def random_feature(X_train, X_test, n_features):
-    """
-    Apply Random Features transformation to data.
-    """
+    print(f"******* random_feature, n_features: {n_features}*******")
     np.random.seed(42)  
     # Scale weights by 1/sqrt(d_in) where d_in is input dimension
     scale = 1.0 / np.sqrt(X_train.shape[1])
@@ -119,16 +100,8 @@ def random_feature(X_train, X_test, n_features):
 
 
 def random_fourier_features(X_train, X_test, n_features, gamma=0.1):
-    """
-    Apply Random Fourier Features transformation to data.
-    Parameters:
-    - X: Input data of shape (n_samples, n_features)
-    - n_features: Number of random features to generate
-    - gamma: RBF kernel parameter (controls the spread of the random projections)
+    print(f"******* random_fourier_features, n_features: {n_features}*******")
 
-    Returns:
-    - Transformed data with shape (n_samples, n_features)
-    """
     np.random.seed(42)
     # Random projection matrix W
     W = np.random.normal(0,  1/np.sqrt(X_train.shape[1]), size=(X_train.shape[1], n_features))
@@ -149,17 +122,8 @@ def random_fourier_features(X_train, X_test, n_features, gamma=0.1):
 
 
 def random_relu_features(X_train, X_test, n_features, scale=.1):
-    """
-    Apply Random ReLU Features transformation to data.
-    Parameters:
-    - X_train: Training data of shape (n_samples, n_features)
-    - X_test: Test data of shape (n_samples, n_features)
-    - n_features: Number of random features to generate
-    - scale: Scaling factor for the random weights (default=1.0)
+    print(f"******* random_relu_features, n_features: {n_features}*******")
 
-    Returns:
-    - Z_train, Z_test: Transformed data with shape (n_samples, n_features)
-    """
     np.random.seed(42)
     # Random projection matrix W
     W = np.random.normal(0, scale/np.sqrt(X_train.shape[1]), size=(X_train.shape[1], n_features))
@@ -180,17 +144,9 @@ def random_relu_features(X_train, X_test, n_features, scale=.1):
 
 
 def random_tanh_features(X_train, X_test, n_features):
-    """
-    Apply Random Tanh Features transformation to data.
-    Parameters:
-    - X_train: Training data of shape (n_samples, n_features)
-    - X_test: Test data of shape (n_samples, n_features)
-    - n_features: Number of random features to generate
-    - scale: Scaling factor for the random weights (default=1.0)
+    print(f"******* random_tanh_features, n_features: {n_features}*******")
 
-    Returns:
-    - Z_train, Z_test: Transformed data with shape (n_samples, n_features)
-    """
+
     np.random.seed(42)
     
     # Scale weights by 1/sqrt(d_in) where d_in is input dimension
@@ -214,7 +170,7 @@ def random_tanh_features(X_train, X_test, n_features):
 
 
 
-def remove_main_component(H_train, H_test, n_lower_components=10):
+def _remove_main_component(H_train, H_test, n_lower_components=10):
     """
     Reduces the dimensionality of the feature matrix by projecting onto the top k singular eigenvectors.
     
@@ -232,7 +188,7 @@ def remove_main_component(H_train, H_test, n_lower_components=10):
 
     #singular_values = pca.singular_values_
     all_components = pca.components_
-    lower_components = all_components[:n_lower_components]
+    lower_components = all_components[-n_lower_components:]
     
 
     # Project the feature matrix onto the bottom k singular vectors
@@ -240,7 +196,6 @@ def remove_main_component(H_train, H_test, n_lower_components=10):
     H_test_reduced = np.dot(H_test, lower_components.T)
     
     return H_train_reduced, H_test_reduced
-
 
 
 

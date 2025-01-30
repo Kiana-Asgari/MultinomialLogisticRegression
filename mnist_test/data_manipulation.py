@@ -16,14 +16,27 @@ def get_cleaned_mnist_data(classes_to_keep=[0,1,2], std_threshold=1e-4, normaliz
     return preprocess_mnist(x_train, y_train, x_test, y_test, classes_to_keep, std_threshold, normalize, pca)
 
 
-def get_cleaned_fashion_mnist_data(classes_to_keep=[0,1,2], std_threshold=1e-4, normalize=True, pca=False):
+def get_cleaned_fashion_mnist_data(classes_to_keep=[0,1,2], 
+                                   std_threshold=1e-4,
+                                     normalize=True, 
+                                     pca=False,
+                                     low_pass_filter=False):
 
     (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+    if low_pass_filter:
+        cutoff_frequency = 10
+        x_train = apply_low_pass_to_dataset(x_train, cutoff=cutoff_frequency)
+        x_test = apply_low_pass_to_dataset(x_test, cutoff=cutoff_frequency)
     x_train = x_train.reshape(x_train.shape[0], -1)
     x_test = x_test.reshape(x_test.shape[0], -1)
     
     # Use the same preprocessing function as regular MNIST
     return preprocess_mnist(x_train, y_train, x_test, y_test, classes_to_keep, std_threshold, normalize, pca)
+
+
+
+
+
 
 
 
@@ -127,6 +140,61 @@ def one_hot_encoding(y_train_filtered, y_test_filtered, classes,):
         y_test_one_hot[test_mask, i-1] = 1
 
     return y_train_one_hot, y_test_one_hot
+
+
+
+import numpy as np
+from scipy.fft import fft2, ifft2, fftshift, ifftshift
+from tqdm import tqdm  # For progress visualization
+
+def low_pass_filter_fft(image, cutoff=10):
+    """
+    Apply a low-pass filter in the frequency domain to a single image.
+
+    Parameters:
+    - image: Input 2D image (grayscale).
+    - cutoff: Cutoff frequency for the low-pass filter.
+
+    Returns:
+    - filtered_image: Filtered image in the spatial domain.
+    """
+    # Perform 2D FFT and shift zero frequency to the center
+    fft_image = fft2(image)
+    fft_shifted = fftshift(fft_image)
+
+    # Create a circular low-pass filter mask
+    rows, cols = image.shape
+    crow, ccol = rows // 2, cols // 2  # Center of the frequency domain
+    mask = np.zeros((rows, cols), dtype=np.float32)
+    for i in range(rows):
+        for j in range(cols):
+            if np.sqrt((i - crow)**2 + (j - ccol)**2) <= cutoff:
+                mask[i, j] = 1
+
+    # Apply the mask
+    fft_filtered = fft_shifted * mask
+
+    # Inverse FFT to return to spatial domain
+    fft_inverse_shifted = ifftshift(fft_filtered)
+    filtered_image = np.abs(ifft2(fft_inverse_shifted))
+    
+    return filtered_image
+
+def apply_low_pass_to_dataset(dataset, cutoff=10):
+    """
+    Apply low-pass FFT filtering to all images in a dataset.
+
+    Parameters:
+    - dataset: Dataset of images (e.g., X_train or X_test).
+    - cutoff: Cutoff frequency for the low-pass filter.
+
+    Returns:
+    - filtered_dataset: Filtered dataset.
+    """
+    filtered_dataset = np.zeros_like(dataset, dtype=np.float32)
+    for i in tqdm(range(len(dataset)), desc="Processing Images"):
+        filtered_dataset[i] = low_pass_filter_fft(dataset[i], cutoff=cutoff)
+    return filtered_dataset
 
 
 
