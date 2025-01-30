@@ -3,7 +3,81 @@ import scipy
 from real_data.eval.fit_data import fit_data
 import matplotlib.pyplot as plt
 import os
+import json
 
+def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
+                          feature_name, n_hidden, file_number=1, seed=42):
+     # Create base filename
+    base_filename = f"error_data_feature_name={feature_name}_n_hidden={n_hidden}_file_number={file_number}.json"
+    base_filepath = os.path.join(os.path.dirname(__file__), "data", "error_empirical", base_filename)
+    print('base_filepath', base_filepath)
+    
+    # Create data/esd directory if it doesn't exist
+    os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
+    print('file path', os.path.dirname(base_filepath))
+    
+    # Initialize or load existing results
+    if os.path.exists(base_filepath):
+        print(f"Loading existing file: {os.path.basename(base_filepath)}")
+        with open(base_filepath, 'r') as f:
+            existing_data = json.load(f)
+            results = existing_data["results"]
+    else:
+        print(f"Creating new file: {os.path.basename(base_filepath)}")
+        results = {}
+        # Initialize the nested structure
+        results = {}
+
+    alpha_values = np.linspace(20, 5, 30)
+    for alpha in alpha_values:
+        n_samples = int(alpha * X_train.shape[1])
+        test_errors = []
+        train_errors = []
+        classification_errors = []
+
+        for i in range(n_iter):
+            np.random.seed(5*i+2)
+            sample_indices = np.random.choice(len(X_train), size=n_samples, replace=False)
+            X_train_sampled = X_train[sample_indices]
+            y_train_sampled = y_train[sample_indices]
+            results = fit_data(X_train_sampled, y_train_sampled, X_test=X_test, y_test=y_test, compute_esd=True, seed=i)
+            test_errors.append(results['test_error'])
+            train_errors.append(results['train_error'])
+            classification_errors.append(results['classification_error'])
+
+        # Calculate mean and std of errors
+        results[str(alpha)] = {
+            'test_error_mean': float(np.mean(test_errors)),
+            'test_error_std': float(np.std(test_errors)),
+            'train_error_mean': float(np.mean(train_errors)),
+            'train_error_std': float(np.std(train_errors)),
+            'classification_error_mean': float(np.mean(classification_errors)),
+            'classification_error_std': float(np.std(classification_errors)),
+            'n_samples': int(n_samples)
+        }
+        print('for alpha: ', alpha)
+        print('     mean test error: ', results[str(alpha)]['test_error_mean'])
+        print('     std test error: ', results[str(alpha)]['test_error_std'])
+        print('     mean train error: ', results[str(alpha)]['train_error_mean'])
+        print('     std train error: ', results[str(alpha)]['train_error_std'])
+        print('mean classification error: ', results[str(alpha)]['classification_error_mean'])
+        print('std classification error: ', results[str(alpha)]['classification_error_std'])
+
+        # Save after each alpha computation
+        with open(base_filepath, 'w') as f:
+            json.dump({
+                "metadata": {
+                    "feature_name": feature_name,
+                    "n_hidden": n_hidden,
+                    "n_iter": n_iter,
+                    "file_number": file_number
+                },
+                "results": results
+            }, f, indent=2)
+        
+        print(f"Completed alpha={alpha}, n_samples={n_samples}")
+    
+    return base_filepath
 
 def eval_esd_hessian(X_train, y_train, X_test, y_test, alpha, n_iter, seed=42):
     

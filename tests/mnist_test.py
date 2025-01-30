@@ -117,3 +117,35 @@ def log_error_theory(file_number, n_hidden, feature_name):
                       file_number=file_number, seed=42)
     print("******logged error theory!******")
 
+
+
+from real_data.eval.eval_data import eval_errors_empirical
+def log_error_empirical(n_hidden, feature_name='tanh', file_number=1):
+    (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
+                                                             feature_name, 
+                                                             decorrelate=True, 
+                                                             n_features=n_hidden, 
+                                                             classes_to_keep=[2,4,6])   
+    eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter=100,
+                          feature_name=feature_name, n_hidden=n_hidden, 
+                          file_number=file_number, seed=42)
+    print("******logged error empirical!******")
+
+
+
+from real_data.plotting.plot_esd import plot_esd_density
+def plots(alpha, file_number=1):
+    """
+    Reads the ESD Hessian data for a given alpha and plots density vs z_real values.
+    
+    Args:
+        alpha (float): The alpha value to plot
+        file_number (int): The file number suffix (default=1)
+    """
+    (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
+                                                             'tanh', 
+                                                             decorrelate=True, 
+                                                             n_features=350, 
+                                                             classes_to_keep=[2,4,6])
+    plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number)
+
