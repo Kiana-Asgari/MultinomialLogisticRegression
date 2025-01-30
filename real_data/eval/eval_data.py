@@ -44,6 +44,7 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
             test_errors.append(results['test_error'])
             train_errors.append(results['train_error'])
             classification_errors.append(results['classification_error'])
+            print('iter: ', i, 'train error: ', results['train_error'])
 
         # Calculate mean and std of errors
         results[str(alpha)] = {
