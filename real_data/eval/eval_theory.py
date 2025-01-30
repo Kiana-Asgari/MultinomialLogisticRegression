@@ -6,7 +6,95 @@ import os
 import json
 from scipy.linalg import sqrtm
 
+from multinomial_logistic.evaluation.log_loss_test_error import test_error
+from multinomial_logistic.evaluation.log_loss_train_eror import train_error
+from multinomial_logistic.evaluation.misclassification_test_error import misclassification_test_error
 
+
+
+def eval_error_theory(X_train, y_train, X_test, y_test,
+                    feature_name, n_hidden, file_number=1, seed=42):
+    
+    results = fit_data(X_train, y_train, X_test=X_test, y_test=y_test, compute_esd=False, seed=seed)
+    Theta_hat = results['Theta_hat']
+    R_00 = Theta_hat @ Theta_hat.T
+    R_00_str = str(R_00.tolist())
+    k=2
+    k_0=2
+
+   # Create base filename
+    base_filename = f"error_data_feature_name={feature_name}_n_hidden={n_hidden}_file_number={file_number}.json"
+    base_filepath = os.path.join(os.path.dirname(__file__), "data", "error_theoretical", base_filename)
+    print('base_filepath', base_filepath)
+    
+    # Create data/esd directory if it doesn't exist
+    os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
+    print('file path', os.path.dirname(base_filepath))
+    
+    # Initialize or load existing results
+    if os.path.exists(base_filepath):
+        print(f"Loading existing file: {os.path.basename(base_filepath)}")
+        with open(base_filepath, 'r') as f:
+            existing_data = json.load(f)
+            results = existing_data["results"]
+    else:
+        print(f"Creating new file: {os.path.basename(base_filepath)}")
+        results = {}
+        # Initialize the nested structure
+        results[R_00_str] = {}
+
+    ##############################################################################
+    ##############################################################################  
+    ##############################################################################
+    alpha_values = np.linspace(20, 5, 100)
+    for alpha in alpha_values:
+        schur, R_01, S, diverged = state_evolution_full_recursion(R_00=R_00,
+                                                                 schur_0=R_00,
+                                                                 R_01_0=np.zeros((2,2)),
+                                                                 lambda_reg=0,
+                                                                 alpha=alpha, 
+                                                                 k=k, 
+                                                                 k_0=k_0,
+                                                                 max_iter=100,
+                                                                 seed=seed,
+                                                                 tol=1e-5)
+        print(' found schur,', schur, 'R_01,', R_01, 'S,', S)
+
+        A = R_01 @ np.linalg.inv(sqrtm(R_00))
+        # Calculate test error, train error, and F_norm
+        R_11 = schur + R_01 @ np.linalg.inv(R_00) @ R_01.T
+        test_err = test_error(R_00, schur, R_01=R_01, alpha=alpha, k=k, k_0=k_0)
+        train_err = train_error(R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
+        misclassification_test_err = misclassification_test_error(S=S, R_00=R_00,
+                                                                           schur_t=schur, 
+                                                                           A_t=A, 
+                                                                           alpha=alpha, k=k, k_0=k_0)
+        f_norm = np.trace(R_00) + np.trace(R_11) - np.trace(R_01) - np.trace(R_01.T)
+        results[R_00_str][alpha] = {
+            'test_error': float(test_err),
+            'train_error': float(train_err),
+            'misclassification_test_error': float(misclassification_test_err),
+            'f_norm': float(f_norm),
+            'schur': schur.tolist(),
+            'R_01': R_01.tolist(),
+            'R_00': R_00.tolist(),
+            'S': S.tolist()
+        }
+        # Save after each computation
+        with open(base_filepath, 'w') as f:
+            json.dump({
+                "metadata": {
+                    "k": k,
+                    "k_0": k_0,
+                    "alpha": alpha,
+                    "feature name": feature_name,
+                    "n_hidden": n_hidden,
+                    "R_00": R_00_str
+                },
+                "results": results
+            }, f, indent=2)
+    
+    return base_filepath
 
 def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_values,
                             feature_name, n_hidden, file_number=1, seed=42):
