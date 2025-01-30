@@ -195,13 +195,13 @@ def _MP_integrand(G_batch, R_00, schur, A, S, MP_S_inv, alpha, k, k_0):
 def complex_integration(integrand, R_00, schur, A, S, MP_S_inv, alpha, k, k_0):
     fdim = 2*k*k
     ndim = k+k_0
-
+    np.random.seed(42)
     expectations, err = cubature(integrand, args=(R_00, schur, A, S, MP_S_inv, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
                                   fdim=fdim,
                                   xmin=[-3.4]*ndim, xmax=[3.4]*ndim, 
                                   abserr=1e-5,
-                                  maxEval=300_000, norm=1, seed=42)
+                                  maxEval=300_000, norm=1)
     
     # Check errors element by element and print problematic components
     problem_indices = np.where(err > 1e-4)[0]

@@ -222,6 +222,9 @@ def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo
 #####################################################################################
 
 def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
+    # Set numpy random seed before cubature call
+    np.random.seed(seed)
+    
     fdim = k*k
     ndim = k+k_0
     expectations, err = cubature(integrand, 
@@ -234,8 +237,8 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
                                    abserr=1e-5,
                                    relerr=1e-4,
                                    maxEval=500_000, 
-                                   norm=1,
-                                   seed=seed)
+                                   norm=1)
+
     if np.max(err) > 1e-4:
         print('     **Error in integration is too large**', np.max(err))
 

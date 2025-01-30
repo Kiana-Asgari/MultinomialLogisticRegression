@@ -26,7 +26,7 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
                                                                  k_0=k_0,
                                                                  max_iter=100,
                                                                  seed=seed,
-                                                                 tol=1e-1)
+                                                                 tol=1e-5)
     print(' found schur,', schur, 'R_01,', R_01, 'S,', S)
 
 
@@ -39,6 +39,7 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
     
     # Create data/esd directory if it doesn't exist
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
+    print('file path', os.path.dirname(base_filepath))
     
     # Initialize or load existing results
     if os.path.exists(base_filepath):
@@ -49,9 +50,11 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
     else:
         print(f"Creating new file: {os.path.basename(base_filepath)}")
         results = {}
+        # Initialize the nested structure
+        results[R_00_str] = {str(alpha): {}}
 
     density_list = []
-
+    last_MP_S = np.complex128(np.eye(k)) #initialize last_MP_S
     ##############################################################################
     ##############################################################################  
     ##############################################################################
@@ -65,6 +68,12 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
         z_imag_str = str(z_imag)
         alpha_str = str(alpha)
         
+        # Ensure the nested structure exists
+        if R_00_str not in results:
+            results[R_00_str] = {}
+        if alpha_str not in results[R_00_str]:
+            results[R_00_str][alpha_str] = {}
+            
         # More robust check for existing combinations
         if (z_real_str in results[R_00_str][alpha_str] and 
             results[R_00_str][alpha_str].get(z_real_str, {}).get(z_imag_str) is not None):
