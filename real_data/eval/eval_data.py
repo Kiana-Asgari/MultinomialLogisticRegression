@@ -46,7 +46,7 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
             sample_indices = np.random.choice(len(X_train), size=n_samples, replace=False)
             X_train_sampled = X_train[sample_indices]
             y_train_sampled = y_train[sample_indices]
-            results_iter = fit_data(X_train_sampled, y_train_sampled, X_test=X_test, y_test=y_test, compute_esd=True, seed=i)
+            results_iter = fit_data(X_train_sampled, y_train_sampled, X_test=X_test, y_test=y_test, compute_esd=False, seed=i)
             test_errors[i] = float(results_iter['test_error'])
             train_errors[i] = float(results_iter['train_error'])
             classification_errors[i] = float(results_iter['classification_error'])
