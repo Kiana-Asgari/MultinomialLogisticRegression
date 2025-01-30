@@ -100,6 +100,6 @@ def log_esd_theory(file_number, alpha):
                                                              n_features=d, 
                                                              classes_to_keep=[2,4,6])   
     eval_esd_hessian_theory(X_train, y_train, X_test, y_test, 
-                            file_number=file_number, seed=42, 
+                            file_number=file_number, seed=42,  feature_name=feature_name,
                             alpha=alpha, n_hidden=d, z_real_values=z_real_values)
     print("******logged esd theory!******")
