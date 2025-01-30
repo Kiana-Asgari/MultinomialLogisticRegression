@@ -4,6 +4,8 @@ from real_data.feature_selection.compute_features import compute_features
 from real_data.feature_selection.check_points_features import check_features_are_standardized, plot_esd_for_feature, check_labels
 from real_data.eval.fit_data import fit_data
 from real_data.eval.eval_data import eval_esd_hessian
+from real_data.eval.eval_theory import eval_error_theory
+
 def test_compute_features():
     print("Testing compute_features...")
     (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist', 'tanh', decorrelate=True, n_features=500, classes_to_keep=[2,4,6])
@@ -101,3 +103,17 @@ def log_esd_theory(file_number, alpha):
                             file_number=file_number, seed=42,  feature_name=feature_name,
                             alpha=alpha, n_hidden=d, z_real_values=z_real_values)
     print("******logged esd theory!******")
+
+
+
+def log_error_theory(file_number, n_hidden, feature_name):
+    (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
+                                                             feature_name, 
+                                                             decorrelate=True, 
+                                                             n_features=n_hidden, 
+                                                             classes_to_keep=[2,4,6])   
+    eval_error_theory(X_train, y_train, X_test, y_test,
+                      feature_name=feature_name, n_hidden=n_hidden, 
+                      file_number=file_number, seed=42)
+    print("******logged error theory!******")
+
