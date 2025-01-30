@@ -85,14 +85,12 @@ def test_eval_esd_hessian_theory():
 def log_esd_theory(file_number, alpha):
     d=350
     feature_name='tanh'
-    if file_number == 1:
-        z_real_values = np.linspace(0.001,0.1,60)
-    elif file_number == 2 and alpha == 10:
-        z_real_values = np.linspace(0.1,0.3,60)
-    elif file_number == 2 and alpha == 20:
-        z_real_values = np.linspace(0.1,0.3,60)
-    elif file_number == 2 and alpha == 30:
-        z_real_values = np.linspace(0.1,0.5,60)
+    if alpha == 10:
+        z_real_values = np.linspace(0.001,0.35,100)
+    elif alpha == 20:
+        z_real_values = np.linspace(0.001,0.35,100)
+    elif alpha == 30:
+        z_real_values = np.linspace(0.001,0.55,100)
 
     (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
                                                              feature_name, 

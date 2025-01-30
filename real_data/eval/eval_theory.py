@@ -17,20 +17,6 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
     R_00_str = str(R_00.tolist())
     k=2
     k_0=2
-    schur, R_01, S, diverged = state_evolution_full_recursion(R_00=R_00,
-                                                                 schur_0=R_00,
-                                                                 R_01_0=np.zeros((2,2)),
-                                                                 lambda_reg=0,
-                                                                 alpha=alpha, 
-                                                                 k=k, 
-                                                                 k_0=k_0,
-                                                                 max_iter=100,
-                                                                 seed=seed,
-                                                                 tol=1e-5)
-    print(' found schur,', schur, 'R_01,', R_01, 'S,', S)
-
-
-    A = R_01 @ np.linalg.inv(sqrtm(R_00))
 
    # Create base filename
     base_filename = f"esd_data_alpha{alpha}_{file_number}.json"
@@ -58,9 +44,23 @@ def eval_esd_hessian_theory(X_train, y_train, X_test, y_test, alpha, z_real_valu
     ##############################################################################
     ##############################################################################  
     ##############################################################################
+    schur, R_01, S, diverged = state_evolution_full_recursion(R_00=R_00,
+                                                                 schur_0=R_00,
+                                                                 R_01_0=np.zeros((2,2)),
+                                                                 lambda_reg=0,
+                                                                 alpha=alpha, 
+                                                                 k=k, 
+                                                                 k_0=k_0,
+                                                                 max_iter=100,
+                                                                 seed=seed,
+                                                                 tol=1e-5)
+    print(' found schur,', schur, 'R_01,', R_01, 'S,', S)
+    print('*****processing z_real min = ', z_real_values[0], ' max = ', z_real_values[-1], ' len = ', len(z_real_values))
+
+    A = R_01 @ np.linalg.inv(sqrtm(R_00))
     for z_real in z_real_values:
         # choose z_imag based on z_real
-        if z_real < 0.1:
+        if z_real < 0.11:
             z_imag = 1e-4
         else:
             z_imag = 1e-3
