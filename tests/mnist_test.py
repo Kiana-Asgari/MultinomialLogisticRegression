@@ -5,6 +5,7 @@ from real_data.feature_selection.check_points_features import check_features_are
 from real_data.eval.fit_data import fit_data
 from real_data.eval.eval_data import eval_esd_hessian
 from real_data.eval.eval_theory import eval_error_theory
+from real_data.plotting.plot_errors import plot_errors_comparison
 
 def test_compute_features():
     print("Testing compute_features...")
@@ -149,3 +150,6 @@ def plots(alpha, file_number=1):
                                                              classes_to_keep=[2,4,6])
     plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number)
 
+
+def plot_errors(n_hidden, feature_name='tanh', file_number=1):
+    plot_errors_comparison(feature_name, n_hidden, file_number)
