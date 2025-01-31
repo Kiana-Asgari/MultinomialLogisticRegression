@@ -173,5 +173,5 @@ from real_data.plotting.plot_bays import plot_bays
 def plot_errors(n_hidden, feature_name='tanh', file_number=1):
     plot_errors_comparison(feature_name, n_hidden, file_number)
     print("******plot errors comparison passed!******")
-    plot_bays(feature_name, n_hidden, file_number)
-    print("******plot bayesian errors passed!******")
+    #plot_bays(feature_name, n_hidden, file_number)
+    #print("******plot bayesian errors passed!******")

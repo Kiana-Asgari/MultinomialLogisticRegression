@@ -119,7 +119,7 @@ def plot_bays(feature_name, n_hidden, file_number=1):
     test_errors_theory_normalized = np.array(test_errors_theory) - irr_test
     class_errors_theory_normalized = np.array(class_errors_theory) - irr_misclass
     
-    mask_theory = alphas_theory > 5
+    mask_theory = alphas_theory > 0
     alphas_theory = alphas_theory[mask_theory]
     test_errors_theory_normalized = test_errors_theory_normalized[mask_theory]
     class_errors_theory_normalized = class_errors_theory_normalized[mask_theory]
@@ -130,22 +130,22 @@ def plot_bays(feature_name, n_hidden, file_number=1):
 
     # Plot test error with error bars
     ax2.errorbar(alphas_emp, test_errors_emp_normalized, yerr=test_std_emp/np.sqrt(n_iter), color='blue',
-                fmt='o', alpha=0.7, label='Empirical', capsize=2, markersize=3)
-    ax2.plot(alphas_theory, test_errors_theory_normalized, '-', label='Theory', alpha=0.7, color='darkblue')
+                fmt='o', alpha=0.7, capsize=2, markersize=3)
+    ax2.plot(alphas_theory, test_errors_theory_normalized, '-', alpha=0.7, color='darkblue')
     ax2.set_xlabel(r'$\alpha$')
-    ax2.set_ylim(0, 1)
-    ax2.set_ylabel('Test Error')
-    ax2.legend()
+    ax2.set_ylim(0, 0.95)
+    ax2.set_ylabel('Residual Test Error')
+    #ax2.legend()
     ax2.grid(True, alpha=0.3)
 
     # Plot classification error with error bars
     ax3.errorbar(alphas_emp, class_errors_emp_normalized, yerr=class_std_emp/np.sqrt(n_iter), color='blue',
-                fmt='o', alpha=0.7, label='Empirical', capsize=2, markersize=3)
-    ax3.plot(alphas_theory, class_errors_theory_normalized, '-', label='Theory', alpha=0.7, color='darkblue')
+                fmt='o', alpha=0.7, capsize=2, markersize=3)
+    ax3.plot(alphas_theory, class_errors_theory_normalized, '-', alpha=0.7, color='darkblue')
     ax3.set_xlabel(r'$\alpha$')
-    ax3.set_ylabel('Classification Error')
-    ax3.set_ylim(0., 0.12)  # Set y-axis limits
-    ax3.legend()
+    ax3.set_ylabel('Residual Classification Error')
+    ax3.set_ylim(0., 0.14)  # Set y-axis limits
+    #ax3.legend()
     ax3.grid(True, alpha=0.3)
 
     plt.tight_layout()

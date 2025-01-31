@@ -1,6 +1,4 @@
-
 import numpy as np
-
 from multinomial_logistic.MLE_empirical.ESD_empirical import esd_empirical
 from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
 import matplotlib.pyplot as plt
@@ -155,4 +153,6 @@ if __name__ == "__main__":
     run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
                    max_iter=400, non_symmetric=args.non_symmetric, 
                    two_classes_close=args.two_classes_close)
+
+
 
