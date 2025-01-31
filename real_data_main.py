@@ -32,8 +32,8 @@ if __name__ == "__main__":
 
     #alpha = args.alpha
     #file_number = args.file_number
-    #log_esd_theory(file_number=file_number, alpha=alpha)
-    log_error_theory(file_number=1, n_hidden=args.n_hidden, feature_name=args.feature_name)
+    log_esd_theory(file_number=1, alpha=args.alpha)
+    #log_error_theory(file_number=1, n_hidden=args.n_hidden, feature_name=args.feature_name)
     #plots(alpha=10.0)
     #plots(alpha=20.0)
     #plots(alpha=30.0)

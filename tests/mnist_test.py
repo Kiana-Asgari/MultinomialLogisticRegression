@@ -89,7 +89,7 @@ def log_esd_theory(file_number, alpha):
     d=350
     feature_name='tanh'
     if alpha == 10:
-        z_real_values = np.linspace(0.001,0.35,100)
+        z_real_values = [0.021,0.023,0.0265,0.0275,0.0285]
     elif alpha == 20:
         z_real_values = np.linspace(0.001,0.35,100)
     elif alpha == 30:
