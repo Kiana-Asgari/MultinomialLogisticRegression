@@ -138,28 +138,21 @@ def test_miscalss():
 ######################################
 from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle
 from multinomial_logistic.MLE_empirical.visualize_data import scatter_plot_data
+import argparse
+
 if __name__ == "__main__":
     print("Running main")
     k = 2
     k_0 = 2
-    #test_miscalss()
-    #alpha = 3.0
-    #d = 250
-    #run_and_log_fp_tests(k_0=k_0, k=k, non_symmetric=True, two_classes_close=False)
-    #plot_errors_vs_alpha(k, k_0, alpha_min_fp=1, alpha_max = 14.11,
-    #             alpha_min_emp=2.7, empirical_mean_std=True, 
-   #              empirical_mean_only=False, empirical_window=0.4)
+    
+    # Add argument parsing
+
+    parser = argparse.ArgumentParser(description='Run FP analysis')
+    parser.add_argument('--non_symmetric', action='store_true', help='Use non-symmetric configuration')
+    parser.add_argument('--two_classes_close', action='store_true', help='Use configuration with two close classes')
+    args = parser.parse_args()
 
     run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-                    max_iter=400, non_symmetric=False, two_classes_close=False)
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=True, two_classes_close=False)
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=False, two_classes_close=True)
-    run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-                    max_iter=400, non_symmetric=False, two_classes_close=False)
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=True, two_classes_close=False)
-    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-    #                max_iter=400, non_symmetric=False, two_classes_close=True)
+                   max_iter=400, non_symmetric=args.non_symmetric, 
+                   two_classes_close=args.two_classes_close)
 

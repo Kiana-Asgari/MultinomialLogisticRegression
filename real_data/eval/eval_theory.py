@@ -114,7 +114,7 @@ def eval_error_theory(X_train, y_train, X_test, y_test,
     ##############################################################################
     ##############################################################################  
     ##############################################################################
-    alpha_values = np.linspace(5.44, 4.5, 10)
+    alpha_values = np.linspace(5.01, 4.5, 10)
     for alpha in alpha_values:
         # Convert alpha to string for dictionary lookup
         alpha_str = str(alpha)
