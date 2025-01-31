@@ -132,6 +132,25 @@ def log_error_empirical(n_hidden, feature_name='tanh', file_number=1):
                           file_number=file_number, seed=42)
     print("******logged error empirical!******")
 
+from real_data.eval.eval_data import eval_bayesian_error
+def log_bayesian_error(n_hidden, feature_name='tanh', file_number=1):
+    (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
+                                                             feature_name, 
+                                                             decorrelate=True, 
+                                                             n_features=n_hidden, 
+                                                             classes_to_keep=[2,4,6])   
+    eval_bayesian_error(X_train, y_train, X_test, y_test, feature_name, n_hidden, file_number=file_number, seed=42)
+    print("******logged bayesian error!******")
+
+from real_data.eval.eval_theory import eval_irreducible_error_theory
+def log_irreducible_error(n_hidden, feature_name='tanh', file_number=1):
+    (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
+                                                             feature_name, 
+                                                             decorrelate=True, 
+                                                             n_features=n_hidden, 
+                                                             classes_to_keep=[2,4,6])   
+    eval_irreducible_error_theory(X_train, y_train, X_test, y_test, feature_name, n_hidden, file_number=file_number, seed=42)
+    print("******logged irreducible error!******")
 
 
 from real_data.plotting.plot_esd import plot_esd_density
@@ -150,6 +169,9 @@ def plots(alpha, file_number=1):
                                                              classes_to_keep=[2,4,6])
     plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number)
 
-
+from real_data.plotting.plot_bays import plot_bays
 def plot_errors(n_hidden, feature_name='tanh', file_number=1):
     plot_errors_comparison(feature_name, n_hidden, file_number)
+    print("******plot errors comparison passed!******")
+    plot_bays(feature_name, n_hidden, file_number)
+    print("******plot bayesian errors passed!******")

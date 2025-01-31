@@ -5,6 +5,87 @@ import matplotlib.pyplot as plt
 import os
 import json
 
+
+
+
+
+def eval_bayesian_error(X_train, y_train, X_test, y_test, feature_name, n_hidden, file_number=1, seed=42):
+
+    # Create base filename
+    base_filename = f"bayesian_error_data_feature_name={feature_name}_n_hidden={n_hidden}_file_number={file_number}.json"
+    base_filepath = os.path.join(os.path.dirname(__file__), "data", "error_empirical", base_filename)
+    print('base_filepath', base_filepath)
+    
+    # Create data/esd directory if it doesn't exist
+    os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
+    print('file path', os.path.dirname(base_filepath))
+    
+    # Initialize or load existing results
+    if os.path.exists(base_filepath):
+        print(f"Loading existing file: {os.path.basename(base_filepath)}")
+        with open(base_filepath, 'r') as f:
+            existing_data = json.load(f)
+            results = existing_data["results"]
+    else:
+        print(f"Creating new file: {os.path.basename(base_filepath)}")
+        results = {}
+        # Initialize the nested structure
+        results = {}
+
+
+
+    n_iter = 100
+    test_errors = np.zeros(n_iter)
+    train_errors = np.zeros(n_iter)
+    classification_errors = np.zeros(n_iter)
+
+
+    for i in range(n_iter):
+        mask = np.ones(len(X_train), dtype=bool)
+        mask[2*i] = False
+        X_train_sampled = X_train[mask]
+        y_train_sampled = y_train[mask]
+        results_iter = fit_data(X_train_sampled, y_train_sampled, X_test=X_test, y_test=y_test, compute_esd=False, seed=i)
+        test_errors[i] = float(results_iter['test_error'])
+        train_errors[i] = float(results_iter['train_error'])
+        classification_errors[i] = float(results_iter['classification_error'])
+        print('iter: ', i, 'test error: ', test_errors[i], 'train error: ', train_errors[i], 'classification error: ', classification_errors[i])
+
+    # Store results for this alpha
+    results = {
+        "test_errors": test_errors.tolist(),
+        "train_errors": train_errors.tolist(),
+        "classification_errors": classification_errors.tolist(),
+        "mean_test_error": float(np.mean(test_errors)),
+        "mean_train_error": float(np.mean(train_errors)),
+        "mean_classification_error": float(np.mean(classification_errors)),
+        "std_test_error": float(np.std(test_errors)),
+        "std_train_error": float(np.std(train_errors)),
+        "std_classification_error": float(np.std(classification_errors))
+    }
+
+    # Save results after each alpha computation
+    data_to_save = {
+        "feature_name": feature_name,
+        "n_hidden": n_hidden,
+        "n_iter": n_iter,
+        "results": results
+    }
+    
+    with open(base_filepath, 'w') as f:
+        json.dump(data_to_save, f, indent=4)
+    
+    print('     mean test error: ', np.mean(test_errors), 'std test error: ', np.std(test_errors))
+    print('     mean train error: ', np.mean(train_errors), 'std train error: ', np.std(train_errors))
+    print('     mean classification error: ', np.mean(classification_errors), 'std classification error: ', np.std(classification_errors))
+
+    return results
+
+
+
+
+
+
 def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
                           feature_name, n_hidden, file_number=1, seed=42):
      # Create base filename

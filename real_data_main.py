@@ -3,6 +3,7 @@ from tests.mnist_test import test_compute_features, test_fitting_whole_dataset
 from tests.mnist_test import test_fitting_sampled_dataset, test_eval_esd_hessian 
 from tests.mnist_test import test_eval_esd_hessian_theory, test_eval_esd_hessian_theory
 from tests.mnist_test import log_esd_theory, log_error_theory, plots, log_error_empirical, plot_errors
+from tests.mnist_test import log_bayesian_error, log_irreducible_error
 
 #python real_data_main.py --alpha 20 --file-number 2
 #python real_data_main.py --n-hidden 350 --feature-name tanh
@@ -27,16 +28,19 @@ if __name__ == "__main__":
     #test_fitting_sampled_dataset()
     #test_eval_esd_hessian()
     #test_eval_esd_hessian_theory()
-    
+    #log_irreducible_error(n_hidden=250, feature_name='tanh', file_number=1)
+    #log_irreducible_error(n_hidden=350, feature_name='tanh', file_number=1)
+   # log_irreducible_error(n_hidden=500, feature_name='tanh', file_number=1)
+
     #alpha = args.alpha
     #file_number = args.file_number
     #log_esd_theory(file_number=file_number, alpha=alpha)
     #log_error_theory(file_number=1, n_hidden=args.n_hidden, feature_name=args.feature_name)
-    plots(alpha=10.0)
-    plots(alpha=20.0)
-    plots(alpha=30.0)
+    #plots(alpha=10.0)
+    #plots(alpha=20.0)
+    #plots(alpha=30.0)
     #log_error_empirical(n_hidden=args.n_hidden)
-    #plot_errors(n_hidden=args.n_hidden)
+    plot_errors(n_hidden=args.n_hidden)
 
 
 

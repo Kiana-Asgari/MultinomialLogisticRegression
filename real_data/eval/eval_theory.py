@@ -6,9 +6,77 @@ import os
 import json
 from scipy.linalg import sqrtm
 
-from multinomial_logistic.evaluation.log_loss_test_error import test_error
+from multinomial_logistic.evaluation.log_loss_test_error import test_error, irreducible_error
 from multinomial_logistic.evaluation.log_loss_train_eror import train_error
-from multinomial_logistic.evaluation.misclassification_test_error import misclassification_test_error
+from multinomial_logistic.evaluation.misclassification_test_error import misclassification_test_error, irreducible_misclassification_error
+
+
+
+
+
+def eval_irreducible_error_theory(X_train, y_train, X_test, y_test,
+                                  feature_name, n_hidden, file_number=1, seed=42):
+    np.random.seed(seed)
+    results = fit_data(X_train, y_train, X_test=X_test, y_test=y_test, compute_esd=False, seed=seed)
+    Theta_hat = results['Theta_hat']
+    R_00 = Theta_hat @ Theta_hat.T
+    R_00_str = str(R_00.tolist())
+    k=2
+    k_0=2
+
+    # Create base filename
+    base_filename = f"irreducible_error_data_feature_name={feature_name}_n_hidden={n_hidden}_file_number={file_number}.json"
+    base_filepath = os.path.join(os.path.dirname(__file__), "data", "error_theoretical", base_filename)
+    print('base_filepath', base_filepath)
+    
+    # Create data directory if it doesn't exist
+    os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
+    print('file path', os.path.dirname(base_filepath))
+    
+    # Initialize or load existing results
+    if os.path.exists(base_filepath):
+        print(f"Loading existing file: {os.path.basename(base_filepath)}")
+        with open(base_filepath, 'r') as f:
+            existing_data = json.load(f)
+            results = existing_data["results"]
+    else:
+        print(f"Creating new file: {os.path.basename(base_filepath)}")
+        results = {}
+        
+    # Skip if R_00 already exists
+    if R_00_str in results:
+        print(f"Skipping R_00 (already exists)")
+        return base_filepath
+
+    # Calculate irreducible errors
+    irr_test_error = irreducible_error(R_00=R_00, k=k, k_0=k_0, alpha=0) #alpha does not matter 
+    irr_misclass_error = irreducible_misclassification_error(R_00=R_00, k=k, k_0=k_0, alpha=0) #alpha does not matter 
+    
+    # Store results
+    results[R_00_str] = {
+        'irreducible_test_error': float(irr_test_error),
+        'irreducible_misclassification_error': float(irr_misclass_error),
+        'R_00': R_00.tolist()
+    }
+
+    # Save results
+    with open(base_filepath, 'w') as f:
+        json.dump({
+            "metadata": {
+                "k": k,
+                "k_0": k_0,
+                "feature name": feature_name,
+                "n_hidden": n_hidden,
+                "R_00": R_00_str
+            },
+            "results": results
+        }, f, indent=2)
+    
+    return base_filepath
+
+
+
+
 
 
 
@@ -46,8 +114,16 @@ def eval_error_theory(X_train, y_train, X_test, y_test,
     ##############################################################################
     ##############################################################################  
     ##############################################################################
-    alpha_values = np.linspace(20, 5, 100)
+    alpha_values = np.linspace(5.44, 4.5, 10)
     for alpha in alpha_values:
+        # Convert alpha to string for dictionary lookup
+        alpha_str = str(alpha)
+        
+        # Skip if this alpha already exists
+        if alpha_str in results[R_00_str]:
+            print(f"Skipping alpha={alpha} (already exists)")
+            continue
+            
         schur, R_01, S, diverged = state_evolution_full_recursion(R_00=R_00,
                                                                  schur_0=R_00,
                                                                  R_01_0=np.zeros((2,2)),
@@ -70,7 +146,7 @@ def eval_error_theory(X_train, y_train, X_test, y_test,
                                                                            A_t=A, 
                                                                            alpha=alpha, k=k, k_0=k_0)
         f_norm = np.trace(R_00) + np.trace(R_11) - np.trace(R_01) - np.trace(R_01.T)
-        results[R_00_str][alpha] = {
+        results[R_00_str][alpha_str] = {
             'test_error': float(test_err),
             'train_error': float(train_err),
             'misclassification_test_error': float(misclassification_test_err),

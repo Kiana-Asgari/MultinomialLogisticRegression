@@ -16,59 +16,6 @@ from multinomial_logistic.evaluation.utils import plot_array
 
 
 
-def plot_misclass_test_error_vs_alpha(R_00, alpha_min, alpha_max ,k, k_0, max_iter, save_path):
-    print('plotting misclassification test error vs alpha... for parameters:')
-    print('     R_00 = ', R_00)
-    alpha_values = np.linspace(alpha_min, alpha_max, max_iter, endpoint=False)
-    lambda_reg_values = [0]
-    legends = ['lambda_reg=0']
-
-
-    misclass_test_error_batches = np.zeros((len(lambda_reg_values), len(alpha_values)))
-
-    for i, lambda_reg in enumerate(lambda_reg_values):
-        for j, alpha in enumerate(alpha_values):
-            schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
-                                            lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-            A_t = R_01 @ np.linalg.inv(R_00)
-            misclass_test_error_batches[i, j] = misclassification_test_error(S, R_00, schur, A_t, alpha, k, k_0)
-            print('misclass_test_error_batches[i, j]', misclass_test_error_batches[i, j])
-        
-    title = f"misclassification test error vs alpha, number of class={k+1:d},R_00= ({R_00})"
-    name = f"misclassification_test_error_vs_alpha_nclass={k+1:d}_R_00={R_00}" 
-
-    plot_array( x_data=alpha_values, y_data_batch=misclass_test_error_batches, legends=legends,\
-                title=title,\
-                x_label="alpha", y_label="misclassification test error",\
-                name=name, save_path=save_path)
-
-
-
-
-
-def plot_misclass_test_error_vs_lambda(R_00, lambda_reg_min, lambda_reg_max ,k, k_0, max_iter, save_path):
-    print('plotting misclassification test error vs alpha... for parameters:')
-    print('     R_00 = ', R_00)
-    alpha_values =  [1.5, 2, 4]
-    lambda_reg_values = np.linspace(lambda_reg_min, lambda_reg_max, max_iter, endpoint=False)
-
-    misclass_test_error_batches = np.zeros((len(alpha_values), len(lambda_reg_values)))
-    legends = ['alpha=1.5', 'alpha=2', 'alpha=4']
-
-    for i, alpha in enumerate(alpha_values):
-        for j, lambda_reg in enumerate(lambda_reg_values):
-            schur, R_01, S, divergence = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k_0,k)),\
-                                            lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0)
-            A_t = R_01 @ np.linalg.inv(sqrtm(R_00))
-            misclass_test_error_batches[i, j] = misclassification_test_error(S, R_00, schur, A_t, alpha, k, k_0)
-            print('misclass_test_error_batches[i, j]', misclass_test_error_batches[i, j])
-        
-    title = f"misclassification test error vs lambda_reg, number of class={k+1:d},R_00= ({R_00})"
-    name = f"misclassification_test_error_vs_lambda_reg_nclass={k+1:d}_R_00={R_00}" 
-    plot_array( x_data=2* lambda_reg_values, y_data_batch=misclass_test_error_batches, legends=legends,\
-                title=title,\
-                x_label="lambda_reg", y_label="misclassification test error",\
-                name=name, save_path=save_path)
 
 
 
@@ -77,6 +24,25 @@ def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, monte_car
     accuracy = integration(_misclassification_integrand, S, R_00, schur_t, A_t, alpha, k, k_0)
     #print('integrand.shape', integrand.shape)
     return 1-accuracy
+
+
+
+
+
+
+
+
+def irreducible_misclassification_error(R_00, k, k_0, alpha):
+    A = sqrtm(R_00)
+    schur = np.zeros((k,k))
+    S=None
+    irreducible_error = 1-integration(_misclassification_integrand, S, R_00, schur, A, alpha, k, k_0)
+    print('     done computing misclassification irreducible error: ', irreducible_error)
+    return irreducible_error
+
+
+
+
 
 
 def _misclassification_integrand(Z_batch, S, R_00, schur_t, A_t, alpha, k, k_0):
