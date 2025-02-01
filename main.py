@@ -151,8 +151,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     R_00 = np.array([[1,1/2], [1/2,1]])
-    run_and_log_fp_tests_regularized(k_0=k_0, k=k, R_00=R_00)  
+    #plot_regularized_error(k=k, k_0=k_0, R_00=R_00)
 
+    run_and_log_fp_tests_regularized(k_0=k_0, k=k, R_00=R_00)  
 
     #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
     #               max_iter=400, non_symmetric=args.non_symmetric, 

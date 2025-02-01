@@ -279,9 +279,9 @@ def plot_regularized_error(k,
                            R_00, 
                            save_path=None, 
                            emp_values = None,
-                           emp_window=0.4, 
-                           lambda_reg_max=0.6,
-                           lambda_reg_min=0.3):
+                           emp_window=0., 
+                           lambda_reg_max=0.39,
+                           lambda_reg_min=0):
 
     print('[Info] Plotting regularized error...')
 
@@ -511,7 +511,7 @@ def _plot_empirical_errors(ax,
     ax.errorbar(
         x=2*np.array(filtered_lambdas),
         y=filtered_errors,
-        yerr=filtered_stds,
+        yerr=np.array(filtered_stds)/10,
         color=color,
         fmt='o',  # square markers
         markersize=3,
