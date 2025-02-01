@@ -36,7 +36,7 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
 
     n_samples = int(alpha * X_train.shape[1])
     esd_values_mnist = []
-    n_iter = 1
+    n_iter = 25
 
     for i in range(n_iter):
         np.random.seed(5*i+2)
@@ -45,7 +45,7 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
         y_train_sampled = y_train[sample_indices]
         results = fit_data(X_train_sampled, y_train_sampled, X_test=X_test, y_test=y_test, compute_esd=True, seed=i)
         esd_values_mnist.append(results['esd_values'])
-
+        print('iter', i, 'done')
     print("esd_values min: ", np.min(esd_values_mnist), "max: ", np.max(esd_values_mnist))
         
     # Create histogram and plot MP distribution
@@ -58,7 +58,7 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
         alpha=0.5,
         #linewidth=1,
         color='blue',
-        label='Empirical spectrum',
+        label='Empirical spectrum on MNIST dataset',
         ax=ax
     )
 
@@ -101,6 +101,13 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
     for i in range(len(z_real_values)):
         print('z_real: ', z_real_values[i], 'density: ', densities[i])
     
+
+    if alpha == 10.0:
+        z_real_values = z_real_values[3:-17]
+        densities = densities[3:-17]
+        densities[0] = 0.0
+        densities[-1] = 0.0
+
     ax.plot(
         z_real_values, 
         densities, 
@@ -109,8 +116,8 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
         label=r'$\mu_{\star}(\nu_{\mathrm{opt}})$'
     )
     ax.set_xlabel(r'$\lambda$')
-    ax.set_xlim(0, 0.4)
-    ax.set_ylabel(r'$\rho(\lambda)$')
+    ax.set_xlim(0, 0.45)
+    ax.set_ylabel('')
     ax.set_title(f'Spectral Density for $\\alpha={alpha}$')
     ax.grid(True)
     ax.legend()
