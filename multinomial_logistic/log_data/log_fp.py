@@ -104,11 +104,11 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
             """
             if alpha < 3:
                 tol = 1e-4
-                max_iter = 5
+                max_iter = 10
             else:
                 tol = 1e-4
-                max_iter = 5
-            if alpha > 15:
+                max_iter = 10
+            if alpha >= 15:
                 continue
 
 

@@ -107,14 +107,16 @@ def plot_test_error_vs_alpha( R_00, alpha_min, alpha_max \
 
 ####################################################################################################
 
-def test_error( R_00, schur, R_01, k, k_0, alpha):
+def test_error( R_00, schur, R_01, k, k_0, alpha,seed=42):
+    np.random.seed(seed)
     A = R_01 @ sqrtm(np.linalg.inv(R_00))
     loss = integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
     return loss
 
 
 
-def irreducible_error(R_00, k, k_0, alpha):
+def irreducible_error(R_00, k, k_0, alpha, seed=42):
+    np.random.seed(seed)
     A = sqrtm(R_00)
     schur = np.zeros((k,k))
     irreducible_error = integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
@@ -170,7 +172,7 @@ def integration(integrand, R_00, schur, A, alpha, k, k_0):
     expectations, err = cubature(integrand, args=( R_00, schur, A, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
                                   fdim= fdim ,xmin=[-4]*ndim, xmax=[4]*ndim, abserr=1e-4, 
-                                  maxEval= 1_500_000, norm=2)
+                                  maxEval= 3_000_000, norm=2)
     if err.item() > 1e-4:
         print('     **[Warning] log loss test error integration error is too large**', err)
     #for e in err:

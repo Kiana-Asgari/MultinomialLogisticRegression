@@ -89,40 +89,18 @@ def plot_train_log_loss_vs_alpha(R_00, alpha_min, alpha_max, k, k_0, max_iter, s
 
 
 
-def train_error(R_00, schur, R_01, S,alpha, k, k_0):
+def train_error(R_00, schur, R_01, S,alpha, k, k_0, seed=42):
+    np.random.seed(seed)
     print('     computing train  error... with parameters: R_00=', R_00, 'schur=', schur, 'R_01=', R_01, 'S=', S)
     loss = integrate(_train_log_loss_integrand, R_00, schur, R_01, S, alpha, k, k_0)
     print('     done computing train error with loss: ', loss)
     return loss
 
 
-def test_error(theta_0, R_00, schur, R_01, S,alpha, k, k_0):
-    print('     computing test error... with parameters: theta_0=', theta_0, 'R_00=', R_00, 'schur=', schur, 'R_01=', R_01, 'S=', S)
-    loss = integrate(_test_log_loss_integrand, theta_0, R_00, schur, R_01, S, alpha, k, k_0)
-    print('     done computing test error with loss: ', loss)
-    return loss
-
-
-
-
 
 #########################
 # Log loss integrand
 #########################
-def _test_log_loss_integrand(Z_batch, theta_0, R_00, schur, R_01, S, alpha, k, k_0):
-    # Compute schur complement
-    N = Z_batch.shape[0]
-    R_00_inv = np.linalg.inv(R_00)
-    schur_root = sqrtm(schur)
-    A = R_01 @ sqrtm(R_00_inv)   
-
-    # Coloring transform
-    g_batch, g_0_batch = coloring_transform(Z_batch, A=A, R_00=R_00, schur_root=schur_root  , alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
-    prob_y_batch = batched_mlogit(g_0_batch)
-    
-    loss = np.zeros(N)
-
-
 def _train_log_loss_integrand(Z_batch, R_00, schur, R_01, S, alpha, k, k_0):
     # Compute schur complement
     N = Z_batch.shape[0]

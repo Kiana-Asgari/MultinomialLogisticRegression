@@ -150,11 +150,6 @@ def run_and_log_fp_classification_test_error(k_0, k, non_symmetric=False, lambda
     return filepath
 
 
-
-
-
-
-
 def run_and_log_fp_tests_regularized(k_0, k, R_00):
     """
     Run and log regularized FP tests, saving test errors for different alpha and lambda values.
@@ -183,113 +178,76 @@ def run_and_log_fp_tests_regularized(k_0, k, R_00):
     unique_alphas = np.unique(alphas)
 
     for alpha in unique_alphas:
-        
         if alpha==2:
             continue
-        # Modified logic for existing results
-        
-        if str(alpha) in results:
-            print(f"Found existing results for alpha={alpha},changing only misclassification test errors")
-            # Get data for this alpha
-            alpha_mask = (alphas == alpha) & ~diverged_flags
-            if not np.any(alpha_mask):
-                continue
-                
-            # Get lambda values for this alpha
-            lambda_values = lambda_regs[alpha_mask][lambda_regs[alpha_mask] < 0.6]
-            misclassification_test_errors = []
-
-            # Use masked indices instead of full array indices
-            masked_indices = np.where(alpha_mask)[0]
-            for j in masked_indices:
-                A = R_01_matrices[j] @ np.linalg.inv(sqrtm(R_00))
-                misclassification_test_err = misclassification_test_error(
-                    S=S_matrices[j], 
-                    R_00=R_00, 
-                    schur_t=schur_matrices[j], 
-                    A_t=A, 
-                    alpha=alpha, 
-                    k=k, 
-                    k_0=k_0
-                )
-                print('misclassification_test_err for alpha', alpha, 'lambda', lambda_regs[j], 'is', misclassification_test_err)
-                misclassification_test_errors.append(misclassification_test_err)
-
-            # Sort by lambda values
-            sort_idx = np.argsort(lambda_values)
-            lambda_values = lambda_values[sort_idx]
-            misclassification_test_errors = np.array(misclassification_test_errors)[sort_idx]
             
-            # Update only the misclassification errors in existing results
-            results[str(alpha)]["misclassification_test_errors"] = misclassification_test_errors.tolist()
-            data = {
-                "metadata": {
-                    "k": k,
-                    "k_0": k_0,
-                    "R_00": R_00.tolist()
-                },
-                "results": results
-            }
-            
-            with open(filepath, 'w') as f:
-                json.dump(data, f, indent=4)
-
-            print(f"Updated misclassification errors for alpha={alpha} saved to file")
-            print('[storing] for alpha', alpha, 'misclassification_test_errors:', results[str(alpha)]["misclassification_test_errors"])
-            continue
-               
-        # Original code for new results
-        print(f"Computing all metrics for new alpha={alpha}")
         # Get data for this alpha
         alpha_mask = (alphas == alpha) & ~diverged_flags
         if not np.any(alpha_mask):
             continue
             
-        # Get lambda values and calculate errors for this alpha
-        lambda_values = lambda_regs[alpha_mask][lambda_regs[alpha_mask] < 0.6]
+        # Get lambda values and corresponding matrices for this alpha
+        lambda_values = lambda_regs[alpha_mask]
+        S_vals = S_matrices[alpha_mask]
+        schur_vals = schur_matrices[alpha_mask]
+        R_01_vals = R_01_matrices[alpha_mask]
+        
+        # Sort by lambda values (in descending order)
+        sort_idx = np.argsort(lambda_values)[::-1]
+        lambda_values = lambda_values[sort_idx]
+        S_vals = S_vals[sort_idx]
+        schur_vals = schur_vals[sort_idx]
+        R_01_vals = R_01_vals[sort_idx]
+        
+        # Filter out lambda values >= 0.6
+        valid_mask = lambda_values < 0.8
+        lambda_values = lambda_values[valid_mask]
+        S_vals = S_vals[valid_mask]
+        schur_vals = schur_vals[valid_mask]
+        R_01_vals = R_01_vals[valid_mask]
+
+    
+        print(f"Computing all metrics for new alpha={alpha}")
         test_errors = []
         train_errors = []
         f_norms = []
         misclassification_test_errors = []
 
-        # Use masked indices instead of full array indices
-        masked_indices = np.where(alpha_mask)[0]
-        for j in masked_indices:
-            if  lambda_regs[j] > 0.6:
-                continue            # Calculate test error, train error, and F_norm
-            R_11 = schur_matrices[j] + R_01_matrices[j] @ np.linalg.inv(R_00) @ R_01_matrices[j].T
-            test_err = test_error(R_00, schur_matrices[j], R_01=R_01_matrices[j], alpha=alpha, k=k, k_0=k_0)
-            print('test_err for alpha', alpha, 'lambda', lambda_regs[j], 'is', test_err)
-            train_err = train_error(R_00=R_00, schur=schur_matrices[j], R_01=R_01_matrices[j], S=S_matrices[j], alpha=alpha, k=k, k_0=k_0)
-            f_norm = np.trace(R_00) + np.trace(R_11) - np.trace(R_01_matrices[j]) - np.trace(R_01_matrices[j].T)
-            print('test_err for alpha', alpha, 'lambda', lambda_regs[j], 'is', test_err, 'train_err', train_err, 'f_norm', f_norm)
-            A = R_01_matrices[j] @ np.linalg.inv(sqrtm(R_00))
-            misclassification_test_err = misclassification_test_error(S=S_matrices[j], R_00=R_00, schur_t=schur_matrices[j], A_t=A, alpha=alpha, k=k, k_0=k_0)
-            print('misclassification_test_err for alpha', alpha, 'lambda', lambda_regs[j], 'is', misclassification_test_err)
+        for j in range(len(lambda_values)):
+            # Calculate test error, train error, and F_norm
+            R_11 = schur_vals[j] + R_01_vals[j] @ np.linalg.inv(R_00) @ R_01_vals[j].T
+            test_err = test_error(R_00, schur_vals[j], R_01=R_01_vals[j], alpha=alpha, k=k, k_0=k_0)
+            print('test_err for alpha', alpha, 'lambda', lambda_values[j], 'is', test_err)
+            train_err = train_error(R_00=R_00, schur=schur_vals[j], R_01=R_01_vals[j], S=S_vals[j], alpha=alpha, k=k, k_0=k_0)
+            f_norm = np.trace(R_00) + np.trace(R_11) - np.trace(R_01_vals[j]) - np.trace(R_01_vals[j].T)
+            print('test_err for alpha', alpha, 'lambda', lambda_values[j], 'is', test_err, 'train_err', train_err, 'f_norm', f_norm)
+            
+            A = R_01_vals[j] @ np.linalg.inv(sqrtm(R_00))
+            misclassification_test_err = misclassification_test_error(
+                S=S_vals[j], 
+                R_00=R_00, 
+                schur_t=schur_vals[j], 
+                A_t=A, 
+                alpha=alpha, 
+                k=k, 
+                k_0=k_0
+            )
+            print('misclassification_test_err for alpha', alpha, 'lambda', lambda_values[j], 'is', misclassification_test_err)
             
             misclassification_test_errors.append(misclassification_test_err)
             test_errors.append(test_err)
             train_errors.append(train_err)
             f_norms.append(f_norm)
 
-        
-        # Sort by lambda values
-        sort_idx = np.argsort(lambda_values)
-        lambda_values = lambda_values[sort_idx]
-        test_errors = np.array(test_errors)[sort_idx]
-        train_errors = np.array(train_errors)[sort_idx]
-        f_norms = np.array(f_norms)[sort_idx]
-        misclassification_test_errors = np.array(misclassification_test_errors)[sort_idx]
-        
-        # Store results for this alpha
-        results[str(alpha)] = {
-            "lambda_values": lambda_values.tolist(),
-            "test_errors": test_errors.tolist(),
-            "train_errors": train_errors.tolist(),
-            "f_norms": f_norms.tolist(), 
-            "misclassification_test_errors": misclassification_test_errors.tolist()
-        }
-        
+            # Store results for this alpha
+            results[str(alpha)] = {
+                "lambda_values": lambda_values.tolist(),
+                "test_errors": test_errors,
+                "train_errors": train_errors,
+                "f_norms": f_norms,
+                "misclassification_test_errors": misclassification_test_errors
+            }
+
         # Save after each alpha to prevent data loss
         data = {
             "metadata": {
@@ -303,9 +261,12 @@ def run_and_log_fp_tests_regularized(k_0, k, R_00):
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=4)
         print(f"Results for alpha={alpha} saved")
+        if str(alpha) in results:
+            print('[storing] for alpha', alpha, 'misclassification_test_errors:', results[str(alpha)]["misclassification_test_errors"])
     
     print(f"All results saved to {filepath}")
     return filepath
+
 
 
 

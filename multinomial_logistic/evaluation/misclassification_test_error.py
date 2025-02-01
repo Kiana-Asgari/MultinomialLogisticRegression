@@ -20,7 +20,9 @@ from multinomial_logistic.evaluation.utils import plot_array
 
 
 
-def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
+def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False, seed=42):
+    np.random.seed(seed)
+
     accuracy = integration(_misclassification_integrand, S, R_00, schur_t, A_t, alpha, k, k_0)
     #print('integrand.shape', integrand.shape)
     return 1-accuracy
@@ -68,8 +70,8 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, abserr=1e-5,
-                                  maxEval= 100_000_000, norm=2)
+                                  fdim= fdim ,xmin=[-3.7]*ndim, xmax=[3.7]*ndim, abserr=1e-5,
+                                  maxEval= 250_000_000, norm=2)
     if err.item() > 1e-4:
         print('     **[Warning] misclassification test error integration error is too large**', err)
     #for e in err:

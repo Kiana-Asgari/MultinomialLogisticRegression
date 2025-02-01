@@ -235,9 +235,9 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
                                    fdim=fdim,
                                    xmin=[-5]*ndim, 
                                    xmax=[5]*ndim, 
-                                   abserr=1e-6,
-                                   relerr=1e-6,
-                                   maxEval=1500_000, 
+                                   abserr=1e-5,
+                                   relerr=1e-5,
+                                   maxEval=1_000_000, 
                                    norm=1)
 
     if np.max(err) > 1e-4:
