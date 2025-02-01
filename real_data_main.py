@@ -29,12 +29,13 @@ if __name__ == "__main__":
     #test_eval_esd_hessian()
     #test_eval_esd_hessian_theory()
 
+    log_error_empirical(n_hidden=args.n_hidden, feature_name='relu')
 
     #alpha = args.alpha
     #file_number = args.file_number
     #log_esd_theory(file_number=1, alpha=args.alpha)
     #log_error_theory(file_number=1, n_hidden=args.n_hidden, feature_name=args.feature_name)
-    plots(alpha=30.0)
+    #plots(alpha=30.0)
     #plots(alpha=20.0)
     #plots(alpha=30.0)
     #log_error_empirical(n_hidden=args.n_hidden)

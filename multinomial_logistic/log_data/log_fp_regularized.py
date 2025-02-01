@@ -38,6 +38,8 @@ def run_and_log_fp_regularized(k_0=2, k=2, alpha_values=[1.5,2,3,5], tol=1e-5, m
 
     for R_00 in R_00_values:
         for lambda_reg in lambda_regs:
+            if lambda_reg >=0.8:
+                continue
             schur = R_00
             R_01 = np.zeros((k, k_0))
             S = np.eye(k)

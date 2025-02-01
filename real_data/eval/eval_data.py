@@ -109,7 +109,7 @@ def eval_errors_empirical(X_train, y_train, X_test, y_test, n_iter,
         # Initialize the nested structure
         results = {}
 
-    alpha_values = np.linspace(4.5, 20, 35)
+    alpha_values = np.linspace(4.1, 20, 35)
     for alpha in alpha_values:
         alpha_str = str(float(alpha))  # Convert to float first to ensure proper string conversion
         n_samples = int(alpha * X_train.shape[1])
