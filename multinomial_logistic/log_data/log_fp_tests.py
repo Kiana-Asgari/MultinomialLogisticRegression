@@ -184,11 +184,11 @@ def run_and_log_fp_tests_regularized(k_0, k, R_00):
 
     for alpha in unique_alphas:
         
-        if alpha!=5:
+        if alpha == 2:
             continue
         # Modified logic for existing results
         
-        if str(alpha) in results:
+        if False: #str(alpha) in results:
             print(f"Found existing results for alpha={alpha},changing only misclassification test errors")
             # Get data for this alpha
             alpha_mask = (alphas == alpha) & ~diverged_flags
