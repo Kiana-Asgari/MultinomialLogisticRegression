@@ -150,9 +150,8 @@ if __name__ == "__main__":
     parser.add_argument('--two_classes_close', action='store_true', help='Use configuration with two close classes')
     args = parser.parse_args()
 
-    run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
-                   max_iter=400, non_symmetric=args.non_symmetric, 
-                   two_classes_close=args.two_classes_close)
-
-
-
+    #run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-4,
+    #               max_iter=400, non_symmetric=args.non_symmetric, 
+    #               two_classes_close=args.two_classes_close)
+    run_and_log_fp_tests(k_0=k_0, k=k,non_symmetric=args.non_symmetric, 
+                        two_classes_close=args.two_classes_close)

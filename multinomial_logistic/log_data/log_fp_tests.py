@@ -455,7 +455,7 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
             # Skip if we already have results for this alpha and R_00
             if R_00_str in results and alpha_str in results[R_00_str]:
                 print(f"Skipping alpha={_alpha} for R_00={R_00} (already exists)")
-                continue
+               # continue
                 
             print(f"\nProcessing alpha = {_alpha}")
             
