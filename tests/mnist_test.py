@@ -89,11 +89,11 @@ def log_esd_theory(file_number, alpha):
     d=350
     feature_name='tanh'
     if alpha == 10:
-        z_real_values = [0.021,0.023,0.0265,0.0275,0.0285]
+        z_real_values = [0.016,0.017]
     elif alpha == 20:
         z_real_values = np.linspace(0.001,0.35,100)
     elif alpha == 30:
-        z_real_values = np.linspace(0.001,0.55,100)
+        z_real_values = [0.036,0.037,0.038,0.041,0.042,0.043,0.044,0.047,0.048]
 
     (X_train, y_train), (X_test, y_test) = compute_features('fashion_mnist',
                                                              feature_name, 

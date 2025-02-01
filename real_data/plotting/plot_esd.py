@@ -3,11 +3,40 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from real_data.eval.fit_data import fit_data
+import matplotlib as mpl
+import seaborn as sns
 
 def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
+
+    sns.set_style("whitegrid", {'axes.edgecolor': 'darkgray',
+                               'axes.linewidth': 0.7}) 
+    mpl.rcParams.update({
+        'text.usetex': True,            # For LaTeX rendering
+        'font.family': 'serif',         # Use serif font family
+        'font.serif': ['Computer Modern Roman'],  # Specific serif font
+        'mathtext.fontset': 'cm',       # Use Computer Modern math font
+        'figure.dpi': 120,              
+        'figure.figsize': (7, 5),       
+        'axes.labelsize': 16,           
+        'axes.titlesize': 16,           
+        'xtick.labelsize': 14,          
+        'ytick.labelsize': 14,          
+        'legend.fontsize': 14,          
+        'lines.linewidth': 2,
+        'axes.linewidth': 1.2,
+        'font.size': 14,                
+        'text.latex.preamble': r'\usepackage{amsmath} \usepackage{amssymb} \usepackage{bm}', # Added bm package
+        'mathtext.default': 'regular',   # Use regular (serif) font for math
+        'axes.formatter.use_mathtext': True,  # Use mathtext for axis formatting
+    })
+    fig, ax = plt.subplots()
+
+
+
+
     n_samples = int(alpha * X_train.shape[1])
     esd_values_mnist = []
-    n_iter = 5
+    n_iter = 1
 
     for i in range(n_iter):
         np.random.seed(5*i+2)
@@ -20,16 +49,19 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
     print("esd_values min: ", np.min(esd_values_mnist), "max: ", np.max(esd_values_mnist))
         
     # Create histogram and plot MP distribution
-    plt.figure(figsize=(10, 6))
-    plt.hist(np.array(esd_values_mnist).flatten(), bins=100, density=True, alpha=0.5,
-             color='blue', label=f'Empirical for $\\alpha={alpha}$')
-    """
-    Reads the ESD Hessian data for a given alpha and plots density vs z_real values.
-    
-    Args:
-        alpha (float): The alpha value to plot
-        file_number (int): The file number suffix (default=1)
-    """
+        
+    sns.histplot(
+        data=np.array(esd_values_mnist).flatten(),
+        bins=100,
+        stat='density',
+        fill=True,
+        alpha=0.5,
+        #linewidth=1,
+        color='blue',
+        label='Empirical spectrum',
+        ax=ax
+    )
+
     # Construct the filepath
     base_filename = f"esd_data_alpha{alpha}_{file_number}.json"
     base_filepath = os.path.join(os.path.dirname(__file__), "..", "eval", "data", "esd_theoretical", base_filename)
@@ -64,20 +96,31 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
     sorted_indices = np.argsort(z_real_values)
     z_real_values = np.array(z_real_values)[sorted_indices]
     densities = np.array(densities)[sorted_indices]
-    
 
-    plt.plot(z_real_values, densities, color='red', label=f'α={alpha}')
-    plt.xlabel('λ')
-    plt.ylabel('ρ(λ)')
-    plt.title(f'Spectral Density for α={alpha}')
-    plt.grid(True)
-    plt.legend()
+    print('available theoretical values:')
+    for i in range(len(z_real_values)):
+        print('z_real: ', z_real_values[i], 'density: ', densities[i])
+    
+    ax.plot(
+        z_real_values, 
+        densities, 
+        color='darkblue', 
+        linewidth=2.4, 
+        label=r'$\mu_{\star}(\nu_{\mathrm{opt}})$'
+    )
+    ax.set_xlabel(r'$\lambda$')
+    ax.set_xlim(0, 0.4)
+    ax.set_ylabel(r'$\rho(\lambda)$')
+    ax.set_title(f'Spectral Density for $\\alpha={alpha}$')
+    ax.grid(True)
+    ax.legend()
     
     # Optional: save the plot
-    plot_dir = os.path.join(os.path.dirname(__file__), "figures")
+    plot_dir = os.path.join(os.path.dirname(__file__), "figures", "esd")
     os.makedirs(plot_dir, exist_ok=True)
-    plt.savefig(os.path.join(plot_dir, f'esd_density_alpha{alpha}.pdf'))
+    plt.savefig(os.path.join(plot_dir, f'esd_350_tanh_alpha{alpha}.pdf'))
     
     plt.show()
     
     return z_real_values, densities
+
