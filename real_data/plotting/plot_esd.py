@@ -107,6 +107,16 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
         densities = densities[3:-17]
         densities[0] = 0.0
         densities[-1] = 0.0
+    if alpha == 30.0:
+        z_real_values = z_real_values[5:-55]
+        densities = densities[5:-55]
+        densities[0] = 0.0
+        z_real_values[-1] = z_real_values[-2] + 2*1e-3
+        densities[-1] = 0.0
+
+
+
+
 
     ax.plot(
         z_real_values, 
@@ -116,7 +126,7 @@ def plot_esd_density(X_train, y_train, X_test, y_test, alpha, file_number=1):
         label=r'$\mu_{\star}(\nu_{\mathrm{opt}})$'
     )
     ax.set_xlabel(r'$\lambda$')
-    ax.set_xlim(0, 0.45)
+    ax.set_xlim(0, 0.35)
     ax.set_ylabel('')
     ax.set_title(f'Spectral Density for $\\alpha={alpha}$')
     ax.grid(True)
