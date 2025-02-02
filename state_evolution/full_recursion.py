@@ -233,10 +233,10 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
                                    ndim=ndim,
                                    vectorized=True,
                                    fdim=fdim,
-                                   xmin=[-5]*ndim, 
-                                   xmax=[5]*ndim, 
-                                   abserr=1e-5,
-                                   relerr=1e-5,
+                                   xmin=[-3.6]*ndim, 
+                                   xmax=[3.6]*ndim, 
+                                   relerr=1e-3,
+                                   abserr=1e-6,
                                    maxEval=1_000_000, 
                                    norm=1)
 

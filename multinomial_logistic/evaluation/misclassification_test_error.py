@@ -70,7 +70,7 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0):
     ndim = k+k_0
     expectations, err = cubature(integrand, args=(S, R_00, schur_t, A_t, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-4]*ndim, xmax=[4]*ndim, abserr=1e-4,
+                                  fdim= fdim ,xmin=[-3.8]*ndim, xmax=[3.8]*ndim, abserr=1e-5,
                                   maxEval= 250_000_000, norm=2)
     if err.item() > 1e-4:
         print('     **[Warning] misclassification test error integration error is too large**', err)

@@ -41,9 +41,9 @@ def prox_fp_iteration(g_batch, S, max_iter=15000, tol=1e-4, verbose=False):
             
  
     
-    if error     > 1:
+    if error     > 1e-4:
         print(' prox_fp_iteration did not converge with error', error)
-        prox_next, divergence = prox_newton_iteration(g_batch, S, prox_t, verbose=False)
+        #prox_next, divergence = prox_newton_iteration(g_batch, S, prox_t, verbose=False)
     return prox_next, divergence
 
 

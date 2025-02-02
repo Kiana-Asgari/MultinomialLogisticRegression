@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime
 from state_evolution.full_recursion import state_evolution_full_recursion
+import fcntl
 
 def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=False, two_classes_close=False):     
     # Create base filename without timestamp
@@ -19,17 +20,17 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
         print("Running symmetric FP")
         base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}"
-        base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution", base_filename)
+        base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution", base_filename)
     elif non_symmetric:
         print("Running non-symmetric FP")
         base_filename =  f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
         base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric"
-        base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution_nonsym", base_filename)
+        base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_nonsym", base_filename)
     elif two_classes_close:
         print("Running two classes close FP")
         base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
         base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close"
-        base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution_two_classes_close", base_filename)
+        base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_two_classes_close", base_filename)
     
     # Create data/fp_solution directory if it doesn't exist
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
@@ -64,12 +65,13 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
 
 
     #alphas = np.sort(np.append(alphas_existing, [3.0,3.2,3.3,3.6,4.3,4.85]))
-    alphas = alphas_existing
-    alphas = np.unique(alphas)[::-1]
-    print('running alphas', alphas)
+    #alphas = alphas_existing
+    #alphas = np.unique(alphas)
+    #print('running alphas', alphas)
     #alphas = [2.7]
-    #alphas = np.linspace(3.1, 6.1, 10)
-
+    alphas = np.linspace(12,2.7, 80)
+    alphas = np.append(2.78, 2.76, 2.74, alphas)
+    print('running alphas:',alphas)
 
 
     for R_00 in R_00_values:
@@ -79,7 +81,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
         diverged_flag = False  # Track divergence for this R_00
     
         for alpha in alphas:  # Note: alphas are already sorted in decreasing order
-            #if alpha<3:
+            #if alpha>=3:
             #    continue
             alpha_str = str(alpha)
             R_00_str = str(R_00.tolist())
@@ -102,12 +104,12 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
                 }
                 continue
             """
-            if alpha < 3:
-                tol = 1e-4
-                max_iter = 10
+            if alpha > 3:
+                tol = 1e-6
+                max_iter = 100
             else:
                 tol = 1e-4
-                max_iter = 10
+                max_iter = 50
             if alpha >= 15:
                 continue
 
@@ -149,18 +151,25 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
             if diverged:
                 diverged_flag = True  # Mark as diverged for future alphas
 
-            # Create a temporary file first, then rename it to avoid partial writes
+            # Save after each iteration
             temp_filepath = filepath + '.tmp'
             with open(temp_filepath, 'w') as f:
-                json.dump({
-                    "metadata": {
-                        "k": k,
-                        "k_0": k_0,
-                        "lambda_reg": lambda_reg
-                    },
-                    "results": results
-                }, f, indent=2)
-            os.replace(temp_filepath, filepath)  # Atomic operation
+                # Acquire exclusive lock
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    json.dump({
+                        "metadata": {
+                            "k": k,
+                            "k_0": k_0,
+                            "lambda_reg": lambda_reg
+                        },
+                        "results": results
+                    }, f, indent=2)
+                finally:
+                    # Release lock
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            # Atomic rename
+            os.replace(temp_filepath, filepath)
             
     return filepath
 
