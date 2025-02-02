@@ -92,7 +92,8 @@ def run_and_log_fp_classification_test_error(k_0, k, non_symmetric=False, lambda
         for _alpha in alphas:
             alpha_str = str(_alpha)
             R_00_str = str(R_00.tolist())
-            
+            if _alpha != 10:
+              continue 
             # Skip if we already have results for this alpha and R_00
             if R_00_str in results and alpha_str in results[R_00_str]:
                 print(f"Skipping alpha={_alpha} for R_00={R_00} (already exists)")
@@ -177,9 +178,7 @@ def run_and_log_fp_tests_regularized(k_0, k, R_00):
 
     unique_alphas = np.unique(alphas)
 
-    for alpha in unique_alphas:
-        if alpha==2:
-            continue
+    for alpha in [10,5,3,1.5]:
             
         # Get data for this alpha
         alpha_mask = (alphas == alpha) & ~diverged_flags
@@ -239,15 +238,13 @@ def run_and_log_fp_tests_regularized(k_0, k, R_00):
             train_errors.append(train_err)
             f_norms.append(f_norm)
 
-            # Store results for this alpha
             results[str(alpha)] = {
                 "lambda_values": lambda_values.tolist(),
-                "test_errors": test_errors,
-                "train_errors": train_errors,
-                "f_norms": f_norms,
-                "misclassification_test_errors": misclassification_test_errors
+                "test_errors": [float(x) for x in test_errors],
+                "train_errors": [float(x) for x in train_errors],
+                "f_norms": [float(x) for x in f_norms],
+                "misclassification_test_errors": [float(x) for x in misclassification_test_errors]
             }
-
         # Save after each alpha to prevent data loss
         data = {
             "metadata": {
