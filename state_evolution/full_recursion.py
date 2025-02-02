@@ -233,11 +233,11 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
                                    ndim=ndim,
                                    vectorized=True,
                                    fdim=fdim,
-                                   xmin=[-3.6]*ndim, 
-                                   xmax=[3.6]*ndim, 
-                                   relerr=1e-3,
+                                   xmin=[-4]*ndim, 
+                                   xmax=[4]*ndim, 
+                                   relerr=1e-4,
                                    abserr=1e-6,
-                                   maxEval=1_000_000, 
+                                   maxEval=1_500_000, 
                                    norm=1)
 
     if np.max(err) > 1e-4:

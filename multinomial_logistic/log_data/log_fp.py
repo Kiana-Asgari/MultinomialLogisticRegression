@@ -70,7 +70,9 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
     #print('running alphas', alphas)
     #alphas = [2.7]
     alphas = np.linspace(12,2.7, 80)
-    alphas = np.append(2.78, 2.76, 2.74, alphas)
+    #alphas = np.append(np.array([2.8]), alphas)
+    alphas = np.sort(np.unique(alphas))[8:]
+    alphas = [3.45,3.58,3.6,3.7]
     print('running alphas:',alphas)
 
 
@@ -109,7 +111,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
                 max_iter = 100
             else:
                 tol = 1e-4
-                max_iter = 50
+                max_iter = 100
             if alpha >= 15:
                 continue
 

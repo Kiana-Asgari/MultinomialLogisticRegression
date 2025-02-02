@@ -15,142 +15,6 @@ from multinomial_logistic.evaluation.misclassification_test_error import misclas
 
 
 
-
-
-def run_and_log_fp_classification_test_error(k_0, k, non_symmetric=False, lambda_reg=0):     
-    # Create base filename
-    if non_symmetric:
-        base_filename = f"fp_misclassification_test_error_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
-        base_filename_dir = f"fp_misclassification_test_error_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric"
-    else:   
-        base_filename = f"fp_misclassification_test_error_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
-        base_filename_dir = f"fp_misclassification_test_error_data_k{k}_k0{k_0}_lambda{lambda_reg}"
-    print('base_filename', base_filename)
-    base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_tests", "misclassification_test_error", base_filename)
-    print('base_filepath', base_filepath)
-    
-    # Create data/fp_tests directory if it doesn't exist
-    os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
-    
-    # Check for existing files with matching parameters
-    data_dir = os.path.dirname(base_filepath)
-    existing_files = []
-    for filename in os.listdir(data_dir):
-        if not filename.endswith('.json'):
-            continue
-        
-        if filename == base_filename:
-            filepath = os.path.join(data_dir, filename)
-            with open(filepath, 'r') as f:
-                data = json.load(f)
-                existing_files.append((filename, data))
-    
-    
-    # If matching file exists, use it
-    if existing_files:
-        filename, existing_data = existing_files[0]
-        filepath = os.path.join(data_dir, filename)
-        results = existing_data["results"]
-        print(f"Appending to existing file: {filename}")
-    else:
-        # Create new file
-        filepath = base_filepath
-        results = {}
-        print(f"Creating new file: {os.path.basename(filepath)}")
-
-    # Read available alphas and R_00 values from FP solution files
-    if non_symmetric:
-        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution_nonsym")
-        fp_filename = f"fp_data_non_symmetric.json"
-        fp_filepath = os.path.join(fp_data_dir, fp_filename)
-    else:
-        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution")
-        fp_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
-        fp_filepath = os.path.join(fp_data_dir, fp_filename)
-        
-    if not os.path.exists(fp_filepath):
-        print(f"No FP solution file found: {fp_filename}")
-        return None
-        
-    with open(fp_filepath, 'r') as f:
-        fp_data = json.load(f)
-        
-    # Extract unique R_00 values and alphas from FP solutions
-    R_00_values = []
-    alphas = set()
-    
-    for R_00_str in fp_data["results"].keys():
-        R_00 = np.array(json.loads(R_00_str))
-        R_00_values.append(R_00)
-        alphas.update(float(alpha) for alpha in fp_data["results"][R_00_str].keys())
-    
-    alphas = sorted(list(alphas), reverse=True)  # Sort in decreasing order
-    
-    for R_00 in R_00_values:
-        if R_00.tolist() == [[1, 0], [0, 1]]:
-            continue
-        for _alpha in alphas:
-            alpha_str = str(_alpha)
-            R_00_str = str(R_00.tolist())
-            if _alpha != 10:
-              continue 
-            # Skip if we already have results for this alpha and R_00
-            if R_00_str in results and alpha_str in results[R_00_str]:
-                print(f"Skipping alpha={_alpha} for R_00={R_00} (already exists)")
-                continue
-                
-            print(f"\nProcessing alpha = {_alpha}")
-            
-            # Get FP solution results
-            fp_results = read_fp_results(alpha=_alpha, k=k, k_0=k_0, R_00=R_00, lambda_reg=lambda_reg, non_symmetric=non_symmetric)
-            if fp_results is None:
-                print(f"No FP solution found for alpha={_alpha}")
-                continue
-                
-            schur, R_01, S, diverged, closest_alpha = fp_results
-            
-            if diverged:
-                # If solution diverged, store empty results
-                if R_00_str not in results:
-                    results[R_00_str] = {}
-                    
-                results[R_00_str][alpha_str] = {
-                    "misclassification_test_error": None,
-                    "diverged": True,
-                    "actual_alpha": closest_alpha
-                }
-                continue
-
-            # Calculate the misclassification test error
-            A = R_01 @ np.linalg.inv(sqrtm(R_00))
-            misclassification_test_err = misclassification_test_error(S=S, R_00=R_00, schur_t=schur, A_t=A, alpha=closest_alpha, k=k, k_0=k_0)
-            print('misclassification_test_err for alpha', closest_alpha, 'is', misclassification_test_err)
-            # Initialize R_00 dict if it doesn't exist
-            if R_00_str not in results:
-                results[R_00_str] = {}
-            
-            # Store results
-            results[R_00_str][alpha_str] = {
-                "misclassification_test_error": float(misclassification_test_err),
-                "diverged": False,
-                "actual_alpha": float(closest_alpha)
-            }
-            print('storing', results[R_00_str][alpha_str])
-            
-            # Save after each iteration
-            with open(filepath, 'w') as f:
-                json.dump({
-                    "metadata": {
-                        "k": k,
-                        "k_0": k_0,
-                        "lambda_reg": lambda_reg
-                    },
-                    "results": results
-                }, f, indent=2)
-            
-    return filepath
-
-
 def run_and_log_fp_tests_regularized(k_0, k, R_00):
     """
     Run and log regularized FP tests, saving test errors for different alpha and lambda values.
@@ -325,7 +189,8 @@ def read_fp_tests_regularized(k, k_0, R_00):
 
 
 ###########################################################################
-def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_close=False):     
+def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_close=False):  
+    print('****************running and logging fp tests...')   
     # Create base filename
     if two_classes_close:
         base_filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
@@ -337,7 +202,7 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         base_filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         base_filename_dir = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}"
     print('base_filename', base_filename)
-    base_filepath = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests", base_filename)
+    base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", base_filename)
     print('base_filepath', base_filepath)
     
     # Create data/fp_tests directory if it doesn't exist
@@ -371,15 +236,15 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
 
     # Read available alphas and R_00 values from FP solution files
     if two_classes_close:
-        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution_two_classes_close")
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_two_classes_close")
         fp_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
         fp_filepath = os.path.join(fp_data_dir, fp_filename)
     elif non_symmetric:
-        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution_nonsym")
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_nonsym")
         fp_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
         fp_filepath = os.path.join(fp_data_dir, fp_filename)
     else:
-        fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution")
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution")
         fp_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         fp_filepath = os.path.join(fp_data_dir, fp_filename)
         
@@ -413,19 +278,23 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
             # Skip if we already have results for this alpha and R_00
             if R_00_str in results and alpha_str in results[R_00_str]:
                 print(f"Skipping alpha={_alpha} for R_00={R_00} (already exists)")
-               # continue
+                continue
                 
             print(f"\nProcessing alpha = {_alpha}")
             
             # Get FP solution results
-            fp_results = read_fp_results(alpha=_alpha, k=k, k_0=k_0, R_00=R_00,
-                                          lambda_reg=lambda_reg, non_symmetric=non_symmetric,
-                                          two_classes_close=two_classes_close)
-            if fp_results is None:
-                print(f"No FP solution found for alpha={_alpha}")
-                continue
-                
-            schur, R_01, S, diverged, closest_alpha = fp_results
+            #fp_results = read_fp_results(alpha=_alpha, k=k, k_0=k_0, R_00=R_00,
+            #                              lambda_reg=lambda_reg, non_symmetric=non_symmetric,
+            #                              two_classes_close=two_classes_close)
+            #if fp_results is None:
+           ##     print(f"No FP solution found for alpha={_alpha}")
+            #    continue
+            result = fp_data["results"][R_00_str][alpha_str]
+            print('->result', result)
+            schur = np.array(result["schur"]).reshape(k,k)
+            R_01 = np.array(result["R_01"]).reshape(k_0,k)
+            S = np.array(result["S"]).reshape(k,k)
+            diverged = result["diverged"]
             
             if diverged:
                 # If solution diverged, store empty results
@@ -438,20 +307,20 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
                     "misclassification_test_error": None,
                     "F_norm": None,
                     "diverged": True,
-                    "actual_alpha": closest_alpha
+                    "actual_alpha": _alpha
                 }
                 continue
 
             # Calculate test error, train error, and F_norm
             R_11 = schur + R_01 @ np.linalg.inv(R_00) @ R_01.T
-            test_err = test_error(R_00, schur, R_01=R_01, alpha=closest_alpha, k=k, k_0=k_0)
-            train_err = train_error(R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=closest_alpha, k=k, k_0=k_0)
+            test_err = test_error(R_00, schur, R_01=R_01, alpha=_alpha, k=k, k_0=k_0)
+            train_err = train_error(R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=_alpha, k=k, k_0=k_0)
             A = R_01.T @ sqrtm(np.linalg.inv(R_00))
 
             misclassification_test_err = misclassification_test_error(S=S, R_00=R_00,
-                                                                           schur_t=schur, 
-                                                                           A_t=A, 
-                                                                           alpha=closest_alpha, k=k, k_0=k_0)
+                                                                    schur_t=schur, 
+                                                                    A_t=A, 
+                                                                    alpha=_alpha, k=k, k_0=k_0)
             f_norm = np.trace(R_00) + np.trace(R_11) - np.trace(R_01) - np.trace(R_01.T)
             
             # Initialize R_00 dict if it doesn't exist
@@ -465,7 +334,7 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
                     "misclassification_test_error": float(misclassification_test_err),
                     "F_norm": float(f_norm),
                     "diverged": False,
-                    "actual_alpha": float(closest_alpha)
+                    "actual_alpha": float(_alpha)
                 }
 
             print('storing', results[R_00_str][alpha_str], 'test:', test_err, 'train:', train_err, 'F_norm:', f_norm,
@@ -573,7 +442,8 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
         print('getting fp stats for symmetric')
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         R_00 = np.array([[1,1/2], [1/2,1]])
-    filepath = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests", filename)
+    #filepath = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests", filename) #changed from newdata to tempdata
+    filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", filename)
     if not os.path.exists(filepath):
         print(f"No FP test file found: {filename}")
         return None
