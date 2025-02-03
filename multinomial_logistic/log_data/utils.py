@@ -147,7 +147,7 @@ def plot_regularized_error(k,
             # Decide which error array to plot
             if error_type == 'test_errors':
                 errors = test_errors
-                y_label = 'Test error'
+                y_label = 'Test error (log loss)'
 
             elif error_type == 'train_errors':
                 errors = train_errors
@@ -155,11 +155,11 @@ def plot_regularized_error(k,
 
             elif error_type == 'misclassification_test_errors':
                 errors = misclassification_test_errors
-                y_label = 'classification error'
+                y_label = 'Test error (classification)'
 
             elif error_type == 'norms':
                 errors = np.sqrt(f_norms)
-                y_label = r'$\|\Theta - \Theta_0\|_F$'
+                y_label =  f'Estimation error ($\|\\bold{{\Theta}} - \\bold{{\Theta_0}}\\|_F$)'
 
             # Add empirical points if available
             _plot_empirical_errors(
@@ -460,6 +460,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         plt.ylabel(y_label)
         plt.grid(True, alpha=0.3)
         plt.legend()
+        plt.xlim(left=3)
         
         # Save the plot
         save_dir = os.path.join(os.path.dirname(__file__), "figures", "errors_vs_alpha")
