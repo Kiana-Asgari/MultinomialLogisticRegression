@@ -390,13 +390,13 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                 mask = (alphas >= 3.3) & (alphas <= 9)
                 filtered_alphas = alphas[mask]
                 filtered_values = np.sqrt(np.array(values)[mask]) + 1e-2
-            plt.plot(filtered_alphas, filtered_values, '-', color=color, label=label, linewidth=1.5)
+            plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.5)
 
         # Add empirical points 
         data_sets = [
-            (mle_data_symmetric, [[1.0, 0.5], [0.5, 1.0]], colors[0]),
+            (mle_data_symmetric, [[1.0, 0.5], [0.5, 1.0]], colors[2]),
             (mle_data_two_classes_close, [[1.0, 0.9], [0.9, 1.0]], colors[1]),
-            (mle_data_non_symmetric, [[1.0, -0.5], [-0.5, 1.0]], colors[2])
+            (mle_data_non_symmetric, [[1.0, -0.5], [-0.5, 1.0]], colors[0])
         ]
         
         for data, R_00, color in data_sets:
@@ -444,6 +444,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                     errors = errors[sort_idx]
                     if metric_name == 'test_errors' or metric_name == 'F_norm':
                         alphas = np.array(alphas) - 2*1e-3
+                        plt.ylim(bottom=1)
                     plt.errorbar(alphas, values, yerr=errors, fmt='o', 
                                     color=color,        
                                     markersize=3,
