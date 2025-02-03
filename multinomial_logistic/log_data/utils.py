@@ -379,18 +379,18 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                 filtered_alphas = alphas[mask]
                 filtered_values = np.array(values)[mask] + 2*1e-3
             elif metric_name == 'train_errors':
-                mask = (alphas >= 0) & (alphas <= alpha_max)
+                mask = (alphas >= 2.7) & (alphas <= alpha_max)
                 filtered_alphas = alphas[mask]
                 filtered_values = np.array(values)[mask]
             elif metric_name == 'misclassification_test_errors':
-                mask = (alphas >= 0) & (alphas <= alpha_max)
+                mask = (alphas > 2.9) & (alphas <= alpha_max)
                 filtered_alphas = alphas[mask]
                 filtered_values = np.array(values)[mask]
             elif metric_name == 'F_norm':
                 mask = (alphas >= 3.3) & (alphas <= 9)
                 filtered_alphas = alphas[mask]
                 filtered_values = np.sqrt(np.array(values)[mask]) + 1e-2
-            plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.5)
+            plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.8)
 
         # Add empirical points 
         data_sets = [
@@ -410,13 +410,13 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                 for alpha_str, result in data['results'][R_00_str].items():
                     alpha = float(alpha_str)
                     if metric_name == 'test_errors':
-                        alpha_min = 3.3
+                        alpha_min = 3
                         alpha_max = 9
                     elif metric_name == 'F_norm':
                         alpha_min = 3.1
                         alpha_max = 9
                     else:
-                        alpha_min = 0
+                        alpha_min = 2.9
                         alpha_max = 12
 
                     if alpha_min <= alpha <= alpha_max and not result.get('div', False):
@@ -432,7 +432,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                 if alphas:
                     # Debug prints
                     print(f"Final mle lengths for {metric_name} - alphas: {len(alphas)}, values: {len(values)}, errors: {len(errors)}")
-                    
+                    print('alphas:', alphas)
                     alphas = np.array(alphas)
                     values = np.array(values)
                     errors = np.array(errors)
@@ -445,12 +445,15 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                     if metric_name == 'test_errors' or metric_name == 'F_norm':
                         alphas = np.array(alphas) - 2*1e-3
                         plt.ylim(bottom=1)
+
+                    #if metric_name == 'misclassification_test_errors':
+                    #    plt.ylim(bottom=0.4,top=0.62)
                     plt.errorbar(alphas, values, yerr=errors, fmt='o', 
                                     color=color,        
                                     markersize=3,
-                                    capsize=2.5,
-                                    capthick=1,
-                                    elinewidth=1.5,
+                                    capsize=2.8,
+                                    capthick=1.5,
+                                    elinewidth=1.8,
                                     alpha=0.76)
 
         plt.xlabel(r'$\alpha$')
