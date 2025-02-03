@@ -95,9 +95,7 @@ def plot_regularized_error(k,
     # Colors for different alpha lines
     colors = [
         'black',
-        'pink',
         '#002B5B',  # Darkest navy blue
-        '#1B4965',  # Deep ocean blue
         '#3E7893',  # Medium blue
         '#5091AA',  # Blue gray
         '#62A9C1',  # Light steel blue
@@ -462,6 +460,10 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         plt.legend()
         plt.xlim(left=3)
         
+        # Add formatter for y-axis ticks to show 2 decimal places
+        ax = plt.gca()
+        ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
+
         # Save the plot
         save_dir = os.path.join(os.path.dirname(__file__), "figures", "errors_vs_alpha")
         os.makedirs(save_dir, exist_ok=True)
