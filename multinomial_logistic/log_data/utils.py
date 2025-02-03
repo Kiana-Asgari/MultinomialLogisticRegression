@@ -458,7 +458,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         plt.ylabel(y_label)
         plt.grid(True, alpha=0.3)
         plt.legend()
-        plt.xlim(left=3)
+        #plt.xlim(left=3)
         
         # Add formatter for y-axis ticks to show 2 decimal places
         ax = plt.gca()
