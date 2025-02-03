@@ -353,13 +353,13 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
     # Plot each metric
     metrics = [
         ('test_errors', [test_errors_fp_symmetric, test_errors_fp_two_classes_close, test_errors_fp_non_symmetric],
-         'Test error'),
+         'Test error (log loss)'),
         ('train_errors', [train_errors_fp_symmetric, train_errors_fp_two_classes_close, train_errors_fp_non_symmetric],
          'Train error'),
         ('misclassification_test_errors', [misclassification_test_errors_fp_symmetric, misclassification_test_errors_fp_two_classes_close, misclassification_test_errors_fp_non_symmetric],
-         'Classification error'),
+         'Test error (classification)'),
         ('F_norm', [F_norms_fp_symmetric, F_norms_fp_two_classes_close, F_norms_fp_non_symmetric],
-         r'$\|\Theta - \Theta_0\|_F$')
+         f'Estimation error ($\|\\bold{{\Theta}} - \\bold{{\Theta_0}}\\|_F$)')
     ]
 
     for metric_name, fp_values, y_label in metrics:
