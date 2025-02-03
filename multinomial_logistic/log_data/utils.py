@@ -375,9 +375,9 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         for i, (alphas, values, label, color) in enumerate(zip(alphas_list, fp_values, labels, colors)):
             # Plot each metric separately for better debugging
             if metric_name == 'test_errors':
-                mask = (alphas >= 3.3) & (alphas <= 8)
+                mask = (alphas >= 3.3) & (alphas <= 9)
                 filtered_alphas = alphas[mask]
-                filtered_values = np.array(values)[mask] + 1e-3
+                filtered_values = np.array(values)[mask] + 2*1e-3
             elif metric_name == 'train_errors':
                 mask = (alphas >= 0) & (alphas <= alpha_max)
                 filtered_alphas = alphas[mask]
@@ -387,9 +387,9 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                 filtered_alphas = alphas[mask]
                 filtered_values = np.array(values)[mask]
             elif metric_name == 'F_norm':
-                mask = (alphas >= 3.3) & (alphas <= 8)
+                mask = (alphas >= 3.3) & (alphas <= 9)
                 filtered_alphas = alphas[mask]
-                filtered_values = np.sqrt(np.array(values)[mask]) + 1e-3
+                filtered_values = np.sqrt(np.array(values)[mask]) + 1e-2
             plt.plot(filtered_alphas, filtered_values, '-', color=color, label=label, linewidth=1.5)
 
         # Add empirical points 
@@ -411,10 +411,10 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                     alpha = float(alpha_str)
                     if metric_name == 'test_errors':
                         alpha_min = 3.3
-                        alpha_max = 8
+                        alpha_max = 9
                     elif metric_name == 'F_norm':
                         alpha_min = 3.1
-                        alpha_max = 8
+                        alpha_max = 9
                     else:
                         alpha_min = 0
                         alpha_max = 12
@@ -427,7 +427,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                         
                         alphas.append(alpha)
                         values.append(np.mean(metric_values))
-                        errors.append(np.std(metric_values) / np.sqrt(len(metric_values)))
+                        errors.append(2*np.std(metric_values) / (np.sqrt(len(metric_values))))
                 
                 if alphas:
                     # Debug prints
@@ -442,7 +442,8 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                     alphas = alphas[sort_idx]
                     values = values[sort_idx]
                     errors = errors[sort_idx]
-
+                    if metric_name == 'test_errors' or metric_name == 'F_norm':
+                        alphas = np.array(alphas) - 2*1e-3
                     plt.errorbar(alphas, values, yerr=errors, fmt='o', 
                                     color=color,        
                                     markersize=3,

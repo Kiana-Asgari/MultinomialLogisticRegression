@@ -270,8 +270,6 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         if R_00.tolist() == [[1,0], [0,1]]:
             continue
         for _alpha in alphas:
-            if _alpha > 15:   #fix this later
-                continue
             alpha_str = str(_alpha)
             R_00_str = str(R_00.tolist())
             
@@ -294,23 +292,6 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
             schur = np.array(result["schur"]).reshape(k,k)
             R_01 = np.array(result["R_01"]).reshape(k_0,k)
             S = np.array(result["S"]).reshape(k,k)
-            diverged = result["diverged"]
-            
-            if diverged:
-                # If solution diverged, store empty results
-                if R_00_str not in results:
-                    results[R_00_str] = {}
-                    
-                results[R_00_str][alpha_str] = {
-                    "test_error": None,
-                    "train_error": None,
-                    "misclassification_test_error": None,
-                    "F_norm": None,
-                    "diverged": True,
-                    "actual_alpha": _alpha
-                }
-                continue
-
             # Calculate test error, train error, and F_norm
             R_11 = schur + R_01 @ np.linalg.inv(R_00) @ R_01.T
             test_err = test_error(R_00, schur, R_01=R_01, alpha=_alpha, k=k, k_0=k_0)
@@ -368,7 +349,7 @@ def read_fp_test_results(alpha, k, k_0, R_00, lambda_reg=0):
         tuple: (test_error, train_error, F_norm, R_01, diverged) if found, None if not found
                where R_01 is the cross-correlation matrix (always zeros in current implementation)
     """
-    data_dir = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests")
+    data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests")
     
     if not os.path.exists(data_dir):
         print("No data directory found")

@@ -71,10 +71,9 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
     #alphas = [2.7]
     alphas = np.linspace(12,2.7, 80)
     #alphas = np.append(np.array([2.8]), alphas)
-    alphas = np.sort(np.unique(alphas))[8:]
-    alphas = [3.45,3.58,3.6,3.7]
+    alphas = np.concatenate([np.array([3.45,3.58,3.6,3.7]), alphas])
+    alphas = np.sort(np.unique(alphas))[::-1]
     print('running alphas:',alphas)
-
 
     for R_00 in R_00_values:
         schur = R_00
@@ -83,8 +82,8 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
         diverged_flag = False  # Track divergence for this R_00
     
         for alpha in alphas:  # Note: alphas are already sorted in decreasing order
-            #if alpha>=3:
-            #    continue
+            if alpha<3:
+                continue
             alpha_str = str(alpha)
             R_00_str = str(R_00.tolist())
             
@@ -140,15 +139,13 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=200, non_symmetric=F
             if R_00_str not in results:
                 results[R_00_str] = {}
             
-            # Only update if we don't have results for this alpha or if previous result diverged
-            if (alpha_str not in results[R_00_str] or 
-                results[R_00_str][alpha_str].get("diverged", True)):
-                results[R_00_str][alpha_str] = {
-                    "schur": schur.tolist(),
-                    "R_01": R_01.tolist(),
-                    "S": S.tolist(),
-                    "diverged": bool(diverged)
-                }
+            # Always update with new results
+            results[R_00_str][alpha_str] = {
+                "schur": schur.tolist(),
+                "R_01": R_01.tolist(),
+                "S": S.tolist(),
+                "diverged": bool(True)
+            }
             
             if diverged:
                 diverged_flag = True  # Mark as diverged for future alphas
