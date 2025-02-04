@@ -302,9 +302,9 @@ def set_up_plotting_style():
         'axes.formatter.use_mathtext': True,
     })
     colors = [
-        'black',
-        '#002B5B',  # Darkest navy blue
-        '#3E7893',  # Medium blue
+        '#E57A77',
+        '#1F449C',  # Deep ocean blue
+        'mediumslateblue',  # Medium blue
         '#5091AA',  # Blue gray
         '#62A9C1',  # Light steel blue
         '#74C2D8',  # Sky blue
