@@ -2,22 +2,27 @@
 Multivariate Proximal Oprator
 """
 
-from multinomial_logistic.utils import batched_mlogit, batched_mult, batched_mlogit_jacobian
 import sys
+
 import numpy as np
 from scipy.optimize import fsolve, minimize
+from scipy.linalg import sqrtm
+from scipy.stats import multivariate_normal
+from multinomial_logistic.utils import (batched_mlogit,
+                                        batched_mlogit_jacobian, batched_mult,
+                                        batched_product, batched_sqrtm)
+from state_evolution.functions import score_jacobian_batched
 
 
-class ProximalOperatorError(RuntimeError):
-    """Exception raised when proximal operator computation fails to converge."""
-    pass
 
-def prox_fp_iteration(g_batch, S, max_iter=15000, tol=1e-4, verbose=False):
+
+def prox_fp_iteration(g_batch, S, max_iter=600, tol=1e-4, verbose=False):
     # computes Prox(g; S) = argmin_beta { g.T S^{-1}g @ mlogit(beta) }
     prox_t = np.zeros_like(g_batch)  # Shape (N, k)
     error = 0
     alpha = 1
     divergence = False
+
 
     if np.linalg.norm(S) >  3*1e4:
         prox_t, divergence = prox_newton_iteration(g_batch, S, prox_t, verbose=False)
@@ -41,9 +46,11 @@ def prox_fp_iteration(g_batch, S, max_iter=15000, tol=1e-4, verbose=False):
             
  
     
-    if error     > 1e-4:
-        print(' prox_fp_iteration did not converge with error', error)
+    if error     > 1e-4: pass
+        #print(' prox_fp_iteration did not converge with error', error)
         #prox_next, divergence = prox_newton_iteration(g_batch, S, prox_t, verbose=False)
+    #print(' prox_fp_iteration converged with error', error, 'iterations: ', i)
+
     return prox_next, divergence
 
 
@@ -73,8 +80,8 @@ def prox_newton_iteration(g_batch, S, prox_fp,\
                            max_iter=10000, tol=1e-2, verbose=False):
     
     divergence = False
-    if verbose:
-        print('...trying to compute prox through newton iteration')
+   # if verbose:
+    print('...trying to compute prox through newton iteration')
 
     prox_t = -1e1  * np.ones_like(g_batch)  # Shape (N, k)
     N , k = prox_t.shape
@@ -124,3 +131,41 @@ def prox_deriv(beta, g, S):
     logit = batched_mlogit(np.array([beta]))[:, :-1].flatten()
     return (beta - g) + S @ logit # Exclude the last element in mlogit
 
+
+
+def prox_density(g_0_batch, g_batch, y_batch, A_full, cov_inv, S, k, T=None, mean=None, gaussian_IS_weight=None):
+        # T = S @ grad \ell(Z) + Z,  gaussian_point = T - S@Y
+        if T is None: 
+            gradient_batch = batched_mlogit(g_batch)[:, :-1] # grad \ell(Z)
+            gaussian_point_batch = batched_mult(S, gradient_batch) + g_batch - batched_mult(S, y_batch) # S @ grad \ell(Z) + Z - S@Y
+        else:
+            gaussian_point_batch = T - batched_mult(S, y_batch)
+
+        # mean = E[g|g_0] = R_01 r_00^{-1} @ g_0, tilted_gaussian_point = g - mean
+        if mean is None:
+            mean = batched_mult(A_full, g_0_batch) # E[g|g_0] = R_01 r_00^{-1} @ g_0
+        else:
+            mean = mean
+        tilted_gaussian_point_batch = gaussian_point_batch - mean
+
+        # gaussian_IS_weight =  (g - mean).T @ cov^{-1} @ (g - mean))
+        if gaussian_IS_weight is None:
+            gaussian_IS_weight = np.einsum('ni,ij,nj->n', g_batch - mean, cov_inv, g_batch - mean)
+        else:
+            gaussian_IS_weight = gaussian_IS_weight
+
+        #importance weights is exp(-1/2 * (tilted_gaussian_point_batch - mean).T @ cov^{-1} @ (tilted_gaussian_point_batch - mean))
+        # divided by exp(-1/2 * (g_batch - mean).T @ cov^{-1} @ (g_batch - mean)) 
+        IS_weight_batch_log = -0.5 * (np.einsum('ni,ij,nj->n', tilted_gaussian_point_batch, cov_inv, tilted_gaussian_point_batch) 
+                                      - gaussian_IS_weight)
+        IS_weight_batch = np.exp(IS_weight_batch_log)
+        # volume_factor_batch = prox_volume_factor(g_batch, S, k)
+        return IS_weight_batch #* volume_factor_batch
+
+def prox_volume_factor(v_batch, S, k):
+    # returns det(I+Jp(v)_root @ S @ Jp(v)_root), v=prox(g + Sy)
+    jacobian_batch = batched_mlogit_jacobian(v_batch)
+    score_jacobian_batch = np.einsum('nij,jl->nil', jacobian_batch, S) \
+                                + np.eye(k)[None, :, :] 
+    determinant_batch = np.linalg.det(score_jacobian_batch) # det(I + S @ Jp(v))
+    return determinant_batch

@@ -17,6 +17,15 @@ def score_jacobian_batched(V_batch, S, k):
     """
     J = batched_mlogit_jacobian(V_batch)
     return batched_inv(np.eye(k) + batched_product(S, J))
+    # TODO: why is the order of S and J different from the paper?
+    # J = batched_mlogit_jacobian(V_batch)
+    # inv_score_jacobian_batch = np.einsum('nij,jl->nil', J, S) + np.eye(k)[None, :, :] 
+    # return batched_inv(inv_score_jacobian_batch)
+
+def score_jacobian_batched_with_volume_factor(V_batch, S, k):
+    J = batched_mlogit_jacobian(V_batch)
+    score_inv_batch = np.eye(k) + batched_product(S, J)
+    return batched_inv(score_inv_batch), np.linalg.det(score_inv_batch)
 
 def MP_batched(V_batch, MP_S_inv, k):
     """

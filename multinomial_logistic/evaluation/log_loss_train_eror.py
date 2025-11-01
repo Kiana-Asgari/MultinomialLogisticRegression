@@ -91,9 +91,9 @@ def plot_train_log_loss_vs_alpha(R_00, alpha_min, alpha_max, k, k_0, max_iter, s
 
 def train_error(R_00, schur, R_01, S,alpha, k, k_0, seed=42):
     np.random.seed(seed)
-    print('     computing train  error... with parameters: R_00=', R_00, 'schur=', schur, 'R_01=', R_01, 'S=', S)
-    loss = integrate(_train_log_loss_integrand, R_00, schur, R_01, S, alpha, k, k_0)
-    print('     done computing train error with loss: ', loss)
+    #loss = integrate(_train_log_loss_integrand, R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
+    loss = mesh_integration(_train_log_loss_integrand, R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
+    print('     train loss: ', loss)
     return loss
 
 
@@ -144,3 +144,50 @@ def integrate(integrand, R_00, schur, R_01, S, alpha, k, k_0):
         print('     **[Warning] train error integration error is too large**, err=', err)
     #print('     done integrating')
     return expectations     
+
+
+
+
+
+
+def mesh_integration(integrand, R_00, schur, R_01, S, alpha, k, k_0, seed=42, size=4.5, n_mesh=12):
+    # Set numpy random seed before mesh integration
+    np.random.seed(seed)
+    fdim = 1
+    ndim = k+k_0
+
+    # Create mesh grid for ndim dimensions using midpoint rule
+    # Divide [-size, size] into n_mesh intervals, sample at midpoints
+    dx = 2 * size / n_mesh
+    axes = [np.linspace(-size + dx/2, size - dx/2, n_mesh) for _ in range(ndim)]
+    grids = np.meshgrid(*axes, indexing='ij')
+    
+    # Flatten the grids to get all points: shape (n_mesh^ndim, ndim)
+    points = np.stack([grid.flatten() for grid in grids], axis=-1)
+    n_points = points.shape[0]
+    
+    # Prepare args for integrand
+    args = (R_00, schur, R_01, S, alpha, k, k_0)
+    
+    # Compute integration using batches for vectorized computation
+    batch_size = 50000
+    n_batches = (n_points + batch_size - 1) // batch_size
+    
+    expectations = np.zeros(fdim)
+    print(f'  --n_batches: {n_batches}, n_points: {n_points}')
+    
+    for i in range(n_batches):
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, n_points)
+        batch_points = points[start_idx:end_idx] # Shape: (batch_size, ndim)
+        # Call integrand with batched points
+        batch_result = integrand(batch_points, *args)  # Shape: (batch_size, fdim)       
+        # Sum over the batch
+        expectations += np.sum(batch_result, axis=0)
+    
+    # Compute volume element (dx^ndim for midpoint rule)
+    volume_element = dx ** ndim
+    
+    # Multiply by volume element to get Riemann sum
+    expectations *= volume_element
+    return expectations

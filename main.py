@@ -1,18 +1,24 @@
-import numpy as np
-from multinomial_logistic.MLE_empirical.ESD_empirical import esd_empirical
-from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
-import matplotlib.pyplot as plt
 import os
-from multinomial_logistic.log_data.utils import plot_density, plot_regularized_error, plot_errors_vs_alpha
-from multinomial_logistic.log_data.log_fp import run_and_log_fp
-from multinomial_logistic.log_data.log_esd import run_and_log_esd
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 from multinomial_logistic.ESD.Marchenko_Pastur_FP import recover_density
-from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests_regularized, read_fp_tests_regularized, run_and_log_fp_tests
-from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle_regularized, log_mle_esd, read_mle_esd
-from multinomial_logistic.log_data.log_fp_regularized import run_and_log_fp_regularized
+from multinomial_logistic.log_data.log_esd import run_and_log_esd
 from multinomial_logistic.log_data.log_fp import run_and_log_fp
-
-
+from multinomial_logistic.log_data.log_fp_regularized import \
+    run_and_log_fp_regularized
+from multinomial_logistic.log_data.log_fp_tests import (
+    read_fp_tests_regularized, run_and_log_fp_tests,
+    run_and_log_fp_tests_regularized)
+from multinomial_logistic.log_data.log_mle_empirical import (
+    log_mle_esd, read_mle_esd, run_and_log_mle_regularized)
+from multinomial_logistic.log_data.utils import (plot_density,
+                                                 plot_errors_vs_alpha,
+                                                 plot_regularized_error)
+from multinomial_logistic.MLE_empirical.ESD_empirical import esd_empirical
+from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import \
+    fit_mle_skitlearn
 
 #########################
 # final plottings
@@ -73,13 +79,18 @@ def plot_final_results(what_to_plot):
 
 
 
-from state_evolution.full_recursion import state_evolution_full_recursion
-from multinomial_logistic.evaluation.misclassification_test_error import misclassification_test_error
+from scipy.linalg import sqrtm
+
 from multinomial_logistic.evaluation.log_loss_test_error import test_error
 from multinomial_logistic.evaluation.log_loss_train_eror import train_error
-from scipy.linalg import sqrtm
-from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
-from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
+from multinomial_logistic.evaluation.misclassification_test_error import \
+    misclassification_test_error
+from multinomial_logistic.MLE_empirical.mle_empirical_baseline import \
+    fit_mle_baseline
+from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import \
+    fit_mle_skitlearn
+from state_evolution.full_recursion import state_evolution_full_recursion
+
 
 def test_miscalss():
     k=2
@@ -133,10 +144,11 @@ def test_miscalss():
 
 
 
+import argparse
+
 ######################################
 from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle
 from multinomial_logistic.MLE_empirical.visualize_data import scatter_plot_data
-import argparse
 
 if __name__ == "__main__":
     print("Running main")

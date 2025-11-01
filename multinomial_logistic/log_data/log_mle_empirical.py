@@ -14,15 +14,16 @@
 import numpy as np
 import json
 import os
+from typing import Literal
 from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
 import warnings
 from multinomial_logistic.MLE_empirical.mle_empirical_skitlearn import fit_mle_skitlearn
 from multinomial_logistic.MLE_empirical.ESD_empirical import esd_empirical
+from configs.R_initiation import get_R_00
 
 
 
-
-def log_mle_esd(k, k_0, d=250, n_trials=100):
+def log_mle_esd(k, k_0, d=250, n_trials=20):
    
     R_00 = np.array([[1,1/2], [1/2,1]])
     
@@ -231,21 +232,27 @@ def run_and_log_mle_regularized(k_0, k, lambda_reg=0, d=250, n_trials=100):
             
     return filepath
 
-def run_and_log_mle(k_0, k, lambda_reg=0, d=250, n_trials=100, two_classes_close=False, non_symmetric=False):     
+def run_and_log_mle(k_0, k, lambda_reg=0, d=250,
+                    n_trials=100, 
+                    two_classes_close=False,
+                    non_symmetric=False,
+                    type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):     
     # Set parameters
     
     # Create base filename without timestamp, but with d and n_trials
-    if non_symmetric:
+    if type_3==False and non_symmetric:
         base_filename = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}_non_symmetric.json"
-        base_dir = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}_non_symmetric"
-    elif two_classes_close:
+    elif type_3==False and two_classes_close:
         base_filename = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}_two_classes_close.json"
-        base_dir = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}_two_classes_close"
-    else:
-        base_filename = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}.json"
-        base_dir = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}"
+    elif type_3==False and not non_symmetric and not two_classes_close:
+        base_filename = f"mle_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}_k3.json"
+    elif type_3 != False:
+        base_filename = f"MLE_evals(d={d},ntrials={n_trials})_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
 
-    base_filepath = os.path.join(os.path.dirname(__file__), "newdata", "mle_empirical", base_filename)
+    if type_3 != False:
+        base_filepath = os.path.join(os.path.dirname(__file__), "Oct_data", "mle_empirical", base_filename)
+    else:
+        base_filepath = os.path.join(os.path.dirname(__file__), "newdata", "mle_empirical", base_filename)
     
     # Create data/mle_empirical directory if it doesn't exist
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
@@ -277,14 +284,20 @@ def run_and_log_mle(k_0, k, lambda_reg=0, d=250, n_trials=100, two_classes_close
 
     R_00_values = np.array([[[1,0.5], [0.5,1]]])  
 
-    if two_classes_close:
+    if type_3==False and two_classes_close:
         R_00_values = np.array([[[1,0.9], [0.9,1]]])
-    elif non_symmetric:
+    elif type_3==False and non_symmetric:
         R_00_values = np.array([[[1,-0.5], [-0.5,1]]])
+    elif type_3==False and not non_symmetric and not two_classes_close:
+        R_00_values = np.array([np.eye(3)])
+    elif type_3 != False:
+        R_00_values = np.array([get_R_00(type_3)])
 
-    alphas =np.concatenate(([2.1724, 1.744827586206898], np.linspace(2.6, 15, 30))).flatten()
-    #alphas = np.sort(alphas)[::-1]  # Sort in decreasing order
-    #alphas = [2.9]
+
+    alphas = np.arange(4, 20, 0.4) 
+    alphas = alphas[::-1]
+    print('\n MEL:alphas:', alphas.shape, 'R_00_values:', R_00_values, 'path:', base_filepath, '\n')
+
     for R_00 in R_00_values:
         for alpha in alphas:
             alpha_str = str(alpha)
@@ -295,7 +308,7 @@ def run_and_log_mle(k_0, k, lambda_reg=0, d=250, n_trials=100, two_classes_close
                 print(f"Skipping alpha={alpha} for R_00={R_00} (already exists)")
                 continue
                 
-            print(f"\nRunning alpha = {alpha}")
+            print(f"\nMLE: Running alpha = {alpha}")
             
             # Set up warning catching
             with warnings.catch_warnings(record=True) as w:
@@ -307,7 +320,7 @@ def run_and_log_mle(k_0, k, lambda_reg=0, d=250, n_trials=100, two_classes_close
                         k=k,
                         R_00=R_00,
                         n_trials=n_trials,
-                        d=d,
+                        d=d
                     )
                     norms, test_errors, train_errors = emp_results['norms'], emp_results['test_errors'], emp_results['train_errors']
                     misclassification_test_errors = emp_results['misclass_test_errors']

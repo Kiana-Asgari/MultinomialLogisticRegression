@@ -186,23 +186,24 @@ def read_fp_tests_regularized(k, k_0, R_00):
 
 
 
-
-
+from typing import Literal
 ###########################################################################
-def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_close=False):  
+def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_close=False, 
+                    type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):  
     print('****************running and logging fp tests...')   
     # Create base filename
-    if two_classes_close:
+    if  type_3==False and two_classes_close:
         base_filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
-        base_filename_dir = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close"
-    elif non_symmetric:
+    elif type_3==False and non_symmetric:
         base_filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
-        base_filename_dir = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric"
-    else:   
-        base_filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
-        base_filename_dir = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}"
+    elif type_3 != False:
+        base_filename = f"FP_evals_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
+
     print('base_filename', base_filename)
-    base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", base_filename)
+    if type_3 != False:
+        base_filepath = os.path.join(os.path.dirname(__file__), "Oct_data", "fp_tests", base_filename)
+    else:
+        base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", base_filename)
     print('base_filepath', base_filepath)
     
     # Create data/fp_tests directory if it doesn't exist
@@ -235,13 +236,17 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         print(f"Creating new file: {os.path.basename(filepath)}")
 
     # Read available alphas and R_00 values from FP solution files
-    if two_classes_close:
+    if type_3==False and two_classes_close:
         fp_data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_two_classes_close")
         fp_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
         fp_filepath = os.path.join(fp_data_dir, fp_filename)
-    elif non_symmetric:
+    elif type_3==False and non_symmetric:
         fp_data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_nonsym")
         fp_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
+        fp_filepath = os.path.join(fp_data_dir, fp_filename)
+    elif type_3 != False:
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "fp_solution")
+        fp_filename = f"FP_solutions_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
         fp_filepath = os.path.join(fp_data_dir, fp_filename)
     else:
         fp_data_dir = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution")
@@ -265,6 +270,8 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         alphas.update(float(alpha) for alpha in fp_data["results"][R_00_str].keys())
     
     alphas = sorted(list(alphas), reverse=True)  # Sort in decreasing order
+    print('R_00_values:', R_00_values, 'alphas:', alphas)
+    print('\n\n')
     
     for R_00 in R_00_values:
         if R_00.tolist() == [[1,0], [0,1]]:
@@ -391,40 +398,27 @@ def read_fp_test_results(alpha, k, k_0, R_00, lambda_reg=0):
             result["F_norm"], np.zeros((k, k_0)), result["diverged"])
 
 
+from configs.R_initiation import get_R_00
+def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_close=False
+                        , type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):
 
-def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_close=False):
-    """
-    Read FP test data and return lists of alphas and corresponding errors.
-    
-    Args:
-        k (int): Dimension of the system
-        k_0 (int): Dimension of g_0
-        R_00 (ndarray): Initial covariance matrix
-        lambda_reg (float): Regularization parameter
-    
-    Returns:
-        tuple: (alphas, test_errors, train_errors)
-        where:
-        - alphas: list of alpha values
-        - test_errors: list of test errors for each alpha
-        - train_errors: list of train errors for each alpha
-        Returns None if data not found
-    """
-    # Get the filepath
-    if non_symmetric:
-        print('getting fp stats for non_symmetric')
+    if type_3==False and non_symmetric:
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
         R_00 = np.array([[1,-1/2], [-1/2,1]])
-    elif two_classes_close:
-        print('getting fp stats for two_classes_close')
+    elif type_3==False and two_classes_close:
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
         R_00 = np.array([[1,0.9], [0.9,1]])
+    elif type_3 != False:
+        filename = f"FP_evals_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
+        R_00 = get_R_00(type_3)
     else:
-        print('getting fp stats for symmetric')
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         R_00 = np.array([[1,1/2], [1/2,1]])
     #filepath = os.path.join(os.path.dirname(__file__), "newdata", "fp_tests", filename) #changed from newdata to tempdata
-    filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", filename)
+    if type_3 != False:
+        filepath = os.path.join(os.path.dirname(__file__), "Oct_data", "fp_tests", filename)
+    else:
+        filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", filename)
     if not os.path.exists(filepath):
         print(f"No FP test file found: {filename}")
         return None
@@ -440,17 +434,13 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
         return None
     
     # Initialize lists to store results
-    alphas = []
-    test_errors = []
-    train_errors = []
-    F_norms = []
-    misclassification_test_errors = []
+    alphas, test_errors, train_errors, F_norms, misclassification_test_errors = [], [], [], [], []
+
     # Process each alpha value
     for alpha_str, alpha_data in data["results"][R_00_str].items():
         # Skip if diverged
         if alpha_data["diverged"]:
             continue
-        
         # Convert strings to float/arrays
         alpha = float(alpha_str)
         test_error = alpha_data["test_error"]

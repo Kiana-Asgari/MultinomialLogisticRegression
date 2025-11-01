@@ -110,8 +110,10 @@ def plot_test_error_vs_alpha( R_00, alpha_min, alpha_max \
 def test_error( R_00, schur, R_01, k, k_0, alpha,seed=42):
     np.random.seed(seed)
     A = R_01 @ sqrtm(np.linalg.inv(R_00))
-    loss = integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
-    return loss
+    #loss = integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
+    loss_mesh = mesh_integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
+    print('     test loss: ', loss_mesh)
+    return loss_mesh
 
 
 
@@ -163,16 +165,57 @@ def _test_error_integrand(Z_batch, R_00, schur, A, alpha, k, k_0,):
 
 ####################################################################################################
 
+def mesh_integration(integrand, R_00, schur, A, alpha, k, k_0, seed=42, size=5, n_mesh=15):
+    # Set numpy random seed before mesh integration
+    np.random.seed(seed)
+    fdim = 1
+    ndim = int(k+k_0)
+    # Create mesh grid for ndim dimensions using midpoint rule
+    # Divide [-size, size] into n_mesh intervals, sample at midpoints
+    dx = 2 * size / n_mesh
+    axes = [np.linspace(-size + dx/2, size - dx/2, n_mesh) for _ in range(ndim)]
+    grids = np.meshgrid(*axes, indexing='ij')
+    
+    # Flatten the grids to get all points: shape (n_mesh^ndim, ndim)
+    points = np.stack([grid.flatten() for grid in grids], axis=-1)
+    n_points = points.shape[0]
+    
+    # Prepare args for integrand
+    args = (R_00, schur, A, alpha, k, k_0)
+    
+    # Compute integration using batches for vectorized computation
+    batch_size = 100000
+    n_batches = (n_points + batch_size - 1) // batch_size
+    
+    expectations = np.zeros(fdim)
+    print(f'  --n_batches: {n_batches}, n_points: {n_points}')
+    
+    for i in range(n_batches):
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, n_points)
+        batch_points = points[start_idx:end_idx] # Shape: (batch_size, ndim)
+        # Call integrand with batched points
+        batch_result = integrand(batch_points, *args)  # Shape: (batch_size, fdim)       
+        # Sum over the batch
+        expectations += np.sum(batch_result, axis=0)
+    
+    # Compute volume element (dx^ndim for midpoint rule)
+    volume_element = dx ** ndim
+    
+    # Multiply by volume element to get Riemann sum
+    expectations *= volume_element
+    return expectations
+
 
 
 
 def integration(integrand, R_00, schur, A, alpha, k, k_0):
     fdim = 1
-    ndim = k+k_0
+    ndim = int(k+k_0)
     expectations, err = cubature(integrand, args=( R_00, schur, A, alpha, k, k_0,), ndim=ndim,
                                   vectorized=True,
-                                  fdim= fdim ,xmin=[-3.8]*ndim, xmax=[3.8]*ndim, abserr=1e-5, 
-                                  maxEval= 3_000_000, norm=2)
+                                  fdim= fdim ,xmin=[-5]*ndim, xmax=[5]*ndim, abserr=1e-5, relerr=1e-5,
+                                  maxEval= 2_000_000, norm=2)
     if err.item() > 1e-4:
         print('     **[Warning] log loss test error integration error is too large**', err)
     #for e in err:

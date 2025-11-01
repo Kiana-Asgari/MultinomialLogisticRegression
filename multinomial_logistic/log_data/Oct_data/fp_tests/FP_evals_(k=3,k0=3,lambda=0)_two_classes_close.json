@@ -1,0 +1,115 @@
+{
+  "metadata": {
+    "k": 3,
+    "k_0": 3,
+    "lambda_reg": 0
+  },
+  "results": {
+    "[[0.5857864376269053, 0.29289321881345265, 0.29289321881345265], [0.29289321881345265, 3.707106781186548, 3.414213562373095], [0.29289321881345265, 3.414213562373095, 3.707106781186548]]": {
+      "19.89999999999994": {
+        "test_error": 1.201084162524757,
+        "train_error": 1.0322994547968583,
+        "misclassification_test_error": 0.5430045231728398,
+        "F_norm": 1.9366456238781247,
+        "diverged": false,
+        "actual_alpha": 19.89999999999994
+      },
+      "19.799999999999944": {
+        "test_error": 1.201632908272938,
+        "train_error": 1.0318891525168365,
+        "misclassification_test_error": 0.5430877652367332,
+        "F_norm": 1.9490998965040411,
+        "diverged": false,
+        "actual_alpha": 19.799999999999944
+      },
+      "19.699999999999946": {
+        "test_error": 1.2021883256286554,
+        "train_error": 1.0314745107969832,
+        "misclassification_test_error": 0.5431203338273648,
+        "F_norm": 1.961714336231772,
+        "diverged": false,
+        "actual_alpha": 19.699999999999946
+      },
+      "19.599999999999945": {
+        "test_error": 1.2027505367597247,
+        "train_error": 1.0310554618778107,
+        "misclassification_test_error": 0.5431715333724235,
+        "F_norm": 1.9744920356731157,
+        "diverged": false,
+        "actual_alpha": 19.599999999999945
+      },
+      "19.499999999999943": {
+        "test_error": 1.2033196668302484,
+        "train_error": 1.0306319322369144,
+        "misclassification_test_error": 0.5433054883323287,
+        "F_norm": 1.987436167199462,
+        "diverged": false,
+        "actual_alpha": 19.499999999999943
+      },
+      "19.399999999999945": {
+        "test_error": 1.203895844092993,
+        "train_error": 1.0302038490126117,
+        "misclassification_test_error": 0.5433828926254454,
+        "F_norm": 2.000549985521083,
+        "diverged": false,
+        "actual_alpha": 19.399999999999945
+      },
+      "19.299999999999947": {
+        "test_error": 1.204479199985039,
+        "train_error": 1.0297711436483628,
+        "misclassification_test_error": 0.5435105589716429,
+        "F_norm": 2.013836830362976,
+        "diverged": false,
+        "actual_alpha": 19.299999999999947
+      },
+      "19.199999999999946": {
+        "test_error": 1.2050698692271822,
+        "train_error": 1.0293337374897733,
+        "misclassification_test_error": 0.5435481859099732,
+        "F_norm": 2.0273001292493547,
+        "diverged": false,
+        "actual_alpha": 19.199999999999946
+      },
+      "19.099999999999945": {
+        "test_error": 1.2056679899269367,
+        "train_error": 1.0288915533282788,
+        "misclassification_test_error": 0.543623061447567,
+        "F_norm": 2.040943400394905,
+        "diverged": false,
+        "actual_alpha": 19.099999999999945
+      },
+      "18.999999999999947": {
+        "test_error": 1.2062737036855171,
+        "train_error": 1.0284445122622832,
+        "misclassification_test_error": 0.5442401391187328,
+        "F_norm": 2.054770255712363,
+        "diverged": false,
+        "actual_alpha": 18.999999999999947
+      },
+      "18.89999999999995": {
+        "test_error": 1.2068871557089005,
+        "train_error": 1.027992533629534,
+        "misclassification_test_error": 0.5442702355593907,
+        "F_norm": 2.068784403940274,
+        "diverged": false,
+        "actual_alpha": 18.89999999999995
+      },
+      "18.799999999999947": {
+        "test_error": 1.2075084949230626,
+        "train_error": 1.0275355349697148,
+        "misclassification_test_error": 0.5443475839483447,
+        "F_norm": 2.0829896538943657,
+        "diverged": false,
+        "actual_alpha": 18.799999999999947
+      },
+      "18.699999999999946": {
+        "test_error": 1.2081378740937636,
+        "train_error": 1.0270734314721346,
+        "misclassification_test_error": 0.5443866567049742,
+        "F_norm": 2.0973899178529294,
+        "diverged": false,
+        "actual_alpha": 18.699999999999946
+      }
+    }
+  }
+}

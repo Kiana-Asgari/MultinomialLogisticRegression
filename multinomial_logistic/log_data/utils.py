@@ -27,6 +27,27 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
+def _find_matching_R00_key(R_00_target, keys, precision=3):
+    # Convert target to numpy array and round
+    R_00_target_arr = np.array(R_00_target)
+    R_00_target_rounded = np.round(R_00_target_arr, precision)
+    
+    for key in keys:
+        try:
+            # Parse the key as a numpy array
+            # Handle both str(array) format and JSON-like format
+            key_arr = eval(key.replace('array(', '').replace(')', ''))
+            key_arr = np.array(key_arr)
+            key_rounded = np.round(key_arr, precision)
+            
+            # Check if arrays match
+            if np.allclose(R_00_target_rounded, key_rounded, atol=0):
+                return key
+        except:
+            # If parsing fails, skip this key
+            continue
+    
+    return None
 
 
 
@@ -318,14 +339,18 @@ def set_up_plotting_style():
 
 
 from multinomial_logistic.log_data.log_fp_tests import get_fp_misclassification_statistics
-
+from configs.R_initiation import get_R_00
 
 def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
     colors = set_up_plotting_style()
-
-    fp_results_two_classes_close = get_fp_statistics(k, k_0, two_classes_close=True)
-    fp_results_symmetric = get_fp_statistics(k, k_0, non_symmetric=False, two_classes_close=False)
-    fp_results_non_symmetric = get_fp_statistics(k, k_0, two_classes_close=False, non_symmetric=True)
+    if k==3:
+        fp_results_symmetric = get_fp_statistics(k, k_0, type_3='symmetric')
+        fp_results_non_symmetric= get_fp_statistics(k, k_0, type_3='three_classes_close')
+        fp_results_two_classes_close=get_fp_statistics(k, k_0, type_3='two_classes_close')
+    else:
+        fp_results_two_classes_close = get_fp_statistics(k, k_0, two_classes_close=True)
+        fp_results_symmetric = get_fp_statistics(k, k_0, non_symmetric=False, two_classes_close=False)
+        fp_results_non_symmetric = get_fp_statistics(k, k_0, two_classes_close=False, non_symmetric=True)
 
     if fp_results_symmetric is None or fp_results_two_classes_close is None or fp_results_non_symmetric is None:
         print("No FP results found")
@@ -337,16 +362,28 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
     
 
     # Read MLE data
-    base_path = 'multinomial_logistic/log_data/newdata/mle_empirical'
+    if k==3:
+        base_path = 'multinomial_logistic/log_data/Oct_data/mle_empirical'
+    else:
+        base_path = 'multinomial_logistic/log_data/newdata/mle_empirical'
     d = 250
 
     # Load mle data
-    with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150.json'), 'r') as f:
-        mle_data_symmetric = json.load(f)
-    with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_two_classes_close.json'), 'r') as f:
-        mle_data_two_classes_close = json.load(f)
-    with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_non_symmetric.json'), 'r') as f:
-        mle_data_non_symmetric = json.load(f)
+    if k==3:
+        with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_symmetric.json'), 'r') as f:
+            mle_data_symmetric = json.load(f)
+        with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_two_classes_close.json'), 'r') as f:
+            mle_data_two_classes_close = json.load(f)
+        with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_three_classes_close.json'), 'r') as f:
+            mle_data_three_classes_close = json.load(f)
+
+    else:
+        with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150.json'), 'r') as f:
+            mle_data_symmetric = json.load(f)
+        with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_two_classes_close.json'), 'r') as f:
+            mle_data_two_classes_close = json.load(f)
+        with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_non_symmetric.json'), 'r') as f:
+            mle_data_non_symmetric = json.load(f)
 
     # Plot each metric
     metrics = [
@@ -373,51 +410,49 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         for i, (alphas, values, label, color) in enumerate(zip(alphas_list, fp_values, labels, colors)):
             # Plot each metric separately for better debugging
             if metric_name == 'test_errors':
-                mask = (alphas >= 3.3) & (alphas <= 9)
-                filtered_alphas = alphas[mask]
-                filtered_values = np.array(values)[mask] + 2*1e-3
+                mask = (alphas >= 3.3) & (alphas <= 12)
+                filtered_alphas = alphas#[mask]
+                filtered_values = np.array(values)#[mask] + 2*1e-3
             elif metric_name == 'train_errors':
                 mask = (alphas >= 2.7) & (alphas <= alpha_max)
-                filtered_alphas = alphas[mask]
-                filtered_values = np.array(values)[mask]
+                filtered_alphas = alphas#[mask]
+                filtered_values = np.array(values)#[mask]
             elif metric_name == 'misclassification_test_errors':
                 mask = (alphas > 2.9) & (alphas <= alpha_max)
-                filtered_alphas = alphas[mask]
-                filtered_values = np.array(values)[mask]
+                filtered_alphas = alphas#[mask]
+                filtered_values = np.array(values)#[mask]
             elif metric_name == 'F_norm':
-                mask = (alphas >= 3.3) & (alphas <= 9)
-                filtered_alphas = alphas[mask]
-                filtered_values = np.sqrt(np.array(values)[mask]) + 1e-2
+                mask = (alphas >= 3.3) & (alphas <= 12)
+                filtered_alphas = alphas#[mask]
+                filtered_values = np.sqrt(np.array(values))#[mask]) + 1e-2
             plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.8)
 
         # Add empirical points 
-        data_sets = [
-            (mle_data_symmetric, [[1.0, 0.5], [0.5, 1.0]], colors[2]),
-            (mle_data_two_classes_close, [[1.0, 0.9], [0.9, 1.0]], colors[1]),
-            (mle_data_non_symmetric, [[1.0, -0.5], [-0.5, 1.0]], colors[0])
-        ]
+        if k==3:
+            data_sets = [
+                (mle_data_symmetric, get_R_00('symmetric'), colors[2]),
+                (mle_data_two_classes_close, get_R_00('two_classes_close'), colors[1]),
+                (mle_data_three_classes_close, get_R_00('three_classes_close'), colors[0]),
+            ]
+        else:
+            data_sets = [
+                (mle_data_symmetric, [[1.0, 0.5], [0.5, 1.0]], colors[2]),
+                (mle_data_two_classes_close, [[1.0, 0.9], [0.9, 1.0]], colors[1]),
+                (mle_data_non_symmetric, [[1.0, -0.5], [-0.5, 1.0]], colors[0])
+            ]
+
         
         for data, R_00, color in data_sets:
-            R_00_str = str(R_00)
-            if R_00_str in data['results']:
-                alphas = []
-                values = []
-                errors = []
-                
+            # Find matching key with 3-digit precision
+            matching_key = _find_matching_R00_key(R_00, data['results'].keys())
+            
+            if matching_key is not None:
+                alphas, values, errors = [], [], [] 
 
-                for alpha_str, result in data['results'][R_00_str].items():
+                for alpha_str, result in data['results'][matching_key].items():
                     alpha = float(alpha_str)
-                    if metric_name == 'test_errors':
-                        alpha_min = 3
-                        alpha_max = 9
-                    elif metric_name == 'F_norm':
-                        alpha_min = 3.1
-                        alpha_max = 9
-                    else:
-                        alpha_min = 2.9
-                        alpha_max = 12
 
-                    if alpha_min <= alpha <= alpha_max and not result.get('div', False):
+                    if True: #alpha_min <= alpha <= alpha_max and not result.get('div', False):
                         mle_metric_name = 'norm' if metric_name == 'F_norm' else metric_name                                
                         metric_values = result[mle_metric_name]                                
                         if not isinstance(metric_values, (list, np.ndarray)):
@@ -442,7 +477,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                     errors = errors[sort_idx]
                     if metric_name == 'test_errors' or metric_name == 'F_norm':
                         alphas = np.array(alphas) - 2*1e-3
-                        plt.ylim(bottom=1)
+                       #plt.ylim(bottom=1)
 
                     #if metric_name == 'misclassification_test_errors':
                     #    plt.ylim(bottom=0.4,top=0.62)
@@ -458,17 +493,19 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         plt.ylabel(y_label)
         plt.grid(True, alpha=0.3)
         plt.legend()
-        plt.xlim(left=3.3)
+        #plt.xlim(left=5)
+        #plt.ylim(top=2)
         
         # Add formatter for y-axis ticks to show 2 decimal places
         ax = plt.gca()
         ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
 
         # Save the plot
-        save_dir = os.path.join(os.path.dirname(__file__), "figures", "errors_vs_alpha")
+        save_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "figures", "errors_vs_alpha")
         os.makedirs(save_dir, exist_ok=True)
-        plt.savefig(os.path.join(save_dir, f'{metric_name}_vs_alpha_k{k}_k0{k_0}.pdf'), 
-                   bbox_inches='tight', dpi=300)
+        saving_path = os.path.join(save_dir, f'{metric_name}_vs_alpha_k{k}_k0{k_0}.pdf')
+        plt.savefig(saving_path, bbox_inches='tight', dpi=300)
+        print(f'\n{metric_name} vs alpha plot saved to {saving_path}')
         plt.close()
 
 
