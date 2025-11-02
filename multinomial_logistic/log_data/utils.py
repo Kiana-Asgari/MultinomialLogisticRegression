@@ -401,9 +401,9 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
         plt.figure(figsize=(10, 6))
         
         # Plot theoretical curves
-        labels = [r'$\mathbf{R}_{00}= \mathbf{R}_{00}^{(1)}$', 
-                 r'$\mathbf{R}_{00}= \mathbf{R}_{00}^{(2)}$', 
-                 r'$\mathbf{R}_{00}= \mathbf{R}_{00}^{(3)}$']
+        labels = [r'$\mathbf{R}_{00}= sym \mathbf{R}_{00}^{(1)}$', 
+                 r'$\mathbf{R}_{00}= two \mathbf{R}_{00}^{(2)}$', 
+                 r'$\mathbf{R}_{00}= three \mathbf{R}_{00}^{(3)}$']
         
         alphas_list = [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric]
         

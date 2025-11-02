@@ -1,43 +1,34 @@
 import torch
+import math
 import time
 
 from state_evolution.utils import mesh_integration
 
+
 def R_recursion(
-    S_t,
-    S_next,
-    R_00,
-    schur_t,
-    R_01_t,
-    lambda_reg,
-    alpha,
+    S_t_tensor,
+    S_next_tensor,
+    R_00_tensor,
+    schur_tensor,
+    R_01_tensor,
+    lambda_tensor,
+    alpha_tensor,
     k,
     k_0,
-    R_00_sqrtm_inv=None,
+    R_00_sqrtm_inv_tensor=None,
     integral_mesh_size=10,
     integral_size=5.5,
 ):
-    dtype = torch.float64
-    default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = getattr(S_t, "device", default_device)
+    device = S_t_tensor.device
+    dtype = S_t_tensor.dtype if torch.is_floating_point(S_t_tensor) else torch.float32
 
-    S_t_tensor = torch.as_tensor(S_t, dtype=dtype, device=device)
-    S_next_tensor = torch.as_tensor(S_next, dtype=dtype, device=device)
-    R_00_tensor = torch.as_tensor(R_00, dtype=dtype, device=device)
-    schur_tensor = torch.as_tensor(schur_t, dtype=dtype, device=device)
-    R_01_tensor = torch.as_tensor(R_01_t, dtype=dtype, device=device)
-    lambda_tensor = torch.as_tensor(lambda_reg, dtype=dtype, device=device)
-    alpha_tensor = torch.as_tensor(alpha, dtype=dtype, device=device)
-
-    if R_00_sqrtm_inv is None:
+    if R_00_sqrtm_inv_tensor is None:
         R_00_sqrt = _matrix_sqrt(R_00_tensor)
         A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R_00_sqrt))
     else:
-        R_00_sqrtm_inv_tensor = torch.as_tensor(R_00_sqrtm_inv, dtype=dtype, device=device)
         A_tensor = torch.matmul(R_01_tensor, R_00_sqrtm_inv_tensor)
-    start_time = time.time()
-
-    R_01_integrand, schur_integrand = mesh_integration(
+    time_start = time.time()
+    combined_integrand = mesh_integration(
         _R_integrand_with_prox_density_fully_vectorized,
         S_t_tensor,
         R_00_tensor,
@@ -46,11 +37,15 @@ def R_recursion(
         alpha_tensor,
         k,
         k_0,
-        fdim=2 * k * k,
+        input_dim=k + k_0,
+        output_dim=2 * k * k,
         n_mesh=integral_mesh_size,
         size=integral_size,
     )
-
+    R_01_integrand = combined_integrand[: k * k].reshape(k, k)
+    schur_integrand = combined_integrand[k * k :].reshape(k, k)
+    time_end = time.time()
+    print(f"  **Time taken for R_recursion: {time_end - time_start} seconds, R_01_integrand: {R_01_integrand}")
     schur = alpha_tensor * torch.matmul(
         S_next_tensor,
         torch.matmul(schur_integrand, S_next_tensor),
@@ -60,9 +55,7 @@ def R_recursion(
         torch.matmul(identity_k - 2.0 * alpha_tensor * lambda_tensor * S_next_tensor, R_01_tensor)
         - alpha_tensor * torch.matmul(S_next_tensor, R_01_integrand)
     )
-    end_time = time.time()
-    print('  --time full R recursion: ', end_time - start_time, 'R_01: ', R_01, 'schur: ', schur)
-    input('Press Enter to continue...')
+
     return R_01, schur
 
 
@@ -165,11 +158,12 @@ def _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0):
     return g, g_0
 
 
-def _standard_normal_pdf(samples):
-    dimension = samples.shape[1]
-    normalization = torch.pow(2.0 * torch.pi, 0.5 * dimension)
-    exponent = -0.5 * torch.sum(samples * samples, dim=1)
-    return torch.exp(exponent) / normalization
+import math
+def _standard_normal_pdf(samples: torch.Tensor)-> torch.Tensor:
+    d = samples.size(-1)
+    norm_sq = (samples ** 2).sum(dim=-1)
+    coeff = (2 * math.pi) ** (-0.5 * d)
+    return coeff * torch.exp(-0.5 * norm_sq)
 
 
 def _batched_mult(matrix, batch):

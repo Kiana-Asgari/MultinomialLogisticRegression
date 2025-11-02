@@ -1,85 +1,149 @@
 
-import numpy as np
-from scipy.linalg import sqrtm
+import torch
 
-from state_evolution.recursion_parts.R_01_recursion import R_01_recursion
 from state_evolution.recursion_parts.S_recursion import S_recursion
 from state_evolution.recursion_parts.full_R_recursion import R_recursion
+from state_evolution.utils import ensure_tensor
+
 div_prox = False
 
 
+def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, S_0=None, tol=1e-5, max_iter=300, seed=42, ):
 
-def state_evolution_full_recursion(R_00: np.ndarray,
-                                    schur_0: np.ndarray,
-                                    R_01_0: np.ndarray,
-                                    lambda_reg: float,
-                                    alpha: float,
-                                    k: int,
-                                    k_0: int,
-                                    S_0=None,
-                                    tol: float=1e-5,
-                                    max_iter: int=300,
-                                    seed: int=42):
-    # AMP state evolution initialization
-    np.random.seed(seed)
-    
-    R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors = _initialize_state_evolution(R_00, schur_0, R_01_0, lambda_reg,
-                                                                                           alpha, k, k_0, S_0=S_0, max_iter=max_iter, seed=seed)
-    div_tol = np.linalg.norm(R_00)* 5 * 1e4
+    torch.manual_seed(seed)
+
+    default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    default_dtype = torch.float32
+
+    source_tensors = [arg for arg in (R_00, schur_0, R_01_0, S_0) if isinstance(arg, torch.Tensor)]
+    if source_tensors:
+        float_tensor = next((t for t in source_tensors if torch.is_floating_point(t)), source_tensors[0])
+        device = float_tensor.device
+        dtype = float_tensor.dtype if torch.is_floating_point(float_tensor) else default_dtype
+    else:
+        device = default_device
+        dtype = default_dtype
+
+    R_00_tensor = ensure_tensor(R_00, dtype=dtype, device=device)
+    schur_0_tensor = ensure_tensor(schur_0, dtype=dtype, device=device)
+    R_01_0_tensor = ensure_tensor(R_01_0, dtype=dtype, device=device)
+    lambda_tensor = ensure_tensor(lambda_reg, dtype=dtype, device=device)
+    alpha_tensor = ensure_tensor(alpha, dtype=dtype, device=device)
+    tol_tensor = ensure_tensor(tol, dtype=dtype, device=device)
+
+    R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors = _initialize_state_evolution(
+        R_00_tensor,
+        schur_0_tensor,
+        R_01_0_tensor,
+        lambda_tensor,
+        alpha_tensor,
+        k,
+        k_0,
+        S_0=S_0,
+        max_iter=max_iter,
+        device=device,
+        dtype=dtype,
+    )
+
+    div_tol = torch.linalg.norm(R_00_tensor) * 5.0e4
     integral_mesh_size = 10
     integral_size = 5.5
 
     for t in range(max_iter):
-        # Step 1: Compute the next state variables
-        S_next, schur_next, R_01_next = _compute_next_state_variables(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0, R_00_sqrtm_inv, 
-                                                     integral_mesh_size=integral_mesh_size, integral_size=integral_size)    
-        errors[t] = np.array([np.linalg.norm(R_01_next - R_01_t), np.linalg.norm(schur_next - schur_t), np.linalg.norm(S_next - S_t)])
+        S_next, schur_next, R_01_next = _compute_next_state_variables(
+            S_t,
+            R_00_tensor,
+            schur_t,
+            R_01_t,
+            lambda_tensor,
+            alpha_tensor,
+            k,
+            k_0,
+            R_00_sqrtm_inv,
+            integral_mesh_size=integral_mesh_size,
+            integral_size=integral_size,
+        )
 
-        # Step 2: Print the statistics
-        _print_stats(t, alpha, errors, S_next, R_01_next, schur_next)
+        current_errors = torch.stack(
+            [
+                torch.linalg.norm(R_01_next - R_01_t),
+                torch.linalg.norm(schur_next - schur_t),
+                torch.linalg.norm(S_next - S_t),
+            ]
+        )
+        errors[t] = current_errors
 
-        # Step 3: Check for divergence
-        #divergence = check_for_divergence(S_next, S_t, schur_next, schur_t, R_01_next, R_01_t, div_tol, t+1, errors)
+        _print_stats(t, alpha_tensor, errors)
 
-            #return schur_t, R_01_t, S_t, divergence
-        if all(errors[t] < 1e-4):
-            integral_mesh_size = 15
-            integral_size = 5.5
-        if all(errors[t]<tol) :
+        # if torch.all(current_errors < 1e-4):
+        #     integral_mesh_size = 15
+        #     integral_size = 5.5
+        if torch.all(current_errors < tol_tensor):
             divergence = False
             break
 
-        # Step 4: Update the state variables
         schur_t, R_01_t, S_t = schur_next, R_01_next, S_next
 
-    # Final step: Print the final statistics
-  
     return schur_t, R_01_t, S_t, divergence
 
-import time
 
-def _compute_next_state_variables(S_t, R_00, schur_t, R_01_t, 
-                                 lambda_reg, alpha, k, k_0,
-                                R_00_sqrtm_inv, integral_mesh_size=10, integral_size=5.5):
+def _compute_next_state_variables(
+    S_t,
+    R_00,
+    schur_t,
+    R_01_t,
+    lambda_reg,
+    alpha,
+    k,
+    k_0,
+    R_00_sqrtm_inv,
+    integral_mesh_size=10,
+    integral_size=5.5,
+):
+    S_next = S_recursion(
+        S_t_tensor=S_t,
+        R_00_tensor=R_00,
+        schur_tensor=schur_t,
+        R_01_tensor=R_01_t,
+        lambda_tensor=lambda_reg,
+        alpha_tensor=alpha,
+        k=k,
+        k_0=k_0,
+        R_00_sqrtm_inv_tensor=R_00_sqrtm_inv,
+        integral_mesh_size=integral_mesh_size,
+        integral_size=integral_size,
+    )
 
-    S_next = S_recursion(S_t=S_t, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
-                         lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, 
-                         R_00_sqrtm_inv=R_00_sqrtm_inv,
-                          integral_mesh_size=integral_mesh_size, integral_size=integral_size)
+    R_01_next, schur_next = R_recursion(
+        S_t_tensor=S_t,
+        S_next_tensor=S_next,
+        R_00_tensor=R_00,
+        schur_tensor=schur_t,
+        R_01_tensor=R_01_t,
+        lambda_tensor=lambda_reg,
+        alpha_tensor=alpha,
+        k=k,
+        k_0=k_0,
+        R_00_sqrtm_inv_tensor=R_00_sqrtm_inv,
+        integral_mesh_size=integral_mesh_size,
+        integral_size=integral_size,
+    )
 
-    R_01_next, schur_next = R_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
-                                        lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, 
-                                        R_00_sqrtm_inv=R_00_sqrtm_inv,
-                                         integral_mesh_size=integral_mesh_size, integral_size=integral_size)
-
-    # R_01_next = R_01_recursion(S_t=S_t, S_next=S_next, R_00=R_00, schur_t=schur_t, R_01_t=R_01_t, 
-    #                            lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, R_00_sqrtm_inv=R_00_sqrtm_inv)
-
-    print('\n','-'*40,'\n')
+    print("\n", "-" * 40, "\n")
     return S_next, schur_next, R_01_next
 
-def check_for_divergence(S_next, S_t, schur_next, schur_t, R_01_next, R_01_t,\
-                          div_tol, iter,errors):
+
+def check_for_divergence(
+    S_next,
+    S_t,
+    schur_next,
+    schur_t,
+    R_01_next,
+    R_01_t,
+    div_tol,
+    iteration,
+    errors,
+):
     global div_prox
     divergence = False
 
@@ -87,60 +151,72 @@ def check_for_divergence(S_next, S_t, schur_next, schur_t, R_01_next, R_01_t,\
         print("[DIVERGENCE] Halting state evolution due to [prox] divergence")
         divergence = True
 
-    for i in range(1, iter):
-        if all(errors[i,j] - errors[i-1,j] > 1e-5 for j in range(3)): #change
+    for i in range(1, iteration):
+        if torch.all(errors[i] - errors[i - 1] > 1e-5):
             print("[DIVERGENCE] Halting state evolution due to [all errors increase > 0]")
-            print(f"Error jump detected: {errors[i] - errors[i-1]}")
+            print(f"Error jump detected: {(errors[i] - errors[i - 1]).tolist()}")
             divergence = True
             break
 
-        if any(errors[i,j] > div_tol/2 for j in range(3)):
+        if torch.any(errors[i] > div_tol / 2):
             print("[DIVERGENCE] Halting state evolution due to one [error] too large")
             divergence = True
             break
 
-        if any(errors[i,j] - errors[i-1,j] > 0.5 and errors[i,j] > 5 \
-               for j in range(3)):
+        if torch.any((errors[i] - errors[i - 1] > 0.5) & (errors[i] > 5)):
             print("[DIVERGENCE] Halting state evolution due to one [error] too large and growing")
             divergence = True
             break
 
-
- 
-
-    if np.linalg.norm(S_next) > div_tol or np.linalg.norm(schur_next) > div_tol or np.linalg.norm(R_01_next) > div_tol:
+    if (
+        torch.linalg.norm(S_next) > div_tol
+        or torch.linalg.norm(schur_next) > div_tol
+        or torch.linalg.norm(R_01_next) > div_tol
+    ):
         print("[DIVERGENCE] Halting state evolution due to [norm] divergence")
         divergence = True
-    return divergence 
+    return divergence
 
 
-def _initialize_state_evolution(R_00: np.ndarray,
-                                schur_0: np.ndarray,
-                                R_01_0: np.ndarray,
-                                lambda_reg: float,
-                                alpha: float,
-                                k: int,
-                                k_0: int,
-                                S_0: np.ndarray=None,
-                                max_iter: int=300,
-                                seed: int=42):
-    np.random.seed(seed)
-    div_tol = np.linalg.norm(R_00)* 5 * 1e4
-    print('*************state evolution iteration started*************')
-    print(f'     [initial parameters] lambda: {lambda_reg}', f'alpha: {alpha}', f'k: {k}','R_00: ', R_00)
+def _initialize_state_evolution(
+    R_00,
+    schur_0,
+    R_01_0,
+    lambda_reg,
+    alpha,
+    k,
+    k_0,
+    S_0=None,
+    max_iter=300,
+    device=torch.device("cpu"),
+    dtype=torch.float32,
+):
 
-    R_00_sqrtm_inv = np.linalg.inv(sqrtm(R_00))
-    R_01_t = np.zeros_like(R_00)
-    schur_t = R_00
-    S_t =  np.eye(k)
+    print("*************state evolution iteration started*************")
+    print(
+        f"     [initial parameters] lambda: {lambda_reg}, alpha: {alpha}, k: {k}, R_00 norm: {torch.linalg.norm(R_00)}"
+    )
+
+    R_00_sqrtm_inv = torch.linalg.inv(_matrix_sqrt(R_00))
+    R_01_t = torch.zeros_like(R_00, device=device, dtype=dtype)
+    schur_t = R_00.clone()
+    S_t = torch.eye(k, dtype=dtype, device=device)
     divergence = False
-    errors = np.zeros((max_iter, 3))
+    errors = torch.zeros((max_iter, 3), dtype=dtype, device=device)
     return R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors
 
 
-def _print_stats(t, alpha, errors, S, R_01, schur):             
-    print(f'state evolution iteration {t+1} Done (alpha: {alpha})')  
-    print(f'     ** R_01 RESIDUAL IS {errors[t,0]}**')
-    print(f'     ** SCHUR RESIDUAL IS {errors[t,1]}**')
-    print(f'     ** S RESIDUAL IS {errors[t,2]}**\n')
+def _print_stats(t, alpha, errors):
+    print(f"state evolution iteration {t + 1} Done (alpha: {alpha.item()})")
+    print(f"     ** R_01 RESIDUAL IS {errors[t, 0].item()}**")
+    print(f"     ** SCHUR RESIDUAL IS {errors[t, 1].item()}**")
+    print(f"     ** S RESIDUAL IS {errors[t, 2].item()}**\n\n")
+
+
+def _matrix_sqrt(matrix):
+    symmetric_matrix = 0.5 * (matrix + matrix.transpose(-1, -2))
+    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric_matrix)
+    eigenvalues_clamped = torch.clamp(eigenvalues, min=0.0)
+    sqrt_eigenvalues = torch.sqrt(eigenvalues_clamped)
+    return eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.transpose(-1, -2)
 

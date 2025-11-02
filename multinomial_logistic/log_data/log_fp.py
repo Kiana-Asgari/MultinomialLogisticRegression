@@ -16,13 +16,13 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
     elif two_classes_close and not type_3:
         R_00_values = np.array([[[1,0.9], [0.9,1]]])
     elif type_3 != False:
-        R_00_values = np.array([get_R_00(type_3)])
+        R_00_values = np.array([get_R_00(k, type_3)])
     else:
         raise ValueError("Invalid combination of parameters")
 
     R_00_str = str(R_00_values[0].tolist())
 
-    alphas = np.arange(3.5, 20, 0.1)
+    alphas = np.arange(5, 20, 0.5)
     alphas = alphas[::-1]
     print('running alphas:', alphas)
 
@@ -93,31 +93,15 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
         diverged_flag = False  # Track divergence for this R_00
     
         for alpha in alphas:  # Note: alphas are already sorted in decreasing order
-            if alpha<3:
-                continue
+
             alpha_str = str(alpha)
             R_00_str = str(R_00.tolist())
             
             # Skip if we already have results for this alpha and R_00
-           # if R_00_str in results and alpha_str in results[R_00_str] and results[R_00_str][alpha_str]["diverged"] == False:
-           #     print(f"Skipping alpha={alpha} for R_00={R_00} (already exists)")
-           #     continue
-
-                
-            print(f"\nRunning alpha = {alpha}")
-            """
-            if diverged_flag:
-                # If already diverged for smaller alpha, just log divergence
-                results[R_00_str][alpha_str] = {
-                    "schur": np.zeros((k, k)).tolist(),
-                    "R_01": np.zeros((k, k_0)).tolist(),
-                    "S": np.zeros((k, k)).tolist(),
-                    "diverged": True
-                }
+            if R_00_str in results and alpha_str in results[R_00_str] and results[R_00_str][alpha_str]["diverged"] == False:
+                print(f"Skipping alpha={alpha} for R_00={R_00} (already exists)")
                 continue
-            """
-    
-
+            print(f"\nRunning alpha = {alpha}")
 
             if R_00_str in results and alpha_str in results[R_00_str]: #and results[R_00_str][alpha_str]["diverged"] == True:
                 schur = np.array(results[R_00_str][alpha_str]["schur"])
@@ -127,17 +111,17 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
 
 
             schur, R_01, S, diverged = state_evolution_full_recursion(
-                R_00=R_00,
-                schur_0=schur,
-                R_01_0=R_01,
-                S_0=S,
-                lambda_reg=lambda_reg,
-                alpha=alpha,
-                k=k,
-                k_0=k_0,
-                tol=tol,
-                max_iter=max_iter
-            )
+                                                            R_00=R_00,
+                                                            schur_0=schur,
+                                                            R_01_0=R_01,
+                                                            S_0=S,
+                                                            lambda_reg=lambda_reg,
+                                                            alpha=alpha,
+                                                            k=k,
+                                                            k_0=k_0,
+                                                            tol=tol,
+                                                            max_iter=max_iter
+                                                        )
             
             # Initialize R_00 dict if it doesn't exist
             if R_00_str not in results:
@@ -148,11 +132,10 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
                 "schur": schur.tolist(),
                 "R_01": R_01.tolist(),
                 "S": S.tolist(),
-                "diverged": bool(True)
+                "diverged": bool(False)
             }
             
-            if diverged:
-                diverged_flag = True  # Mark as diverged for future alphas
+
 
             # Save after each iteration
             temp_filepath = filepath + '.tmp'

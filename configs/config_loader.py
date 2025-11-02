@@ -1,7 +1,7 @@
 import numpy as np
 import yaml
 from pathlib import Path
-
+from configs.R_initiation import get_R_00
 
 def load_config(config_name, config_file='test_configs.yaml'):
     """
@@ -61,6 +61,9 @@ def example_configs(config_name, config_file='test_configs.yaml'):
     tuple : (R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, S_0, tol, max_iter, seed)
     """
     params = load_config(config_name, config_file)
+    if params['R_00'] == 'symmetric':
+        params['R_00'] = get_R_00(params['k'], 'symmetric')
+        params['schur_0'] = params['R_00'].copy()
     
     return (
         params['R_00'],

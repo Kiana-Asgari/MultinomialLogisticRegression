@@ -108,6 +108,7 @@ def plot_test_error_vs_alpha( R_00, alpha_min, alpha_max \
 ####################################################################################################
 
 def test_error( R_00, schur, R_01, k, k_0, alpha,seed=42):
+    return 0
     np.random.seed(seed)
     A = R_01 @ sqrtm(np.linalg.inv(R_00))
     #loss = integration(_test_error_integrand, R_00, schur, A, alpha, k, k_0)
