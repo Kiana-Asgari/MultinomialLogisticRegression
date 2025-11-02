@@ -18,7 +18,7 @@ from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_ba
 
 
 def train_error(R_00, schur, R_01, S,alpha, k, k_0, seed=42):
-    return 0
+
     np.random.seed(seed)
     #loss = integrate(_train_log_loss_integrand, R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
     loss = mesh_integration(_train_log_loss_integrand, R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)

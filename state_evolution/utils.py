@@ -3,21 +3,7 @@ import torch
 from cubature import cubature
 
 
-def ensure_tensor(data, dtype=None, device=None):
-    if isinstance(data, torch.Tensor):
-        tensor = data
-        if device is not None and tensor.device != device:
-            tensor = tensor.to(device=device)
-        if dtype is not None and tensor.dtype != dtype:
-            tensor = tensor.to(dtype=dtype)
-        return tensor
 
-    kwargs = {}
-    if dtype is not None:
-        kwargs["dtype"] = dtype
-    if device is not None:
-        kwargs["device"] = device
-    return torch.tensor(data, **kwargs)
 
 
 def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, R_01_t=None, seed=42, fdim=None):
@@ -83,7 +69,7 @@ def _prepare_arg(arg, target_device, target_dtype):
 def _set_device_and_dtype(integrand_args):
     # ---------- Device / dtype discovery (unchanged pattern) ----------
     default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    default_dtype = torch.float32
+    default_dtype = torch.float64
 
     source_tensors = [arg for arg in integrand_args if isinstance(arg, torch.Tensor)]
     if source_tensors:

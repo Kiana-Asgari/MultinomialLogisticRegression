@@ -7,14 +7,14 @@ import matplotlib as mpl
 from matplotlib.lines import Line2D
 
 from multinomial_logistic.log_data.log_fp_tests import get_fp_statistics
-from multinomial_logistic.log_data.log_mle_empirical import get_mle_statistics
+from multinomial_logistic.log_data.read_mle_empirical import read_mle_results
 from multinomial_logistic.log_data.log_esd import get_density_data
-from multinomial_logistic.log_data.log_mle_empirical import read_emp_esd_results
+from multinomial_logistic.log_data.read_mle_empirical import read_mle_results
 from multinomial_logistic.evaluation.log_loss_test_error import test_error
 from multinomial_logistic.evaluation.log_loss_train_eror import train_error
 from multinomial_logistic.log_data.log_fp_tests import read_fp_tests_regularized
-from multinomial_logistic.log_data.log_mle_empirical import get_mle_regularized_results
-
+from multinomial_logistic.log_data.read_mle_empirical import read_mle_results
+from multinomial_logistic.log_data.read_mle_empirical import get_mle_statistics
 
 
 ###############################################################################
@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 
 
 def _find_matching_R00_key(R_00_target, keys, precision=3):
+
     # Convert target to numpy array and round
     R_00_target_arr = np.array(R_00_target)
     R_00_target_rounded = np.round(R_00_target_arr, precision)
@@ -341,9 +342,9 @@ def set_up_plotting_style():
 from multinomial_logistic.log_data.log_fp_tests import get_fp_misclassification_statistics
 from configs.R_initiation import get_R_00
 
-def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
+def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
     colors = set_up_plotting_style()
-    if k==3:
+    if k>=3:
         fp_results_symmetric = get_fp_statistics(k, k_0, type_3='symmetric')
         fp_results_non_symmetric= get_fp_statistics(k, k_0, type_3='three_classes_close')
         fp_results_two_classes_close=get_fp_statistics(k, k_0, type_3='two_classes_close')
@@ -362,14 +363,15 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
     
 
     # Read MLE data
-    if k==3:
+    if k>=3:
         base_path = 'multinomial_logistic/log_data/Oct_data/mle_empirical'
+        d = 300
     else:
         base_path = 'multinomial_logistic/log_data/newdata/mle_empirical'
-    d = 250
+        d = 250
 
     # Load mle data
-    if k==3:
+    if k>=3:
         with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_symmetric.json'), 'r') as f:
             mle_data_symmetric = json.load(f)
         with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_two_classes_close.json'), 'r') as f:
@@ -428,11 +430,11 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
             plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.8)
 
         # Add empirical points 
-        if k==3:
+        if k>=3:
             data_sets = [
-                (mle_data_symmetric, get_R_00('symmetric'), colors[2]),
-                (mle_data_two_classes_close, get_R_00('two_classes_close'), colors[1]),
-                (mle_data_three_classes_close, get_R_00('three_classes_close'), colors[0]),
+                (mle_data_symmetric, get_R_00(k, 'symmetric'), colors[2]),
+                (mle_data_two_classes_close, get_R_00(k, 'two_classes_close'), colors[1]),
+                (mle_data_three_classes_close, get_R_00(k, 'three_classes_close'), colors[0]),
             ]
         else:
             data_sets = [
@@ -452,7 +454,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 12, alpha_min=3.4):
                 for alpha_str, result in data['results'][matching_key].items():
                     alpha = float(alpha_str)
 
-                    if True: #alpha_min <= alpha <= alpha_max and not result.get('div', False):
+                    if alpha_min <= alpha <= alpha_max:
                         mle_metric_name = 'norm' if metric_name == 'F_norm' else metric_name                                
                         metric_values = result[mle_metric_name]                                
                         if not isinstance(metric_values, (list, np.ndarray)):

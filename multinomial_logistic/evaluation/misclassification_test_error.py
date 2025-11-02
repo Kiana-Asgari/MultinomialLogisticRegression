@@ -12,22 +12,15 @@ from state_evolution.utils import mesh_integration, ensure_tensor
 def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
     device = torch.device("cuda")
 
-    source_tensors = [
-        arg
-        for arg in (S, R_00, schur_t, A_t, alpha)
-        if isinstance(arg, torch.Tensor) and torch.is_floating_point(arg)
-    ]
-    dtype = source_tensors[0].dtype if source_tensors else torch.float64
+    dtype = torch.float32
 
     def to_tensor(arg):
         return ensure_tensor(arg, dtype=dtype, device=device)
 
-    S_tensor = to_tensor(S)
+
     R_00_tensor = to_tensor(R_00)
     schur_tensor = to_tensor(schur_t)
     A_tensor = to_tensor(A_t)
-    alpha_tensor = to_tensor(alpha)
-
     R00_sqrt = _matrix_sqrt(R_00_tensor)
     schur_root = _matrix_sqrt(schur_tensor)
 
@@ -41,8 +34,9 @@ def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_mesh=45,
-        size=8,
+        n_mesh=20,
+        size=7.5,
+        batch_size=1_200_000,
     )
 
     accuracy = accuracy_tensor[0]

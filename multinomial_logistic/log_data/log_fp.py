@@ -123,6 +123,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
                                                             max_iter=max_iter
                                                         )
             
+
             # Initialize R_00 dict if it doesn't exist
             if R_00_str not in results:
                 results[R_00_str] = {}

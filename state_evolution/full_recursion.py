@@ -219,4 +219,3 @@ def _matrix_sqrt(matrix):
     eigenvalues_clamped = torch.clamp(eigenvalues, min=0.0)
     sqrt_eigenvalues = torch.sqrt(eigenvalues_clamped)
     return eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.transpose(-1, -2)
-

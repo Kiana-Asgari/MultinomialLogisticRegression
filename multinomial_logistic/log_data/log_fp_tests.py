@@ -410,7 +410,7 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
         R_00 = np.array([[1,0.9], [0.9,1]])
     elif type_3 != False:
         filename = f"FP_evals_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
-        R_00 = get_R_00(type_3)
+        R_00 = get_R_00(k, type_3)
     else:
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         R_00 = np.array([[1,1/2], [1/2,1]])
@@ -438,9 +438,7 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
 
     # Process each alpha value
     for alpha_str, alpha_data in data["results"][R_00_str].items():
-        # Skip if diverged
-        if alpha_data["diverged"]:
-            continue
+
         # Convert strings to float/arrays
         alpha = float(alpha_str)
         test_error = alpha_data["test_error"]

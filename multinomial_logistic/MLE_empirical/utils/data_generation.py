@@ -1,5 +1,5 @@
 import numpy as np
-from multinomial_logistic.MLE_empirical.mle_empirical_baseline import batched_mlogit
+from multinomial_logistic.utils import batched_mlogit
 
 def generate_data(alpha, d, k, Theta_0, random_state=0):
     if random_state==0:
