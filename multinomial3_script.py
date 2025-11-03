@@ -16,15 +16,8 @@ if __name__ == "__main__":
 
     params = example_configs('k=3_example')
 
-    R_00 = torch.tensor(params[0])
-    schur_0 = torch.tensor(params[1])
-    R_01_0 = torch.tensor(params[2])
-    lambda_reg = torch.tensor(params[3])
-    alpha = torch.tensor(params[4])
-    k = torch.tensor(params[5])
-    k_0 = torch.tensor(params[6])
-    S_0 = torch.tensor(params[7])
 
-    state_evolution_full_recursion(R_00=R_00, schur_0=schur_0, R_01_0=R_01_0, lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0, S_0=S_0)
+
+    state_evolution_full_recursion(*params)
  
 

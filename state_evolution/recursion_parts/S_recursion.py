@@ -1,111 +1,235 @@
-import numpy as np
-from scipy.linalg import sqrtm
-from scipy.stats import multivariate_normal
-from scipy.stats import norm
-from scipy import special
-
-from multinomial_logistic.integration import batched_mult, coloring_transform
-from multinomial_logistic.prox import (prox_density,
-                                       prox_fp_iteration, prox_volume_factor)
-from multinomial_logistic.utils import (batched_mlogit, batched_mult,
-                                        batched_normal_basis, batched_outer,
-                                        batched_scalar_mult, wrapper)
-from state_evolution.functions import score_batched, score_jacobian_batched
-from state_evolution.utils import integration, mesh_integration
-from cubature import cubature
-
+import torch
 import time
-def S_recursion(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0, R_00_sqrtm_inv=None,
-                 integral_mesh_size=10, integral_size=5.5):
+from state_evolution.utils import mesh_integration, mesh_integration_threaded
+
+
+def S_recursion(
+    S_t,
+    R_00,
+    schur_t,
+    R_01_t,
+    lambda_reg,
+    alpha,
+    k,
+    k_0,
+    R_00_sqrtm_inv=None,
+    integral_mesh_size=10,
+    integral_size=5.5,
+):
+
+    dtype = torch.float64
+    device = torch.device("cuda")
+
+
+    S_t_tensor = torch.as_tensor(S_t, dtype=dtype, device=device)
+    R_00_tensor = torch.as_tensor(R_00, dtype=dtype, device=device)
+    schur_tensor = torch.as_tensor(schur_t, dtype=dtype, device=device)
+    R_01_tensor = torch.as_tensor(R_01_t, dtype=dtype, device=device)
+    lambda_tensor = torch.as_tensor(lambda_reg, dtype=dtype, device=device)
+    alpha_tensor = torch.as_tensor(alpha, dtype=dtype, device=device)
+
+
     if R_00_sqrtm_inv is None:
-        A_t = R_01_t @ np.linalg.inv(sqrtm(R_00))
+        R_00_sqrt = _matrix_sqrt(R_00_tensor)
+        A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R_00_sqrt))
     else:
-        A_t = R_01_t @ R_00_sqrtm_inv
+        R_00_sqrtm_inv_tensor = torch.as_tensor(R_00_sqrtm_inv, dtype=dtype, device=device)
+        A_tensor = torch.matmul(R_01_tensor, R_00_sqrtm_inv_tensor)
+    time_start = time.time()
+    schur_root = _matrix_sqrt(schur_tensor)
+    R00_sqrt = _matrix_sqrt(R_00_tensor)
+    A_full = torch.matmul(A_tensor, torch.linalg.inv(R00_sqrt))
+    cov_inv = torch.linalg.inv(schur_tensor)
+ 
+    # S_integrand_flat = mesh_integration(
+    #     _S_fp_integrand_with_prox_density,
+    #     R00_sqrt,
+    #     S_t_tensor,
+    #     schur_root,
+    #     A_tensor,
+    #     A_full,
+    #     cov_inv,
+    #     k=k,
+    #     k_0=k_0,
+    #     input_dim=k + k_0,
+    #     output_dim=k * k,
+    #     n_mesh=integral_mesh_size,
+    #     size=integral_size,
+    # )
+    S_integrand_flat = mesh_integration_threaded(
+        _S_fp_integrand_with_prox_density,
+        R00_sqrt,
+        S_t_tensor,
+        schur_root,
+        A_tensor,
+        A_full,
+        cov_inv,
+        k=k,
+        k_0=k_0,
+        input_dim=k + k_0,
+        output_dim=k * k,
+        n_mesh=integral_mesh_size,
+        size=integral_size,
+    )
 
-    S_integrand = mesh_integration(_S_fp_integrand_with_prox_density, S_t, R_00, schur_t, A_t, alpha, k, k_0, n_mesh=integral_mesh_size, size=integral_size)
+    S_integrand = S_integrand_flat.reshape(k, k)
+    time_end = time.time()
+    print(f"  **Time taken for S_recursion: {time_end - time_start} seconds, S_integrand: {S_integrand}")
+    identity_k = torch.eye(k, dtype=dtype, device=device)
 
-    S = 1/alpha * np.linalg.inv(np.eye(k) - S_integrand + 2*lambda_reg*S_t) @ S_t
+    lhs = identity_k - S_integrand + 2.0 * lambda_tensor * S_t_tensor
+    S = 1/alpha * torch.einsum("ij,nj->ni", _matrix_inverse(lhs), S_t_tensor)
     return S
 
 
+def _S_fp_integrand_with_prox_density(
+    Z_batch,
+    R00_sqrt,
+    S_t,
+    schur_root,
+    A_t,
+    A_full,
+    cov_inv,
+    k,
+    k_0
+):
+
+    dtype = Z_batch.dtype
+    device = Z_batch.device
+    batch_size = Z_batch.shape[0]
 
 
 
+    g_batch, g_0_batch = _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0)
+    pdf = _standard_normal_pdf(Z_batch)
+    prob_y_batch = _batched_mlogit(g_0_batch)
+    score_jacobian_batch = _score_jacobian_inverse(g_batch, S_t, k)
+    det_score_jacobian_batch = torch.reciprocal(torch.linalg.det(score_jacobian_batch))
+    integrand_prox_batch = _batched_scalar_mult(score_jacobian_batch, det_score_jacobian_batch)
+
+    gradient_batch = _batched_mlogit(g_batch)[:, :-1]
+    T_prox_batch = _batched_mult(S_t, gradient_batch) + g_batch
+    mean_prox_batch = _batched_mult(A_full, g_0_batch)
+    diff = g_batch - mean_prox_batch
+    gaussian_IS_weight_batch = torch.einsum("ni,ij,nj->n", diff, cov_inv, diff)
+
+    y_basis = torch.cat(
+        [
+            torch.zeros((1, k), dtype=dtype, device=device),
+            torch.eye(k, dtype=dtype, device=device),
+        ],
+        dim=0,
+    )
+    repeats = y_basis.shape[0]
+    y_flat = y_basis.repeat_interleave(batch_size, dim=0)
+    g_flat = g_batch.repeat(repeats, 1)
+    g_0_flat = g_0_batch.repeat(repeats, 1)
+    T_flat = T_prox_batch.repeat(repeats, 1)
+    mean_flat = mean_prox_batch.repeat(repeats, 1)
+    gaussian_IS_flat = gaussian_IS_weight_batch.repeat(repeats)
+
+    prox_density_flat = _prox_density(
+        g_0_batch=g_0_flat,
+        g_batch=g_flat,
+        y_batch=y_flat,
+        A_full=A_full,
+        cov_inv=cov_inv,
+        S=S_t,
+        T=T_flat,
+        mean=mean_flat,
+        gaussian_IS_weight=gaussian_IS_flat,
+    )
+    prob_y_reordered = torch.cat(
+        [prob_y_batch[:, -1:].T, prob_y_batch[:, :-1].T],
+        dim=0,
+    )
+    prox_density_reshaped = prox_density_flat.view(repeats, batch_size)
+    weight_sum = torch.sum(prob_y_reordered * prox_density_reshaped, dim=0)
+
+    integrand = _batched_scalar_mult(integrand_prox_batch, weight_sum)
+    integrand = _batched_scalar_mult(integrand, pdf)
+
+    return integrand.reshape(batch_size, -1)
 
 
+def _matrix_sqrt(matrix):
+    symmetric_matrix = 0.5 * (matrix + matrix.transpose(-1, -2))
+    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric_matrix)
+    eigenvalues_clamped = torch.clamp(eigenvalues, min=0.0)
+    sqrt_eigenvalues = torch.sqrt(eigenvalues_clamped)
+    return eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.transpose(-1, -2)
+
+def _matrix_inverse(matrix):
+    return torch.linalg.inv(matrix)
 
 
-def _S_fp_integrand_with_prox_density(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
-    N = Z_batch.shape[0]
-    schur_root = sqrtm(schur_t)
-    A_full = A_t @ np.linalg.inv(sqrtm(R_00)) # A_full = A_t @ R_00^{-1/2} = R_01 @ R_00^{-1}
-    cov_inv = np.linalg.inv(schur_t)
-    global div_prox 
-    # Coloring transform to get (g_0) ~ N(0, R_00) from Z_0 ~ N(0, I)
-    g_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root, alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ 
-    pdf = multivariate_normal(mean=np.zeros(k_0+k), cov=np.eye(k_0+k)).pdf(Z_batch) # density of whitened g_0 only
-    prob_y_batch = batched_mlogit(g_0_batch)
+def _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0):
+    Z_top = Z_batch[:, :k]
+    Z_bottom = Z_batch[:, -k_0:]
+    g = torch.matmul(Z_bottom, A_t.T) + torch.matmul(Z_top, schur_root.T)
+    g_0 = torch.matmul(Z_bottom, R00_sqrt.T)
+    return g, g_0
 
-    integrand = np.zeros((N, k, k))
-    score_jacobian_batch = score_jacobian_batched(g_batch, S_t, k) # (I + S @ Jp(v)^{-1}
-    det_score_jacobian_batch = 1/np.linalg.det(score_jacobian_batch) # det(I + S @ Jp(v))^{-1}
-    integrand_prox_batch = batched_scalar_mult(score_jacobian_batch, det_score_jacobian_batch) # (I + S @ Jp(v))^{-1} * det(I + S @ Jp(v))^{-1}
-    gradient_batch = batched_mlogit(g_batch)[:, :-1] # grad \ell(Z)
-    T_prox_batch = batched_mult(S_t, gradient_batch) + g_batch
-    mean_prox_batch = batched_mult(A_full, g_0_batch)
-    gaussian_IS_weight_batch = np.einsum('ni,ij,nj->n', g_batch - mean_prox_batch, cov_inv, g_batch - mean_prox_batch)
-
-    for i in range(-1, k):
-        y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
-        prox_density_batch = prox_density(g_0_batch=g_0_batch,
-                                            g_batch=g_batch,
-                                            y_batch=y_batch,
-                                            A_full=A_full, 
-                                            cov_inv=cov_inv,
-                                            S=S_t, 
-                                            T=T_prox_batch,
-                                            mean=mean_prox_batch,
-                                            gaussian_IS_weight=gaussian_IS_weight_batch,
-                                            k=k) # density(v|g_0)
-        integrand += np.einsum('nij,n,n->nij', integrand_prox_batch, prob_y_batch[:, i], prox_density_batch) # (I + S @ Jp(g))^{-1} * p(y) * density(v,g_0)/density(g|g_0)
-   
-    if not monte_carlo:
-        integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(V|y))^{-1} * p(y) * p(z_0) * p_prox(v|z_0)
-    
-    if k == 1:
-        return integrand.reshape(-1)#flattened  
-    return integrand.reshape(N, -1) #flattened
+import math
+def _standard_normal_pdf(samples: torch.Tensor)-> torch.Tensor:
+    d = samples.size(-1)
+    norm_sq = (samples ** 2).sum(dim=-1)
+    coeff = (2 * math.pi) ** (-0.5 * d)
+    return coeff * torch.exp(-0.5 * norm_sq)
 
 
+def _batched_mult(matrix, batch):
+    return torch.matmul(batch, matrix.T)
 
 
+def _batched_scalar_mult(tensor, weights):
+    return tensor * weights.view(-1, 1, 1)
 
 
+def _batched_mlogit(beta):
+    zeros = torch.zeros((beta.shape[0], 1), dtype=beta.dtype, device=beta.device)
+    logits = torch.cat([beta, zeros], dim=1)
+    return torch.softmax(logits, dim=1)
 
 
-# def _S_fp_integrand(Z_batch, S_t, R_00, schur_t, A_t, alpha, k, k_0, monte_carlo=False):
-#     N = Z_batch.shape[0]
-#     schur_root = sqrtm(schur_t)
-#     global div_prox 
-#     # Coloring transform
-#     g_batch, g_0_batch = coloring_transform(Z_batch, A=A_t, R_00=R_00, schur_root=schur_root, alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
-#     pdf = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0)).pdf(Z_batch)
-#     prob_y_batch = batched_mlogit(g_0_batch)
+def _batched_mlogit_jacobian(beta):
+    probabilities = _batched_mlogit(beta)[:, :-1]
+    outer_products = torch.einsum("ni,nj->nij", probabilities, probabilities)
+    diagonals = torch.zeros_like(outer_products)
+    diag_index = torch.arange(probabilities.shape[1], device=beta.device)
+    diagonals[:, diag_index, diag_index] = probabilities
+    return diagonals - outer_products
 
-#     integrand = np.zeros((N, k, k))
 
-#     for i in range(-1, k):
-#         y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batched
-#         prox_g_batch, div_prox = prox_fp_iteration(g_batch + batched_mult(S_t, y_batch), S=S_t) # prox(g + yS; S)
-#         score_jacobian_batch = score_jacobian_batched(prox_g_batch, S_t, k) # (I + S @ Jp(prox(g + yS; S)))^{-1}
-    
-#         #print('score_jacobian for y = ', i)
-#         #print('    .... with eigenvalues: ', np.linalg.eigvals(score_jacobian_batch[0]))
-#         integrand += batched_scalar_mult(score_jacobian_batch, prob_y_batch[:, i]) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y)  
-   
-#     if not monte_carlo:
-#         integrand = batched_scalar_mult(integrand, pdf) # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y) * p(g,g_0)
-    
-#     if k == 1:
-#         return integrand.reshape(-1)#flattened  
-#     return integrand.reshape(N, -1) #flattened
+def _score_jacobian_inverse(V_batch, S, k):
+    J = _batched_mlogit_jacobian(V_batch)
+    identity = torch.eye(k, dtype=V_batch.dtype, device=V_batch.device).unsqueeze(0)
+    S_term = torch.einsum("ij,njk->nik", S, J)
+    system = identity + S_term
+    return torch.linalg.inv(system)
+
+
+def _prox_density(
+    g_0_batch,
+    g_batch,
+    y_batch,
+    A_full,
+    cov_inv,
+    S,
+    T,
+    mean,
+    gaussian_IS_weight,
+):
+
+    gaussian_point_batch = T - _batched_mult(S, y_batch)
+    tilted_gaussian_point_batch = gaussian_point_batch - mean
+    exponent = -0.5 * (
+        torch.einsum(
+            "ni,ij,nj->n",
+            tilted_gaussian_point_batch,
+            cov_inv,
+            tilted_gaussian_point_batch,
+        )
+        - gaussian_IS_weight
+    )
+    return torch.exp(exponent)

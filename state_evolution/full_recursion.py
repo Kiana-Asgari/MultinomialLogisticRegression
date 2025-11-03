@@ -1,7 +1,7 @@
 
 import numpy as np
 from scipy.linalg import sqrtm
-
+import torch
 from state_evolution.recursion_parts.R_01_recursion import R_01_recursion
 from state_evolution.recursion_parts.S_recursion import S_recursion
 from state_evolution.recursion_parts.full_R_recursion import R_recursion
@@ -21,7 +21,7 @@ def state_evolution_full_recursion(R_00: np.ndarray,
                                     max_iter: int=300,
                                     seed: int=42):
     # AMP state evolution initialization
-    np.random.seed(seed)
+    torch.manual_seed(seed)
     
     R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors = _initialize_state_evolution(R_00, schur_0, R_01_0, lambda_reg,
                                                                                            alpha, k, k_0, S_0=S_0, max_iter=max_iter, seed=seed)
@@ -33,7 +33,21 @@ def state_evolution_full_recursion(R_00: np.ndarray,
         # Step 1: Compute the next state variables
         S_next, schur_next, R_01_next = _compute_next_state_variables(S_t, R_00, schur_t, R_01_t, lambda_reg, alpha, k, k_0, R_00_sqrtm_inv, 
                                                      integral_mesh_size=integral_mesh_size, integral_size=integral_size)    
-        errors[t] = np.array([np.linalg.norm(R_01_next - R_01_t), np.linalg.norm(schur_next - schur_t), np.linalg.norm(S_next - S_t)])
+        if not isinstance(R_01_t, torch.Tensor):
+            R_01_t = torch.tensor(R_01_t, dtype=R_01_next.dtype, device=R_01_next.device)
+        if not isinstance(schur_t, torch.Tensor):
+            schur_t = torch.tensor(schur_t, dtype=schur_next.dtype, device=schur_next.device)
+        if not isinstance(S_t, torch.Tensor):
+            S_t = torch.tensor(S_t, dtype=S_next.dtype, device=S_next.device)
+
+        errors[t] = torch.stack(
+            (
+                torch.norm(R_01_next - R_01_t),
+                torch.norm(schur_next - schur_t),
+                torch.norm(S_next - S_t),
+            )
+        ).to(errors.dtype)
+
 
         # Step 2: Print the statistics
         _print_stats(t, alpha, errors, S_next, R_01_next, schur_next)
@@ -42,10 +56,10 @@ def state_evolution_full_recursion(R_00: np.ndarray,
         #divergence = check_for_divergence(S_next, S_t, schur_next, schur_t, R_01_next, R_01_t, div_tol, t+1, errors)
 
             #return schur_t, R_01_t, S_t, divergence
-        if all(errors[t] < 1e-4):
+        if torch.all(errors[t] < 1e-4).item():
             integral_mesh_size = 15
             integral_size = 5.5
-        if all(errors[t]<tol) :
+        if torch.all(errors[t] < tol).item():
             divergence = False
             break
 
@@ -53,6 +67,9 @@ def state_evolution_full_recursion(R_00: np.ndarray,
         schur_t, R_01_t, S_t = schur_next, R_01_next, S_next
 
     # Final step: Print the final statistics
+    print(f"  --schur_t: {schur_t}")
+    print(f"  --R_01_t: {R_01_t}")
+    print(f"  --S_t: {S_t}")
   
     return schur_t, R_01_t, S_t, divergence
 
@@ -134,7 +151,7 @@ def _initialize_state_evolution(R_00: np.ndarray,
     schur_t = R_00
     S_t =  np.eye(k)
     divergence = False
-    errors = np.zeros((max_iter, 3))
+    errors = torch.zeros((max_iter, 3), dtype=torch.float64, device=torch.device("cuda"))
     return R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors
 
 
