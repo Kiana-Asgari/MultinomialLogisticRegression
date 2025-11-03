@@ -18,7 +18,7 @@ def S_recursion(
 ):
 
     device = S_t_tensor.device
-    dtype = S_t_tensor.dtype if torch.is_floating_point(S_t_tensor) else torch.float32
+    dtype = S_t_tensor.dtype if torch.is_floating_point(S_t_tensor) else torch.float64
 
 
     if R_00_sqrtm_inv_tensor is None:

@@ -1,9 +1,7 @@
 import numpy as np
 import torch
 from cubature import cubature
-
-
-
+import threading
 
 
 def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, R_01_t=None, seed=42, fdim=None):
@@ -42,7 +40,11 @@ def integration(integrand, S, R_00, schur_t, A_t, alpha, k, k_0, R_01_t=None, se
 
 import numpy as np
 import torch
-import threading
+from cubature import cubature
+
+
+
+
 
 
 def _create_batch_points(start_idx, end_idx, target_device, input_dim, n_mesh, axis_cache):
@@ -68,7 +70,7 @@ def _prepare_arg(arg, target_device, target_dtype):
 
 def _set_device_and_dtype(integrand_args):
     # ---------- Device / dtype discovery (unchanged pattern) ----------
-    default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    default_device = torch.device("cuda")
     default_dtype = torch.float64
 
     source_tensors = [arg for arg in integrand_args if isinstance(arg, torch.Tensor)]
@@ -82,7 +84,7 @@ def _set_device_and_dtype(integrand_args):
     return device, dtype
 
 #######################################################################
-## mesh integration
+## mesh integration, threaded, working incrorectly.
 #######################################################################z
 def mesh_integration(
     integrand,
@@ -156,11 +158,11 @@ def mesh_integration(
 
                 # Build points and evaluate integrand on this device
                 batch_points_device = _create_batch_points(start_idx, end_idx, target_device, input_dim, n_mesh, axis_cache)
-                batch_result = integrand(batch_points_device, *batch_args)  # (batch, output_dim)
+                full_args = batch_args #(*batch_args, k, k_0)
+                batch_result = integrand(batch_points_device, *full_args)  # (batch, output_dim)
 
                 # Accumulate locally (no cross-device traffic here)
                 local_sum.add_(batch_result.sum(dim=0))
-                partials[target_device].add_(batch_result.sum(0))
 
                 del batch_points_device, batch_result  # drop refs so they can be freed
 
@@ -222,3 +224,47 @@ def gpu_clear_cache(device=None):
 def gpu_reset_memstats(device=None):
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats(device)
+
+
+
+
+
+
+#######################################################################
+## mesh integration, working correctly
+#######################################################################
+def mesh_integration_single_threaded(integrand, *args, k, k_0,  input_dim, output_dim, n_mesh=10, size=5.5, seed=42,):
+    torch.manual_seed(seed)
+
+
+    dtype =torch.float64
+    device = torch.device("cuda")
+    args = tuple(torch.as_tensor(arg, dtype=dtype, device=device) for arg in args)
+
+
+
+    dx = 2.0 * size / n_mesh
+    axis = torch.linspace(-size + dx / 2.0, size - dx / 2.0, n_mesh, device=device, dtype=dtype)
+    grids = torch.meshgrid(*([axis] * input_dim), indexing='ij')
+    points = torch.stack([grid.reshape(-1) for grid in grids], dim=-1)
+    n_points = points.shape[0]
+
+    batch_size = 50000
+    n_batches = (n_points + batch_size - 1) // batch_size
+
+    expectations = torch.zeros(output_dim, dtype=dtype, device=device)
+    print(f'  --n_batches: {n_batches}, n_points: {n_points}')
+
+    for batch_index in range(n_batches):
+        start_idx = batch_index * batch_size
+        end_idx = min((batch_index + 1) * batch_size, n_points)
+        batch_points = points[start_idx:end_idx]
+        full_args = (*args, k, k_0)
+        batch_result = integrand(batch_points, *full_args)
+        expectations += batch_result.sum(dim=0)
+
+    volume_element = dx ** input_dim
+    expectations = expectations * volume_element
+
+
+    return expectations

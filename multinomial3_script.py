@@ -1,9 +1,9 @@
 from configs.config_loader import example_configs
-from multinomial_logistic.log_data.log_fp import run_and_log_fp
+#from multinomial_logistic.log_data.log_fp import run_and_log_fp
 #from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle
 from state_evolution.full_recursion import state_evolution_full_recursion
-from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests
-from multinomial_logistic.log_data.utils import plot_errors_vs_alpha
+#rom multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests
+#from multinomial_logistic.log_data.utils import plot_errors_vs_alpha
 import numpy as np
 import torch
 from configs.R_initiation import get_R_00
@@ -15,7 +15,11 @@ if __name__ == "__main__":
 
 
     params = example_configs('k=3_example')
-    state_evolution_full_recursion(*params)
+    S, R_01, schur, divergence = state_evolution_full_recursion(*params)
+    print(f"  --S: {S}")
+    print(f"  --R_01: {R_01}")
+    print(f"  --schur: {schur}")
+    print('finished script with GPU')
     
     k = 3
     k_0 = 3

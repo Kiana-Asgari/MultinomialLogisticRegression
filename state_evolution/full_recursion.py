@@ -3,7 +3,7 @@ import torch
 
 from state_evolution.recursion_parts.S_recursion import S_recursion
 from state_evolution.recursion_parts.full_R_recursion import R_recursion
-from state_evolution.utils import ensure_tensor
+
 
 div_prox = False
 
@@ -13,7 +13,7 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
     torch.manual_seed(seed)
 
     default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    default_dtype = torch.float32
+    default_dtype = torch.float64
 
     source_tensors = [arg for arg in (R_00, schur_0, R_01_0, S_0) if isinstance(arg, torch.Tensor)]
     if source_tensors:
@@ -24,12 +24,12 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
         device = default_device
         dtype = default_dtype
 
-    R_00_tensor = ensure_tensor(R_00, dtype=dtype, device=device)
-    schur_0_tensor = ensure_tensor(schur_0, dtype=dtype, device=device)
-    R_01_0_tensor = ensure_tensor(R_01_0, dtype=dtype, device=device)
-    lambda_tensor = ensure_tensor(lambda_reg, dtype=dtype, device=device)
-    alpha_tensor = ensure_tensor(alpha, dtype=dtype, device=device)
-    tol_tensor = ensure_tensor(tol, dtype=dtype, device=device)
+    R_00_tensor = torch.as_tensor(R_00, dtype=dtype, device=device)
+    schur_0_tensor = torch.as_tensor(schur_0, dtype=dtype, device=device)
+    R_01_0_tensor = torch.as_tensor(R_01_0, dtype=dtype, device=device)
+    lambda_tensor = torch.as_tensor(lambda_reg, dtype=dtype, device=device)
+    alpha_tensor = torch.as_tensor(alpha, dtype=dtype, device=device)
+    tol_tensor = torch.as_tensor(tol, dtype=dtype, device=device)
 
     R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors = _initialize_state_evolution(
         R_00_tensor,
@@ -189,7 +189,7 @@ def _initialize_state_evolution(
     S_0=None,
     max_iter=300,
     device=torch.device("cpu"),
-    dtype=torch.float32,
+    dtype=torch.float64,
 ):
 
     print("*************state evolution iteration started*************")
