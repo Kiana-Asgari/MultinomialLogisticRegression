@@ -277,7 +277,11 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
         if R_00.tolist() == [[1,0], [0,1]]:
             continue
         for _alpha in alphas:
-            alpha_str = str(_alpha)
+            if _alpha == int(_alpha) and str(_alpha) not in fp_data["results"][R_00_str].keys():
+                alpha_str = str(int(_alpha))
+            else:
+                alpha_str = str(_alpha)
+            
             R_00_str = str(R_00.tolist())
             
             # Skip if we already have results for this alpha and R_00
@@ -285,17 +289,10 @@ def run_and_log_fp_tests(k_0, k, non_symmetric=False, lambda_reg=0, two_classes_
                 print(f"Skipping alpha={_alpha} for R_00={R_00} (already exists)")
                 continue
                 
-            print(f"\nProcessing alpha = {_alpha}")
-            
-            # Get FP solution results
-            #fp_results = read_fp_results(alpha=_alpha, k=k, k_0=k_0, R_00=R_00,
-            #                              lambda_reg=lambda_reg, non_symmetric=non_symmetric,
-            #                              two_classes_close=two_classes_close)
-            #if fp_results is None:
-           ##     print(f"No FP solution found for alpha={_alpha}")
-            #    continue
+            print(f"\nProcessing alpha = {_alpha} (alpha_str: {alpha_str})")
             result = fp_data["results"][R_00_str][alpha_str]
             print('->result', result)
+
             schur = np.array(result["schur"]).reshape(k,k)
             R_01 = np.array(result["R_01"]).reshape(k_0,k)
             S = np.array(result["S"]).reshape(k,k)
@@ -400,7 +397,11 @@ def read_fp_test_results(alpha, k, k_0, R_00, lambda_reg=0):
 
 from configs.R_initiation import get_R_00
 def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_close=False
-                        , type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):
+                        , type_3:Literal[False,
+                         'symmetric', 
+                         'two_classes_close',
+                         'three_classes_close',
+                         'two_vs_two_vs_one']=False):
 
     if type_3==False and non_symmetric:
         filename = f"fp_test_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
@@ -419,19 +420,19 @@ def get_fp_statistics(k, k_0, lambda_reg=0, non_symmetric=False, two_classes_clo
         filepath = os.path.join(os.path.dirname(__file__), "Oct_data", "fp_tests", filename)
     else:
         filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_tests", filename)
+
     if not os.path.exists(filepath):
-        print(f"No FP test file found: {filename}")
-        return None
+        raise FileNotFoundError(f"No FP test file found: {filename}")
     
     # Read the file
     with open(filepath, 'r') as f:
         data = json.load(f)
     
     # Check if we have results for this R_00
+    breakpoint()
     R_00_str = str(R_00.tolist())
     if R_00_str not in data["results"]:
-        print(f"No results found for R_00={R_00}")
-        return None
+        raise ValueError(f"No results found for R_00={R_00}")
     
     # Initialize lists to store results
     alphas, test_errors, train_errors, F_norms, misclassification_test_errors = [], [], [], [], []

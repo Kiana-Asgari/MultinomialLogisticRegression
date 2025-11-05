@@ -164,7 +164,7 @@ def run_and_log_mle(k_0, k, lambda_reg=0, d=250,
                     n_trials=100, 
                     two_classes_close=False,
                     non_symmetric=False,
-                    type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):     
+                    type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close', 'two_vs_two_vs_one'] = False):     
     # Set parameters
     
     # Create base filename without timestamp, but with d and n_trials
@@ -222,7 +222,7 @@ def run_and_log_mle(k_0, k, lambda_reg=0, d=250,
         R_00_values = np.array([get_R_00(k, type_3)])
 
 
-    alphas = np.arange(4, 20, 0.4) 
+    alphas = np.arange(3.6, 16, 0.4) 
     alphas = alphas[::-1]
     print('\n MEL:alphas:', alphas.shape, 'R_00_values:', R_00_values, 'path:', base_filepath, '\n')
 

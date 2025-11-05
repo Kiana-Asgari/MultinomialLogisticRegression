@@ -2,18 +2,14 @@ import os
 import json
 import numpy as np
 from state_evolution.full_recursion import state_evolution_full_recursion
-
-# log the fp solution for alpha = [1.5, 2, 3, 5]
-# for lambda in (0, 1.5)
-# and R = I_k, and R_00 = [[1,1/2][1/2,1]
-# and k = 2
+from typing import Literal
 
 
-
-
-
-def run_and_log_fp_regularized(k_0=2, k=2, alpha_values=[1.5,2,3,5], tol=1e-5, max_iter=80):     
+def run_and_log_fp_regularized(k_0, k, alpha_values, 
+                                type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close', 'two_vs_two_vs_one'] = False, 
+                                tol=1e-5, max_iter=80):     
     # Create base filename
+
     base_filename = f"fp_reg_data_k{k}_k0{k_0}.json"
     base_filepath = os.path.join(os.path.dirname(__file__), "data", "fp_solution", base_filename)
     
@@ -30,8 +26,7 @@ def run_and_log_fp_regularized(k_0=2, k=2, alpha_values=[1.5,2,3,5], tol=1e-5, m
         print(f"Creating new file: {base_filename}")
         results = {}
 
-    # Specific values as per requirements
-    R_00_values = np.array([[[1,0.5], [0.5,1]]])
+
     alphas = np.array(alpha_values)  # Specific alpha values
     lambda_regs = np.concatenate([np.linspace(0.001,0.2,50), np.linspace(0.2, 1.5, 50)]).flatten()  # 100 points between 0 and 1.5
     lambda_regs = np.sort(lambda_regs)[::-1]

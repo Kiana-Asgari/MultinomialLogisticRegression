@@ -1,11 +1,12 @@
 import torch
 import time
-from state_evolution.utils import mesh_integration
+from state_evolution.utils import sphere_mesh_integration
 
 
 def S_recursion(
     S_t_tensor,
     R_00_tensor,
+    R00_sqrt,
     schur_tensor,
     R_01_tensor,
     lambda_tensor,
@@ -18,32 +19,45 @@ def S_recursion(
 ):
 
     device = S_t_tensor.device
-    dtype = S_t_tensor.dtype if torch.is_floating_point(S_t_tensor) else torch.float64
+    dtype = S_t_tensor.dtype 
 
+    R00_sqrt = _matrix_sqrt(R_00_tensor)
 
     if R_00_sqrtm_inv_tensor is None:
-        R_00_sqrt = _matrix_sqrt(R_00_tensor)
-        A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R_00_sqrt))
+        A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R00_sqrt))
     else:
         A_tensor = torch.matmul(R_01_tensor, R_00_sqrtm_inv_tensor)
-    time_start = time.time()
-    S_integrand_flat = mesh_integration(
+    y_basis = torch.cat(
+        [
+            torch.zeros((1, k), dtype=dtype, device=device),
+            torch.eye(k, dtype=dtype, device=device),
+        ],
+        dim=0,
+    )
+    schur_root = _matrix_sqrt(schur_tensor)
+    A_full = torch.matmul(A_tensor, torch.linalg.inv(R00_sqrt))
+    cov_inv = torch.linalg.inv(schur_tensor )
+
+    S_integrand_flat = sphere_mesh_integration(
         _S_fp_integrand_with_prox_density,
         S_t_tensor,
-        R_00_tensor,
-        schur_tensor,
+        R00_sqrt,
+        schur_root,
+        cov_inv,
+        A_full,
         A_tensor,
-        alpha_tensor,
+        y_basis,
         k,
         k_0,
         input_dim=k + k_0,
         output_dim=k * k,
-        n_mesh=integral_mesh_size,
-        size=integral_size,
+        batch_size=35_000,
+        n_radius=14,
+        n_polar=7,
+        radius=4.5
     )
     S_integrand = S_integrand_flat.reshape(k, k)
-    time_end = time.time()
-    print(f"  **Time taken for S_recursion: {time_end - time_start} seconds, S_integrand: {S_integrand}")
+
     identity_k = torch.eye(k, dtype=dtype, device=device)
     lhs = identity_k - S_integrand + 2.0 * lambda_tensor * S_t_tensor
     S = torch.linalg.solve(lhs, S_t_tensor) / alpha_tensor
@@ -53,26 +67,22 @@ def S_recursion(
 def _S_fp_integrand_with_prox_density(
     Z_batch,
     S_t,
-    R_00,
-    schur_t,
+    R00_sqrt,
+    schur_root,
+    cov_inv,
+    A_full,
     A_t,
-    alpha,
+    y_basis,
     k,
     k_0,
 ):
 
-    dtype = Z_batch.dtype
-    device = Z_batch.device
     batch_size = Z_batch.shape[0]
-
-    schur_root = _matrix_sqrt(schur_t)
-    R00_sqrt = _matrix_sqrt(R_00)
-    A_full = torch.matmul(A_t, torch.linalg.inv(R00_sqrt))
-    cov_inv = torch.linalg.inv(schur_t)
 
     g_batch, g_0_batch = _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0)
     pdf = _standard_normal_pdf(Z_batch)
     prob_y_batch = _batched_mlogit(g_0_batch)
+    
     score_jacobian_batch = _score_jacobian_inverse(g_batch, S_t, k)
     det_score_jacobian_batch = torch.reciprocal(torch.linalg.det(score_jacobian_batch))
     integrand_prox_batch = _batched_scalar_mult(score_jacobian_batch, det_score_jacobian_batch)
@@ -83,13 +93,7 @@ def _S_fp_integrand_with_prox_density(
     diff = g_batch - mean_prox_batch
     gaussian_IS_weight_batch = torch.einsum("ni,ij,nj->n", diff, cov_inv, diff)
 
-    y_basis = torch.cat(
-        [
-            torch.zeros((1, k), dtype=dtype, device=device),
-            torch.eye(k, dtype=dtype, device=device),
-        ],
-        dim=0,
-    )
+
     repeats = y_basis.shape[0]
     y_flat = y_basis.repeat_interleave(batch_size, dim=0)
     g_flat = g_batch.repeat(repeats, 1)

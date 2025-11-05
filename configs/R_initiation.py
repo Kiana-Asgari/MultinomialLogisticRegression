@@ -109,21 +109,46 @@ def _two_vs_three_classes():
 #########################################################
 # One isolated class and rest symmetrically close classes in R^3 and R^4
 #########################################################
-def _three_classes_close():
+def _three_classes_close(r):
     theta = np.arccos(-3/4)       # polar angle
     phi = _azimuthal_directions([0, 2*np.pi/3, -2*np.pi/3])  # azimuth directions in R^3
 
     v1, v2, v3, v4 = _generate_vectors(theta, phi, include_base=True)
+    v1 = v1 * r # the isolated class is r times further away from the other three classes
     R_00 = _compute_R_00(v1, v2, v3, v4)
     return R_00
 
-def _four_vs_one_classes():
+def _four_vs_one_classes(r):
     # PRODUCING 5 vectors in R^4, such that the last four are close to each other and the first is far away from the other four
     theta = 3*np.pi/4                           # tilt for the four-cluster
     v1, v2, v3, v4, v5 = _generate_vectors(theta, _TETRAHEDRAL_DIRECTIONS, include_base=True)
+    v1 = v1 * r # the isolated class is r times further away from the other four classes
     R_00 = _compute_R_00(v1, v2, v3, v4, v5)
     return R_00
 
+def _two_vs_two_vs_one():
+    # returns 5 vectors in R^4, containing two clusters of two points and one isolated point
+
+    # One isolated point (base vector) and two tight two-point clusters positioned apart
+    delta = np.pi / 12                     # small angular separation within each cluster
+    theta_close = np.pi / 3                # cluster close to the base class
+    theta_far = 2 * np.pi / 3              # cluster further from the base class
+
+    phi = np.array([
+        [1.0, 0.0, 0.0],
+        [np.cos(delta), np.sin(delta), 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, np.cos(delta), np.sin(delta)],
+    ], dtype=float)
+
+    theta_values = np.array([theta_close, theta_close, theta_far, theta_far], dtype=float)
+
+    v1, v2, v3, v4, v5 = _generate_vectors(theta_values, phi, include_base=True)
+    #v4 = v4 * 0.5
+
+
+    R_00 = _compute_R_00(v1, v2, v3, v4, v5)
+    return R_00
 def _compute_R_00(v1, v2, v3, v4, v5=None):
     # --- Compute theta1, theta2, theta3 and Theta0,R_00=Theta0.T @ Theta0 ---
    # breakpoint()
@@ -133,31 +158,14 @@ def _compute_R_00(v1, v2, v3, v4, v5=None):
     # Theta0 = [theta1, theta2, theta3]
     Theta0 = np.column_stack((theta1, theta2, theta3))  if v5 is None else np.column_stack((theta1, theta2, theta3, theta4))
     V = np.column_stack((v1, v2, v3, v4))  if v5 is None else np.column_stack((v1, v2, v3, v4, v5))
-    print('VTV:', V.T @ V)
-    print('eigenvalues:', np.linalg.eigvals(V.T @ V))
+
     return Theta0.T @ Theta0
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def get_R_00(k, type:Literal['symmetric', 'two_classes_close', 'three_classes_close'] = 'symmetric'):
+def get_R_00(k, type:Literal['symmetric', 'two_classes_close', 'three_classes_close', 'two_vs_two_vs_one'] = 'symmetric'):
     if type == 'symmetric':
         if k == 3:
             return _symmetric_classes()
@@ -166,15 +174,20 @@ def get_R_00(k, type:Literal['symmetric', 'two_classes_close', 'three_classes_cl
 
     elif type == 'two_classes_close':
         if k == 3:  
-            return _two_classes_close()
+            return _three_classes_close(r = 1)
         elif k == 4:
-            return _four_vs_one_classes()
+            return _four_vs_one_classes(r = 1)
 
     elif type == 'three_classes_close':
         if k == 3:
-            return _three_classes_close()
+            return _two_classes_close()
         elif k == 4:
-            return _two_vs_three_classes()
+            return _four_vs_one_classes(r = 3)
+            #return _two_vs_three_classes()
+
+    elif type == 'two_vs_two_vs_one':
+        if k == 4:
+            return _two_vs_two_vs_one()
 
     else:
-        raise ValueError(f"Invalid R_00 type: {type}; choices are 'symmetric', 'two_classes_close', or 'three_classes_close'")
+        raise ValueError(f"Invalid R_00 type: {type}; choices are 'symmetric', 'two_classes_close', or 'three_classes_close' two_vs_two_vs_one")

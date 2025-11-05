@@ -1,122 +1,195 @@
-import numpy as np
-from scipy.linalg import sqrtm
-from scipy.stats import multivariate_normal
-from multinomial_logistic.utils import mlogit, batched_mlogit, log_sum_exp_batch
-from cubature import cubature
-from multinomial_logistic.integration import coloring_transform
-from multinomial_logistic.utils import batched_mult, batched_outer, batched_scalar_mult, batched_normal_basis
-from state_evolution.full_recursion import state_evolution_full_recursion
-from multinomial_logistic.evaluation.utils import plot_array
-from multinomial_logistic.prox import prox_fp_iteration
-from multinomial_logistic.MLE_empirical.mle_empirical_baseline import fit_mle_baseline
+import math
+
+import torch
+
+from state_evolution.utils import sphere_mesh_integration, get_primary_device
 
 
-    
+def train_error(R_00, schur, R_01, S, alpha, k, k_0, seed=42):
+    device = get_primary_device()
+    dtype = torch.float32
+
+    R_00_tensor = torch.tensor(R_00, device=device, dtype=dtype)
+    schur_tensor = torch.tensor(schur, device=device, dtype=dtype)
+    R_01_tensor = torch.tensor(R_01, device=device, dtype=dtype)
+    S_tensor = torch.tensor(S, device=device, dtype=dtype)
+
+    R00_sqrt = _matrix_sqrt(R_00_tensor)
+    R00_sqrt_inv = torch.linalg.inv(R00_sqrt)
+    schur_root = _matrix_sqrt(schur_tensor)
+    A_tensor = torch.matmul(R_01_tensor, R00_sqrt_inv)
+    A_full = torch.matmul(A_tensor, R00_sqrt_inv)
+    cov_inv = torch.linalg.inv(schur_tensor)
+
+    y_basis = torch.cat(
+        [
+            torch.zeros((1, k), dtype=dtype, device=device),
+            torch.eye(k, dtype=dtype, device=device),
+        ],
+        dim=0,
+    )
+
+    loss_tensor = sphere_mesh_integration(
+        _train_log_loss_integrand,
+        S_tensor,
+        R00_sqrt,
+        schur_root,
+        cov_inv,
+        A_full,
+        A_tensor,
+        y_basis,
+        k,
+        k_0,
+        input_dim=k + k_0,
+        output_dim=1,
+        seed=seed,
+        n_radius=16,
+        n_polar=7,
+        radius=4.5,
+        batch_size=200_000,
+    )
+
+    loss_value = loss_tensor[0].item()
+    print("     train loss: ", loss_value)
+    return loss_value
 
 
+def _train_log_loss_integrand(
+    Z_batch,
+    S_t,
+    R00_sqrt,
+    schur_root,
+    cov_inv,
+    A_full,
+    A_t,
+    y_basis,
+    k,
+    k_0,
+):
+    g_batch, g_0_batch = _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0)
+    pdf = _standard_normal_pdf(Z_batch)
+    prob_y_batch = _batched_mlogit(g_0_batch)
+
+    J = _batched_mlogit_jacobian(g_batch)
+    identity = torch.eye(k, dtype=g_batch.dtype, device=g_batch.device).unsqueeze(0)
+    system = identity + torch.einsum("ij,njk->nik", S_t, J)
+    det_system = torch.linalg.det(system)
+
+    gradient_batch = _batched_mlogit(g_batch)[:, :-1]
+    T_prox_batch = _batched_mult(S_t, gradient_batch) + g_batch
+    mean_prox_batch = _batched_mult(A_full, g_0_batch)
+    diff = g_batch - mean_prox_batch
+    gaussian_IS_weight_batch = torch.einsum("ni,ij,nj->n", diff, cov_inv, diff)
+
+    batch_size = Z_batch.shape[0]
+    repeats = y_basis.shape[0]
+
+    y_flat = y_basis.repeat_interleave(batch_size, dim=0)
+    g_flat = g_batch.repeat(repeats, 1)
+    g0_flat = g_0_batch.repeat(repeats, 1)
+    T_flat = T_prox_batch.repeat(repeats, 1)
+    mean_flat = mean_prox_batch.repeat(repeats, 1)
+    gaussian_IS_flat = gaussian_IS_weight_batch.repeat(repeats)
+
+    prox_density_flat = _prox_density(
+        g_0_batch=g0_flat,
+        g_batch=g_flat,
+        y_batch=y_flat,
+        A_full=A_full,
+        cov_inv=cov_inv,
+        S=S_t,
+        T=T_flat,
+        mean=mean_flat,
+        gaussian_IS_weight=gaussian_IS_flat,
+    )
+    prox_density = prox_density_flat.view(repeats, batch_size)
+
+    prob_y_reordered = torch.cat(
+        [prob_y_batch[:, -1:].T, prob_y_batch[:, :-1].T],
+        dim=0,
+    )
+
+    logsum = _logsumexp_with_zero(g_batch)
+    dot = torch.matmul(y_basis, g_batch.T)
+    logloss = logsum.unsqueeze(0) - dot
+
+    weighted = logloss * prob_y_reordered * prox_density
+    loss = det_system * weighted.sum(dim=0) * pdf
+
+    return loss.unsqueeze(1)
 
 
-
-def train_error(R_00, schur, R_01, S,alpha, k, k_0, seed=42):
-
-    np.random.seed(seed)
-    #loss = integrate(_train_log_loss_integrand, R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
-    loss = mesh_integration(_train_log_loss_integrand, R_00=R_00, schur=schur, R_01=R_01, S=S, alpha=alpha, k=k, k_0=k_0)
-    print('     train loss: ', loss)
-    return loss
-
+@torch.no_grad()
+def _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0):
+    Z_top = Z_batch[:, :k]
+    Z_bottom = Z_batch[:, -k_0:]
+    g = torch.matmul(Z_bottom, A_t.T) + torch.matmul(Z_top, schur_root.T)
+    g_0 = torch.matmul(Z_bottom, R00_sqrt.T)
+    return g, g_0
 
 
-#########################
-# Log loss integrand
-#########################
-def _train_log_loss_integrand(Z_batch, R_00, schur, R_01, S, alpha, k, k_0):
-    # Compute schur complement
-    N = Z_batch.shape[0]
-    R_00_inv = np.linalg.inv(R_00)
-    schur_root = sqrtm(schur)
-    A = R_01 @ sqrtm(R_00_inv)
-    
-    # Coloring transform
-    g_batch, g_0_batch = coloring_transform(Z_batch, A=A, R_00=R_00, schur_root=schur_root  , alpha=alpha, k=k, k_0=k_0) # (g,g_0) ~ N(0, R)
-    prob_y_batch = batched_mlogit(g_0_batch)
-    
-    loss = np.zeros(N)
-    for i in range(-1, k):
-        y_batch = batched_normal_basis(i, k, N) # Y = (0,1,0...0) batch
-        prox_g_batch, div_prox = prox_fp_iteration(g_batch + batched_mult(S, y_batch), S) # prox(g + yS; S)
-
-        
-        if div_prox:
-            print('     **prox Divergence detected**')
-            break
-        logloss_batch = log_sum_exp_batch(prox_g_batch) - np.einsum('ij,ij->i', y_batch, prox_g_batch)
-        loss += logloss_batch * prob_y_batch[:, i] # (I + S @ Jp(prox(g + yS; S)))^{-1} * p(y)  
-
-    pdf = multivariate_normal(mean=np.zeros(k+k_0), cov=np.eye(k+k_0)).pdf(Z_batch)
-    return loss * pdf
-    
-   
-    
+@torch.no_grad()
+def _matrix_sqrt(matrix):
+    symmetric = 0.5 * (matrix + matrix.transpose(-1, -2))
+    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric)
+    eigenvalues_clamped = torch.clamp(eigenvalues, min=0.0)
+    sqrt_eigenvalues = torch.sqrt(eigenvalues_clamped)
+    return eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.transpose(-1, -2)
 
 
-
-def integrate(integrand, R_00, schur, R_01, S, alpha, k, k_0):
-    #print('     integrating... ')
-    fdim = 1
-    ndim = k+k_0
-    expectations, err = cubature(integrand, args=(R_00, schur, R_01, S, alpha, k, k_0,), ndim=ndim,
-                                  vectorized=True,
-                                  fdim= fdim ,xmin=[-3.6]*ndim, xmax=[3.6]*ndim, abserr = 1e-5,
-                                  maxEval=1_500_000, norm=2)
-    if err.item() > 1e-4:
-        print('     **[Warning] train error integration error is too large**, err=', err)
-    #print('     done integrating')
-    return expectations     
+@torch.no_grad()
+def _batched_mlogit(beta):
+    zeros = beta.new_zeros((beta.shape[0], 1))
+    logits = torch.cat([beta, zeros], dim=1)
+    return torch.softmax(logits, dim=1)
 
 
+@torch.no_grad()
+def _batched_mlogit_jacobian(beta):
+    probabilities = _batched_mlogit(beta)[:, :-1]
+    outer_products = torch.einsum("ni,nj->nij", probabilities, probabilities)
+    diagonals = torch.zeros_like(outer_products)
+    diag_index = torch.arange(probabilities.shape[1], device=beta.device)
+    diagonals[:, diag_index, diag_index] = probabilities
+    return diagonals - outer_products
 
 
+@torch.no_grad()
+def _batched_mult(matrix, batch):
+    return torch.matmul(batch, matrix.T)
 
 
-def mesh_integration(integrand, R_00, schur, R_01, S, alpha, k, k_0, seed=42, size=4.5, n_mesh=12):
-    # Set numpy random seed before mesh integration
-    np.random.seed(seed)
-    fdim = 1
-    ndim = k+k_0
+@torch.no_grad()
+def _standard_normal_pdf(samples):
+    d = samples.shape[-1]
+    norm_sq = (samples ** 2).sum(dim=-1)
+    coeff = (2 * math.pi) ** (-0.5 * d)
+    return coeff * torch.exp(-0.5 * norm_sq)
 
-    # Create mesh grid for ndim dimensions using midpoint rule
-    # Divide [-size, size] into n_mesh intervals, sample at midpoints
-    dx = 2 * size / n_mesh
-    axes = [np.linspace(-size + dx/2, size - dx/2, n_mesh) for _ in range(ndim)]
-    grids = np.meshgrid(*axes, indexing='ij')
-    
-    # Flatten the grids to get all points: shape (n_mesh^ndim, ndim)
-    points = np.stack([grid.flatten() for grid in grids], axis=-1)
-    n_points = points.shape[0]
-    
-    # Prepare args for integrand
-    args = (R_00, schur, R_01, S, alpha, k, k_0)
-    
-    # Compute integration using batches for vectorized computation
-    batch_size = 50000
-    n_batches = (n_points + batch_size - 1) // batch_size
-    
-    expectations = np.zeros(fdim)
-    print(f'  --n_batches: {n_batches}, n_points: {n_points}')
-    
-    for i in range(n_batches):
-        start_idx = i * batch_size
-        end_idx = min((i + 1) * batch_size, n_points)
-        batch_points = points[start_idx:end_idx] # Shape: (batch_size, ndim)
-        # Call integrand with batched points
-        batch_result = integrand(batch_points, *args)  # Shape: (batch_size, fdim)       
-        # Sum over the batch
-        expectations += np.sum(batch_result, axis=0)
-    
-    # Compute volume element (dx^ndim for midpoint rule)
-    volume_element = dx ** ndim
-    
-    # Multiply by volume element to get Riemann sum
-    expectations *= volume_element
-    return expectations
+
+@torch.no_grad()
+def _logsumexp_with_zero(beta):
+    zeros = beta.new_zeros((beta.shape[0], 1))
+    logits = torch.cat([zeros, beta], dim=1)
+    return torch.logsumexp(logits, dim=1)
+
+
+@torch.no_grad()
+def _prox_density(
+    g_0_batch,
+    g_batch,
+    y_batch,
+    A_full,
+    cov_inv,
+    S,
+    T,
+    mean,
+    gaussian_IS_weight,
+):
+    gaussian_point_batch = T - _batched_mult(S, y_batch)
+    tilted_gaussian_point_batch = gaussian_point_batch - mean
+    exponent = -0.5 * (
+        torch.einsum("ni,ij,nj->n", tilted_gaussian_point_batch, cov_inv, tilted_gaussian_point_batch)
+        - gaussian_IS_weight
+    )
+    return torch.exp(exponent)

@@ -7,7 +7,8 @@ import fcntl
 from typing import Literal
 from configs.R_initiation import get_R_00
 
-def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=False, two_classes_close=False, 
+def run_and_log_fp(k_0, k, alphas, lambda_reg=0, tol=1e-5, max_iter=300, 
+non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_size=5,
                     type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):     
     # Create base filename without timestamp
 
@@ -22,8 +23,7 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
 
     R_00_str = str(R_00_values[0].tolist())
 
-    alphas = np.arange(5, 20, 0.5)
-    alphas = alphas[::-1]
+
     print('running alphas:', alphas)
 
 
@@ -90,7 +90,6 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
         schur = R_00
         R_01 = np.zeros((k, k_0))
         S = np.eye(k)
-        diverged_flag = False  # Track divergence for this R_00
     
         for alpha in alphas:  # Note: alphas are already sorted in decreasing order
 
@@ -120,7 +119,9 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
                                                             k=k,
                                                             k_0=k_0,
                                                             tol=tol,
-                                                            max_iter=max_iter
+                                                            max_iter=max_iter,
+                                                            integral_mesh_size=integral_mesh_size,
+                                                            integral_size=integral_size
                                                         )
             
 
@@ -160,20 +161,21 @@ def run_and_log_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, non_symmetric=F
             
     return filepath
 
-def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0, non_symmetric=False, two_classes_close=False):
-    """
-    Read results for the closest available alpha value from the matching file.
-    
-    Args:
-        alpha (float): The alpha value to look for
-        k (int): Dimension of the system
-        k_0 (int): Dimension of g_0
-        R_00 (ndarray): Initial covariance matrix
-        lambda_reg (float): Regularization parameter
-    
-    Returns:
-        tuple: (schur, S, diverged) if found, None if not found
-    """
+
+
+
+
+
+
+
+
+
+
+
+def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0, 
+                    type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False,
+                    non_symmetric=False, two_classes_close=False):
+
     data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution")
     
     if not os.path.exists(data_dir):
@@ -181,7 +183,11 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0, non_symmetric=False, two_
         return None
     
     # Look for the specific file
-    if two_classes_close:
+    if k>=3:
+        fp_data_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "fp_solution")
+        filename = f"FP_solutions_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
+        filepath = os.path.join(fp_data_dir, filename)
+    elif two_classes_close:
         fp_data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution_two_classes_close")
         filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
         filepath = os.path.join(fp_data_dir, filename)
@@ -222,24 +228,19 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0, non_symmetric=False, two_
     closest_alpha_str = str(closest_alpha)
     
     # Try both integer and float string formats for integer alphas
-    if False:#closest_alpha.is_integer():
-        
-        int_alpha_str = str(int(closest_alpha))
-        float_alpha_str = f"{closest_alpha}.0"
-        if int_alpha_str in data["results"][R_00_str]:
-            result = data["results"][R_00_str][int_alpha_str]
-        else:
-            result = data["results"][R_00_str][float_alpha_str]
-    else:
+    try:
         result = data["results"][R_00_str][closest_alpha_str]
+    except KeyError:
+        closest_alpha_str = str(int(closest_alpha))
+        result = data["results"][R_00_str][closest_alpha_str]
+    except KeyError:
+        print(f"No results found for R_00={R_00} and alpha={closest_alpha}")
+        return None, None, None, None, None
     
     # Convert lists back to numpy arrays
     schur = np.array(result["schur"]).reshape(k,k)
     R_01 = np.array(result["R_01"]).reshape(k_0,k)
     S = np.array(result["S"]).reshape(k,k)
     diverged = result["diverged"]
-    
-    print(f"Found FP results in file: {filename}")
-    print(f"Using alpha={closest_alpha} (requested alpha={alpha} not found)")
-    print(f"R_00 = {R_00}, S = {S}, schur = {schur}")
+
     return schur, R_01, S, diverged, closest_alpha

@@ -342,17 +342,18 @@ def set_up_plotting_style():
 from multinomial_logistic.log_data.log_fp_tests import get_fp_misclassification_statistics
 from configs.R_initiation import get_R_00
 
-def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
+def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
     colors = set_up_plotting_style()
     if k>=3:
         fp_results_symmetric = get_fp_statistics(k, k_0, type_3='symmetric')
         fp_results_non_symmetric= get_fp_statistics(k, k_0, type_3='three_classes_close')
         fp_results_two_classes_close=get_fp_statistics(k, k_0, type_3='two_classes_close')
+        fp_results_two_vs_two_vs_one=get_fp_statistics(k, k_0, type_3='two_vs_two_vs_one')
     else:
         fp_results_two_classes_close = get_fp_statistics(k, k_0, two_classes_close=True)
         fp_results_symmetric = get_fp_statistics(k, k_0, non_symmetric=False, two_classes_close=False)
         fp_results_non_symmetric = get_fp_statistics(k, k_0, two_classes_close=False, non_symmetric=True)
-
+        fp_results_two_vs_two_vs_one = None
     if fp_results_symmetric is None or fp_results_two_classes_close is None or fp_results_non_symmetric is None:
         print("No FP results found")
         return
@@ -360,12 +361,16 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
     alphas_fp_symmetric, test_errors_fp_symmetric, train_errors_fp_symmetric, F_norms_fp_symmetric, misclassification_test_errors_fp_symmetric = fp_results_symmetric
     alphas_fp_two_classes_close, test_errors_fp_two_classes_close, train_errors_fp_two_classes_close, F_norms_fp_two_classes_close, misclassification_test_errors_fp_two_classes_close = fp_results_two_classes_close
     alphas_fp_non_symmetric, test_errors_fp_non_symmetric, train_errors_fp_non_symmetric, F_norms_fp_non_symmetric, misclassification_test_errors_fp_non_symmetric = fp_results_non_symmetric
+    alphas_fp_two_vs_two_vs_one, test_errors_fp_two_vs_two_vs_one, train_errors_fp_two_vs_two_vs_one, F_norms_fp_two_vs_two_vs_one, misclassification_test_errors_fp_two_vs_two_vs_one = fp_results_two_vs_two_vs_one
     
 
     # Read MLE data
-    if k>=3:
+    if k>3:
         base_path = 'multinomial_logistic/log_data/Oct_data/mle_empirical'
         d = 300
+    elif k==3:
+        base_path = 'multinomial_logistic/log_data/Oct_data/mle_empirical'
+        d = 250
     else:
         base_path = 'multinomial_logistic/log_data/newdata/mle_empirical'
         d = 250
@@ -378,6 +383,8 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
             mle_data_two_classes_close = json.load(f)
         with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_three_classes_close.json'), 'r') as f:
             mle_data_three_classes_close = json.load(f)
+        with open(os.path.join(base_path, f'MLE_evals(d={d},ntrials=100)_(k={k},k0={k_0},lambda=0)_two_vs_two_vs_one.json'), 'r') as f:
+            mle_data_two_vs_two_vs_one = json.load(f)
 
     else:
         with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150.json'), 'r') as f:
@@ -386,16 +393,18 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
             mle_data_two_classes_close = json.load(f)
         with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_non_symmetric.json'), 'r') as f:
             mle_data_non_symmetric = json.load(f)
+        with open(os.path.join(base_path, f'mle_data_k{k}_k0{k_0}_lambda0_d{d}_ntrials150_two_vs_two_vs_one.json'), 'r') as f:
+            mle_data_two_vs_two_vs_one = json.load(f)
 
     # Plot each metric
     metrics = [
-        ('test_errors', [test_errors_fp_symmetric, test_errors_fp_two_classes_close, test_errors_fp_non_symmetric],
+        ('test_errors', [test_errors_fp_symmetric, test_errors_fp_two_classes_close, test_errors_fp_non_symmetric, test_errors_fp_two_vs_two_vs_one],
          'Test error (log loss)'),
-        ('train_errors', [train_errors_fp_symmetric, train_errors_fp_two_classes_close, train_errors_fp_non_symmetric],
+        ('train_errors', [train_errors_fp_symmetric, train_errors_fp_two_classes_close, train_errors_fp_non_symmetric, train_errors_fp_two_vs_two_vs_one],
          'Train error'),
-        ('misclassification_test_errors', [misclassification_test_errors_fp_symmetric, misclassification_test_errors_fp_two_classes_close, misclassification_test_errors_fp_non_symmetric],
+        ('misclassification_test_errors', [misclassification_test_errors_fp_symmetric, misclassification_test_errors_fp_two_classes_close, misclassification_test_errors_fp_non_symmetric, misclassification_test_errors_fp_two_vs_two_vs_one],
          'Test error (classification)'),
-        ('F_norm', [F_norms_fp_symmetric, F_norms_fp_two_classes_close, F_norms_fp_non_symmetric],
+        ('F_norm', [F_norms_fp_symmetric, F_norms_fp_two_classes_close, F_norms_fp_non_symmetric, F_norms_fp_two_vs_two_vs_one],
          f'Estimation error ($\|\\bold{{\Theta}} - \\bold{{\Theta_0}}\\|_F$)')
     ]
 
@@ -405,28 +414,29 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
         # Plot theoretical curves
         labels = [r'$\mathbf{R}_{00}= sym \mathbf{R}_{00}^{(1)}$', 
                  r'$\mathbf{R}_{00}= two \mathbf{R}_{00}^{(2)}$', 
-                 r'$\mathbf{R}_{00}= three \mathbf{R}_{00}^{(3)}$']
+                 r'$\mathbf{R}_{00}= three \mathbf{R}_{00}^{(3)}$',
+                 r'$\mathbf{R}_{00}= two \mathbf{R}_{00}^{(2)}$']
         
-        alphas_list = [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric]
+        alphas_list = [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric, alphas_fp_two_vs_two_vs_one]
         
         for i, (alphas, values, label, color) in enumerate(zip(alphas_list, fp_values, labels, colors)):
             # Plot each metric separately for better debugging
             if metric_name == 'test_errors':
-                mask = (alphas >= 3.3) & (alphas <= 12)
-                filtered_alphas = alphas#[mask]
-                filtered_values = np.array(values)#[mask] + 2*1e-3
+                mask = (alphas >= alpha_min) & (alphas <= alpha_max)
+                filtered_alphas = alphas[mask]
+                filtered_values = np.array(values[mask]) #+ 2*1e-3
             elif metric_name == 'train_errors':
-                mask = (alphas >= 2.7) & (alphas <= alpha_max)
-                filtered_alphas = alphas#[mask]
-                filtered_values = np.array(values)#[mask]
+                mask = (alphas >= alpha_min) & (alphas <= alpha_max)
+                filtered_alphas = alphas[mask]
+                filtered_values = np.array(values[mask])
             elif metric_name == 'misclassification_test_errors':
-                mask = (alphas > 2.9) & (alphas <= alpha_max)
-                filtered_alphas = alphas#[mask]
-                filtered_values = np.array(values)#[mask]
+                mask = (alphas >= alpha_min) & (alphas <= alpha_max)
+                filtered_alphas = alphas[mask]
+                filtered_values = np.array(values[mask])
             elif metric_name == 'F_norm':
-                mask = (alphas >= 3.3) & (alphas <= 12)
-                filtered_alphas = alphas#[mask]
-                filtered_values = np.sqrt(np.array(values))#[mask]) + 1e-2
+                mask = (alphas >= alpha_min) & (alphas <= alpha_max)
+                filtered_alphas = alphas[mask]
+                filtered_values = np.sqrt(np.array(values[mask]))# + 1e-2
             plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.8)
 
         # Add empirical points 
@@ -435,6 +445,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
                 (mle_data_symmetric, get_R_00(k, 'symmetric'), colors[2]),
                 (mle_data_two_classes_close, get_R_00(k, 'two_classes_close'), colors[1]),
                 (mle_data_three_classes_close, get_R_00(k, 'three_classes_close'), colors[0]),
+                (mle_data_two_vs_two_vs_one, get_R_00(k, 'two_vs_two_vs_one'), colors[3])
             ]
         else:
             data_sets = [
@@ -503,7 +514,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max = 20, alpha_min=4.5):
         ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
 
         # Save the plot
-        save_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "figures", "errors_vs_alpha")
+        save_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "figures", f"{k}_classes", "errors_vs_alpha")
         os.makedirs(save_dir, exist_ok=True)
         saving_path = os.path.join(save_dir, f'{metric_name}_vs_alpha_k{k}_k0{k_0}.pdf')
         plt.savefig(saving_path, bbox_inches='tight', dpi=300)
@@ -538,9 +549,9 @@ def plot_density(k,
                  d=250, 
                  lambda_reg=0,
                  save_path=None, 
-                 emp_histogram=True, 
+                 emp_histogram=False, 
                  emp_bins=80, 
-                 z_real_lower_bound=0.014, 
+                 z_real_lower_bound=0.0, 
                  clean_data_for_5=False, 
                  clean_data_for_3=False, 
                  clean_data_for_10=False,
@@ -580,6 +591,7 @@ def plot_density(k,
     # -------------------------------------
     # 2. Retrieve and filter theoretical data
     # -------------------------------------
+
     closest_alpha, z_reals, z_imags, densities = get_density_data(
         k, 
         k_0, 
@@ -604,50 +616,9 @@ def plot_density(k,
     z_reals_filtered = z_reals_filtered[mask_z_real]
     densities_filtered = densities_filtered[mask_z_real]
 
-    # Add a zero point at just below the lower bound to ensure the curve starts at zero
-    if clean_data_for_5:
-        densities_filtered = densities_filtered[10:]
-        z_reals_filtered = z_reals_filtered[10:]
-        densities_filtered[0] = 0
-    if clean_data_for_10:
-        print('cleaning data for 10')
-        densities_filtered = densities_filtered[2:]
-        z_reals_filtered = z_reals_filtered[2:]
-        densities_filtered[-1] = 0
-        densities_filtered[0] = 0
-
-        z_reals_filtered = np.delete(z_reals_filtered, [7,16,20,22])
-        densities_filtered = np.delete(densities_filtered, [7,16,20,22])
-        z_reals_filtered = np.delete(z_reals_filtered, [14,21,23])
-        densities_filtered = np.delete(densities_filtered, [14,21,23])
-        z_reals_filtered = np.delete(z_reals_filtered, [19,49])
-        densities_filtered = np.delete(densities_filtered, [19,49])
-
-    if clean_data_for_3:
-        densities_filtered = densities_filtered[:-2]
-        z_reals_filtered = z_reals_filtered[:-2]
-        #z_reals_filtered = np.insert(z_reals_filtered, 0, 0.001)
-        densities_filtered[0] = 0
-        densities_filtered[-1] = 0
-    if clean_data_for_20:
-        
-        densities_filtered = densities_filtered[2:-3]
-        z_reals_filtered = z_reals_filtered[2:-3]
-        densities_filtered[0] = 0
-        densities_filtered[-1] = 0
-
-        z_reals_filtered = np.delete(z_reals_filtered, [9,28])
-        densities_filtered = np.delete(densities_filtered, [9,28])
-
-
-
     for i in range(len(z_reals_filtered)):
         print(f'[index {i}]: z:', z_reals_filtered[i], 'density:', densities_filtered[i])
 
-
-    # -----------------------------
-    # 3. Create and style the figure
-    # -----------------------------
     fig, ax = plt.subplots()
 
     # Plot the theoretical density curve
@@ -659,13 +630,6 @@ def plot_density(k,
         label=r'$\mu_{\star}(\nu^{\mathrm{opt}})$'
     )
 
-    # Style the axes
-    #ax.spines['top'].set_visible(True)
-    #ax.spines['right'].set_visible(True)
-
-    # -----------------------------------------
-    # 4. Add empirical histogram if requested
-    # -----------------------------------------
     if emp_histogram and eigenvalues is not None:
         if isinstance(eigenvalues, np.ndarray):
             flat_eigenvalues = eigenvalues.flatten()
@@ -698,9 +662,9 @@ def plot_density(k,
     # -------------
     if save_path is None:
         # Create a default path if none is provided
-        fig_dir = os.path.join(os.path.dirname(__file__), "figures", "fixed_density")
+        fig_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "figures", "ESD", f'{k+1}_classes')
         os.makedirs(fig_dir, exist_ok=True)
-        filename = (f"density_k{k}_k0{k_0}_R00{R_00[0,1]}"
+        filename = (f"density_k{k}_k0{k_0}_R00{R_00[0,1]:.2f}"
                     f"_alpha{alpha_target:.2f}_lambda{lambda_reg}"
                     f"_emp{int(emp_histogram)}_d{d}.pdf")
         save_path = os.path.join(fig_dir, filename)

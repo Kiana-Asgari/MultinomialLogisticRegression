@@ -3,26 +3,21 @@ import torch
 
 from state_evolution.recursion_parts.S_recursion import S_recursion
 from state_evolution.recursion_parts.full_R_recursion import R_recursion
+from state_evolution.utils import get_primary_device
 
 
 div_prox = False
 
 
-def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, S_0=None, tol=1e-5, max_iter=300, seed=42, ):
+def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, S_0=None, 
+tol=1e-5, max_iter=300, seed=42, integral_mesh_size=10  , integral_size=5.5):
 
     torch.manual_seed(seed)
 
-    default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    default_dtype = torch.float64
+    device = get_primary_device()
+    dtype = torch.float32
 
-    source_tensors = [arg for arg in (R_00, schur_0, R_01_0, S_0) if isinstance(arg, torch.Tensor)]
-    if source_tensors:
-        float_tensor = next((t for t in source_tensors if torch.is_floating_point(t)), source_tensors[0])
-        device = float_tensor.device
-        dtype = float_tensor.dtype if torch.is_floating_point(float_tensor) else default_dtype
-    else:
-        device = default_device
-        dtype = default_dtype
+
 
     R_00_tensor = torch.as_tensor(R_00, dtype=dtype, device=device)
     schur_0_tensor = torch.as_tensor(schur_0, dtype=dtype, device=device)
@@ -40,19 +35,19 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
         k,
         k_0,
         S_0=S_0,
-        max_iter=max_iter,
-        device=device,
-        dtype=dtype,
+        max_iter=max_iter
     )
 
     div_tol = torch.linalg.norm(R_00_tensor) * 5.0e4
-    integral_mesh_size = 10
-    integral_size = 5.5
+    R00_sqrt = _matrix_sqrt(R_00_tensor)
+
+
 
     for t in range(max_iter):
         S_next, schur_next, R_01_next = _compute_next_state_variables(
             S_t,
             R_00_tensor,
+            R00_sqrt,
             schur_t,
             R_01_t,
             lambda_tensor,
@@ -63,6 +58,7 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
             integral_mesh_size=integral_mesh_size,
             integral_size=integral_size,
         )
+
 
         current_errors = torch.stack(
             [
@@ -90,6 +86,7 @@ def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, 
 def _compute_next_state_variables(
     S_t,
     R_00,
+    R00_sqrt,
     schur_t,
     R_01_t,
     lambda_reg,
@@ -103,6 +100,7 @@ def _compute_next_state_variables(
     S_next = S_recursion(
         S_t_tensor=S_t,
         R_00_tensor=R_00,
+        R00_sqrt=R00_sqrt,
         schur_tensor=schur_t,
         R_01_tensor=R_01_t,
         lambda_tensor=lambda_reg,
@@ -187,16 +185,15 @@ def _initialize_state_evolution(
     k,
     k_0,
     S_0=None,
-    max_iter=300,
-    device=torch.device("cpu"),
-    dtype=torch.float64,
+    max_iter=300
 ):
 
     print("*************state evolution iteration started*************")
     print(
         f"     [initial parameters] lambda: {lambda_reg}, alpha: {alpha}, k: {k}, R_00 norm: {torch.linalg.norm(R_00)}"
     )
-
+    dtype = R_00.dtype
+    device = R_00.device
     R_00_sqrtm_inv = torch.linalg.inv(_matrix_sqrt(R_00))
     R_01_t = torch.zeros_like(R_00, device=device, dtype=dtype)
     schur_t = R_00.clone()

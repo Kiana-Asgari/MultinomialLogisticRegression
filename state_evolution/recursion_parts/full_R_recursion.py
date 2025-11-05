@@ -1,8 +1,7 @@
 import torch
 import math
-import time
 
-from state_evolution.utils import mesh_integration
+from state_evolution.utils import sphere_mesh_integration
 
 
 def R_recursion(
@@ -20,32 +19,41 @@ def R_recursion(
     integral_size=5.5,
 ):
     device = S_t_tensor.device
-    dtype = S_t_tensor.dtype if torch.is_floating_point(S_t_tensor) else torch.float64
+    dtype = S_t_tensor.dtype 
 
     if R_00_sqrtm_inv_tensor is None:
         R_00_sqrt = _matrix_sqrt(R_00_tensor)
         A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R_00_sqrt))
     else:
         A_tensor = torch.matmul(R_01_tensor, R_00_sqrtm_inv_tensor)
-    time_start = time.time()
-    combined_integrand = mesh_integration(
+    y_basis = torch.cat(
+        [
+            torch.zeros((1, k), dtype=dtype, device=device),
+            torch.eye(k, dtype=dtype, device=device),
+        ],
+        dim=0,
+    )
+
+    combined_integrand = sphere_mesh_integration(
         _R_integrand_with_prox_density_fully_vectorized,
         S_t_tensor,
         R_00_tensor,
         schur_tensor,
         A_tensor,
+        y_basis,
         alpha_tensor,
         k,
         k_0,
         input_dim=k + k_0,
         output_dim=2 * k * k,
-        n_mesh=integral_mesh_size,
-        size=integral_size,
+        batch_size=35_000,
+        n_radius=14,
+        n_polar=7,
+        radius=4.5
     )
     R_01_integrand = combined_integrand[: k * k].reshape(k, k)
     schur_integrand = combined_integrand[k * k :].reshape(k, k)
-    time_end = time.time()
-    print(f"  **Time taken for R_recursion: {time_end - time_start} seconds, R_01_integrand: {R_01_integrand}")
+
     schur = alpha_tensor * torch.matmul(
         S_next_tensor,
         torch.matmul(schur_integrand, S_next_tensor),
@@ -65,12 +73,11 @@ def _R_integrand_with_prox_density_fully_vectorized(
     R_00,
     schur_t,
     A_t,
+    y_basis,
     alpha,
     k,
     k_0,
 ):
-    dtype = Z_batch.dtype
-    device = Z_batch.device
     batch_size = Z_batch.shape[0]
 
     schur_root = _matrix_sqrt(schur_t)
@@ -90,13 +97,7 @@ def _R_integrand_with_prox_density_fully_vectorized(
     diff = g_batch - mean_prox_batch
     gaussian_IS_weight_batch = torch.einsum("ni,ij,nj->n", diff, cov_inv, diff)
 
-    y_basis = torch.cat(
-        [
-            torch.zeros((1, k), dtype=dtype, device=device),
-            torch.eye(k, dtype=dtype, device=device),
-        ],
-        dim=0,
-    )
+    
     repeats = y_basis.shape[0]
     y_flat = y_basis.repeat_interleave(batch_size, dim=0)
     g_flat = g_batch.repeat(repeats, 1)
