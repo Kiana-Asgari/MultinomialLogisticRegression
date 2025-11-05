@@ -493,6 +493,30 @@
         "F_norm": 44.44725505983358,
         "diverged": false,
         "actual_alpha": 5.0
+      },
+      "4.900000000000001": {
+        "test_error": 2.702322006225586,
+        "train_error": 0.9002859592437744,
+        "misclassification_test_error": 0.7061705589294434,
+        "F_norm": 49.02992794947926,
+        "diverged": false,
+        "actual_alpha": 4.900000000000001
+      },
+      "4.800000000000001": {
+        "test_error": 2.817687511444092,
+        "train_error": 0.8898493051528931,
+        "misclassification_test_error": 0.7074861526489258,
+        "F_norm": 55.0334570461675,
+        "diverged": false,
+        "actual_alpha": 4.800000000000001
+      },
+      "4.700000000000001": {
+        "test_error": 2.9779186248779297,
+        "train_error": 0.8811242580413818,
+        "misclassification_test_error": 0.7091288566589355,
+        "F_norm": 63.85360361072047,
+        "diverged": false,
+        "actual_alpha": 4.700000000000001
       }
     }
   }
