@@ -31,19 +31,14 @@ def _ESD():
 if __name__ == "__main__":
     k = 4
     k_0 = 4
-    type_3 = 'two_vs_two_vs_one'
+    type_3 = 'two_classes_close'
     R00 = get_R_00(k, type_3)
-    run_and_log_fp(k=k, k_0=k_0, lambda_reg=0, tol=1e-4, max_iter=100, type_3=type_3,
-    alphas = [4.2])
 
-    
+    run_and_log_fp(k=k, k_0=k_0, lambda_reg=0, tol=1e-4, max_iter=150, type_3=type_3,
+            alphas = [4.2, 4.1, 4.0, 3.9, 3.8])
 
-
-
-  
-
-
-
+    run_and_log_fp_tests(k=k, k_0=k_0, lambda_reg=0, type_3=type_3)
+    plot_errors_vs_alpha(k=k, k_0=k_0,alpha_min=3.0, alpha_max=20.0)
 
     # run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-5, max_iter=200,
     #         type_3=type_3, alphas = np.arange(5, 8, 0.1)[::-1],
@@ -52,32 +47,5 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
-
-
-
-    # run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=tol, max_iter=max_iter, 
-    #                  type_3='three_classes_close', alphas = [5.4,5.5,5.6, 5.8, 6], 
-    #                  integral_mesh_size=integral_mesh_size, integral_size=integral_size)
-    # run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=tol, max_iter=max_iter,
-    #                 type_3='symmetric', alphas = [4.3,4.4, 4.5, 4.8, 5, 5.3, 5.8, 6],
-    #                 integral_mesh_size=integral_mesh_size, integral_size=integral_size)
-    # run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3='three_classes_close')
-    # run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3='symmetric')
-    
-    # run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=tol, max_iter=max_iter,
-    #                 type_3='two_classes_close', alphas = [4.3,4.4, 4.5, 4.8, 5, 5.3, 5.8, 6], 
-    #                 integral_mesh_size=integral_mesh_size, integral_size=integral_size)
-
-
-    # run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3='two_classes_close')
-
-    # plot_errors_vs_alpha(k_0=k_0, k=k, alpha_max=14, alpha_min=3.5)
 
 

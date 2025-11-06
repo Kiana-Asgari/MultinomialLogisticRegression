@@ -1,7 +1,7 @@
 import torch
 import time
 from state_evolution.utils import sphere_mesh_integration
-
+from state_evolution.functions import _matrix_sqrt, _matrix_inv, _solve
 
 def S_recursion(
     S_t_tensor,
@@ -24,7 +24,7 @@ def S_recursion(
     R00_sqrt = _matrix_sqrt(R_00_tensor)
 
     if R_00_sqrtm_inv_tensor is None:
-        A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R00_sqrt))
+        A_tensor = torch.matmul(R_01_tensor, _matrix_inv(R00_sqrt))
     else:
         A_tensor = torch.matmul(R_01_tensor, R_00_sqrtm_inv_tensor)
     y_basis = torch.cat(
@@ -35,8 +35,8 @@ def S_recursion(
         dim=0,
     )
     schur_root = _matrix_sqrt(schur_tensor)
-    A_full = torch.matmul(A_tensor, torch.linalg.inv(R00_sqrt))
-    cov_inv = torch.linalg.inv(schur_tensor )
+    A_full = torch.matmul(A_tensor, _matrix_inv(R00_sqrt))
+    cov_inv = _matrix_inv(schur_tensor )
 
     S_integrand_flat = sphere_mesh_integration(
         _S_fp_integrand_with_prox_density,
@@ -51,16 +51,16 @@ def S_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=k * k,
-        batch_size=5_000,
+        batch_size=80_000,
         n_radius=12,
-        n_polar=6,
-        radius=3.8
+        n_polar=7,
+        radius=4
     )
     S_integrand = S_integrand_flat.reshape(k, k)
 
     identity_k = torch.eye(k, dtype=dtype, device=device)
     lhs = identity_k - S_integrand + 2.0 * lambda_tensor * S_t_tensor
-    S = torch.linalg.solve(lhs, S_t_tensor) / alpha_tensor
+    S = _solve(lhs, S_t_tensor) / alpha_tensor
     return S
 
 
@@ -126,12 +126,7 @@ def _S_fp_integrand_with_prox_density(
     return integrand.reshape(batch_size, -1)
 
 
-def _matrix_sqrt(matrix):
-    symmetric_matrix = 0.5 * (matrix + matrix.transpose(-1, -2))
-    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric_matrix)
-    eigenvalues_clamped = torch.clamp(eigenvalues, min=0.0)
-    sqrt_eigenvalues = torch.sqrt(eigenvalues_clamped)
-    return eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.transpose(-1, -2)
+
 
 
 def _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0):

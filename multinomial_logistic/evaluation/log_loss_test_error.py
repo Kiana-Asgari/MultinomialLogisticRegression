@@ -6,6 +6,7 @@ from state_evolution.utils import sphere_mesh_integration, get_primary_device
 
 
 def test_error(R_00, schur, R_01, k, k_0, alpha, seed=42):
+
     device = get_primary_device()
     dtype = torch.float32
 
@@ -37,10 +38,10 @@ def test_error(R_00, schur, R_01, k, k_0, alpha, seed=42):
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_radius=16,
+        n_radius=14,
         n_polar=7,
-        radius=4.5,
-        batch_size=200_000,
+        radius=4,
+        batch_size=30_000,
     )
 
     loss_value = loss_tensor[0].item()

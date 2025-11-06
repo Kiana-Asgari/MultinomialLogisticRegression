@@ -1,7 +1,8 @@
 import torch
 import math
-
+from state_evolution.functions import _matrix_sqrt, _matrix_inv
 from state_evolution.utils import sphere_mesh_integration
+
 
 
 def R_recursion(
@@ -23,7 +24,7 @@ def R_recursion(
 
     if R_00_sqrtm_inv_tensor is None:
         R_00_sqrt = _matrix_sqrt(R_00_tensor)
-        A_tensor = torch.matmul(R_01_tensor, torch.linalg.inv(R_00_sqrt))
+        A_tensor = torch.matmul(R_01_tensor, _matrix_inv(R_00_sqrt))
     else:
         A_tensor = torch.matmul(R_01_tensor, R_00_sqrtm_inv_tensor)
     y_basis = torch.cat(
@@ -46,9 +47,9 @@ def R_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=2 * k * k,
-        batch_size=5_000,
+        batch_size=35_000,
         n_radius=12,
-        n_polar=6,
+        n_polar=7,
         radius=4
     )
     R_01_integrand = combined_integrand[: k * k].reshape(k, k)
@@ -82,8 +83,8 @@ def _R_integrand_with_prox_density_fully_vectorized(
 
     schur_root = _matrix_sqrt(schur_t)
     R00_sqrt = _matrix_sqrt(R_00)
-    A_full = torch.matmul(A_t, torch.linalg.inv(R00_sqrt))
-    cov_inv = torch.linalg.inv(schur_t)
+    A_full = torch.matmul(A_t, _matrix_inv(R00_sqrt))
+    cov_inv = _matrix_inv(schur_t)
 
     g_batch, g_0_batch = _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0)
     pdf = _standard_normal_pdf(Z_batch)
@@ -143,12 +144,7 @@ def _R_integrand_with_prox_density_fully_vectorized(
     return torch.cat([R_01_flat, schur_flat], dim=1)
 
 
-def _matrix_sqrt(matrix):
-    symmetric_matrix = 0.5 * (matrix + matrix.transpose(-1, -2))
-    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric_matrix)
-    eigenvalues_clamped = torch.clamp(eigenvalues, min=0.0)
-    sqrt_eigenvalues = torch.sqrt(eigenvalues_clamped)
-    return eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.transpose(-1, -2)
+
 
 
 def _coloring_transform(Z_batch, A_t, R00_sqrt, schur_root, k, k_0):

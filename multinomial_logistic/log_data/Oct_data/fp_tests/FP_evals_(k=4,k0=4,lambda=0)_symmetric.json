@@ -127,12 +127,36 @@
         "actual_alpha": 4.4
       },
       "4.3": {
-        "test_error": 4.390346527099609,
-        "train_error": 0.6047806739807129,
-        "misclassification_test_error": 0.6570123434066772,
-        "F_norm": 203.99845077170932,
+        "test_error": 2.5146324634552,
+        "train_error": 0.6138970255851746,
+        "misclassification_test_error": 0.6362026929855347,
+        "F_norm": 59.500675215729984,
         "diverged": false,
         "actual_alpha": 4.3
+      },
+      "4.2": {
+        "test_error": 2.6860408782958984,
+        "train_error": 0.5839768052101135,
+        "misclassification_test_error": 0.6387162208557129,
+        "F_norm": 71.11236751254955,
+        "diverged": false,
+        "actual_alpha": 4.2
+      },
+      "4.1": {
+        "test_error": 2.91119384765625,
+        "train_error": 0.5487347841262817,
+        "misclassification_test_error": 0.6428548097610474,
+        "F_norm": 87.73282505429052,
+        "diverged": false,
+        "actual_alpha": 4.1
+      },
+      "4.0": {
+        "test_error": 3.2179861068725586,
+        "train_error": 0.5056312084197998,
+        "misclassification_test_error": 0.6463918685913086,
+        "F_norm": 112.93176550729282,
+        "diverged": false,
+        "actual_alpha": 4.0
       }
     }
   }

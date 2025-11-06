@@ -35,10 +35,10 @@ def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_radius=16,
-        n_polar=7,
-        radius=4.8,
-        batch_size=200_000,
+        n_radius=18,
+        n_polar=8,
+        radius=5.5,
+        batch_size=30_000,
     )
 
     accuracy = accuracy_tensor[0]
