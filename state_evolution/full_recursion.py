@@ -190,6 +190,8 @@ def _initialize_state_evolution(
     alpha_init=0
 ):
 
+
+
     print("*************state evolution iteration started*************")
     print(
         f"     [initial parameters] lambda: {lambda_reg}, alpha: {alpha}, k: {k}, R_00 norm: {torch.linalg.norm(R_00)}"

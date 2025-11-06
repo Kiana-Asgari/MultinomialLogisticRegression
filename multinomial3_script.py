@@ -31,14 +31,14 @@ def _ESD():
 if __name__ == "__main__":
     k = 4
     k_0 = 4
-    type_3 = 'two_classes_close'
+    type_3 = 'three_classes_close'
     R00 = get_R_00(k, type_3)
 
-    run_and_log_fp(k=k, k_0=k_0, lambda_reg=0, tol=1e-4, max_iter=150, type_3=type_3,
-            alphas = [4.2, 4.1, 4.0, 3.9, 3.8])
+    # run_and_log_fp(k=k, k_0=k_0, lambda_reg=0, tol=1e-4, max_iter=250, type_3=type_3,
+    #         alphas = [5.2, 5, 5.0, 4.9, 4.8, 4.6, 4.5, 4.4])
 
     run_and_log_fp_tests(k=k, k_0=k_0, lambda_reg=0, type_3=type_3)
-    plot_errors_vs_alpha(k=k, k_0=k_0,alpha_min=3.0, alpha_max=20.0)
+    plot_errors_vs_alpha(k=k, k_0=k_0,alpha_min=3.0, alpha_max=14.0)
 
     # run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-5, max_iter=200,
     #         type_3=type_3, alphas = np.arange(5, 8, 0.1)[::-1],

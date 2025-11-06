@@ -47,7 +47,7 @@ def R_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=2 * k * k,
-        batch_size=35_000,
+        batch_size=100_000,
         n_radius=12,
         n_polar=7,
         radius=4

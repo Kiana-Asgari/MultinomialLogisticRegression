@@ -605,6 +605,22 @@
         "F_norm": 76.528050661328,
         "diverged": false,
         "actual_alpha": 3.7
+      },
+      "3.6": {
+        "test_error": 3.235180139541626,
+        "train_error": 0.589640736579895,
+        "misclassification_test_error": 0.7212502956390381,
+        "F_norm": 87.3831104760963,
+        "diverged": false,
+        "actual_alpha": 3.6
+      },
+      "3.5": {
+        "test_error": 3.7000200748443604,
+        "train_error": 0.5220583081245422,
+        "misclassification_test_error": 0.7260857820510864,
+        "F_norm": 121.5462941535701,
+        "diverged": false,
+        "actual_alpha": 3.5
       }
     }
   }

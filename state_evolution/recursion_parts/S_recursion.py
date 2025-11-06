@@ -51,7 +51,7 @@ def S_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=k * k,
-        batch_size=80_000,
+        batch_size=150_000,
         n_radius=12,
         n_polar=7,
         radius=4

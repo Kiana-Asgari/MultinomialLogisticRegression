@@ -109,6 +109,46 @@
         "F_norm": 251.1445761040194,
         "diverged": false,
         "actual_alpha": 5.4
+      },
+      "5.2": {
+        "test_error": 1.8374301195144653,
+        "train_error": 0.5631396770477295,
+        "misclassification_test_error": 0.5279202461242676,
+        "F_norm": 70.76943493156114,
+        "diverged": false,
+        "actual_alpha": 5.2
+      },
+      "5.0": {
+        "test_error": 1.9880129098892212,
+        "train_error": 0.5315364003181458,
+        "misclassification_test_error": 0.5331124067306519,
+        "F_norm": 92.23601032552347,
+        "diverged": false,
+        "actual_alpha": 5.0
+      },
+      "4.9": {
+        "test_error": 2.086884021759033,
+        "train_error": 0.5136660933494568,
+        "misclassification_test_error": 0.5363738536834717,
+        "F_norm": 107.65908573573853,
+        "diverged": false,
+        "actual_alpha": 4.9
+      },
+      "4.8": {
+        "test_error": 2.2100491523742676,
+        "train_error": 0.49402478337287903,
+        "misclassification_test_error": 0.5393329858779907,
+        "F_norm": 128.33847260419873,
+        "diverged": false,
+        "actual_alpha": 4.8
+      },
+      "4.6": {
+        "test_error": 2.58957576751709,
+        "train_error": 0.4471834599971771,
+        "misclassification_test_error": 0.5462819337844849,
+        "F_norm": 202.2669019346966,
+        "diverged": false,
+        "actual_alpha": 4.6
       }
     }
   }

@@ -133,6 +133,38 @@
         "F_norm": 181.55324315647465,
         "diverged": false,
         "actual_alpha": 4.3
+      },
+      "4.2": {
+        "test_error": 2.7824811935424805,
+        "train_error": 0.6573013067245483,
+        "misclassification_test_error": 0.6559016704559326,
+        "F_norm": 77.78327129982597,
+        "diverged": false,
+        "actual_alpha": 4.2
+      },
+      "4.1": {
+        "test_error": 3.0802056789398193,
+        "train_error": 0.6313545107841492,
+        "misclassification_test_error": 0.6598590612411499,
+        "F_norm": 101.07834933047221,
+        "diverged": false,
+        "actual_alpha": 4.1
+      },
+      "4.0": {
+        "test_error": 3.579305410385132,
+        "train_error": 0.6006473898887634,
+        "misclassification_test_error": 0.6652489900588989,
+        "F_norm": 146.06174419247697,
+        "diverged": false,
+        "actual_alpha": 4.0
+      },
+      "3.9": {
+        "test_error": 4.827879905700684,
+        "train_error": 0.5580389499664307,
+        "misclassification_test_error": 0.6738451719284058,
+        "F_norm": 291.54155392031237,
+        "diverged": false,
+        "actual_alpha": 3.9
       }
     }
   }
