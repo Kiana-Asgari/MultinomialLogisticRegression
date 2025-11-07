@@ -18,29 +18,24 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
         R_00_values = np.array([[[1,0.9], [0.9,1]]])
     elif type_3 != False:
         R_00_values = np.array([get_R_00(k, type_3)])
-    else:
-        raise ValueError("Invalid combination of parameters")
+
 
     R_00_str = str(R_00_values[0].tolist())
 
 
-    print('running alphas:', alphas)
 
 
     if not non_symmetric and not two_classes_close and not type_3:
         print("Running symmetric FP")
         base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
-        base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}"
         base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution", base_filename)
     elif not type_3 and non_symmetric:
         print("Running non-symmetric FP")
         base_filename =  f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
-        base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric"
         base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_nonsym", base_filename)
     elif not type_3 and two_classes_close:
         print("Running two classes close FP")
         base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
-        base_filename_dir = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close"
         base_filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_two_classes_close", base_filename)
     elif type_3 != False:
         print("Running 3 classes FP for type_3 =", type_3)
@@ -50,11 +45,6 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
     
     # Create data/fp_solution directory if it doesn't exist
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
-    print('saving fp solutions to base_filepath:', base_filepath)
-    print('\nR_00 =', R_00_values)
-
-    
-    # Check for existing files with matching parameters
     data_dir = os.path.dirname(base_filepath)
     existing_files = []
     for filename in os.listdir(data_dir):
@@ -69,7 +59,6 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
     
     # If matching file exists, use it
 
-
     if existing_files:
         filename, existing_data = existing_files[0]
         filepath = os.path.join(data_dir, filename)
@@ -81,9 +70,6 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
         filepath = base_filepath
         results = {}
         print(f"Creating new file: {os.path.basename(filepath)}")
-
-
-
 
 
     for R_00 in R_00_values:
@@ -161,6 +147,93 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
             
     return filepath
 
+
+def refine_logged_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300,
+                     non_symmetric=False, two_classes_close=False,
+                     integral_mesh_size=10, integral_size=5,
+                     type_3: Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):
+    """Refine previously logged fixed points by rerunning state evolution from saved states."""
+
+    if non_symmetric and not type_3:
+        print("Refining non-symmetric FP")
+        base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_non_symmetric.json"
+        filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_nonsym", base_filename)
+    elif not type_3 and two_classes_close:
+        print("Refining two classes close FP")
+        base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}_two_classes_close.json"
+        filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution_two_classes_close", base_filename)
+    elif type_3 != False:
+        print("Refining 3 classes FP for type_3 =", type_3)
+        base_filename = f"FP_solutions_(k={k},k0={k_0},lambda={lambda_reg})_{type_3}.json"
+        filepath = os.path.join(os.path.dirname(__file__), "Oct_data", "fp_solution", base_filename)
+    else:
+        print("Refining symmetric FP")
+        base_filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
+        filepath = os.path.join(os.path.dirname(__file__), "tempdata", "fp_solution", base_filename)
+
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"No logged FP data found at {filepath}")
+
+    with open(filepath, 'r') as f:
+        data = json.load(f)
+
+    results = data.get("results", {})
+
+    if not results:
+        print("No results to refine in", filepath)
+        return filepath
+
+    def _persist_results():
+        temp_filepath = filepath + '.tmp'
+        with open(temp_filepath, 'w') as tmp_file:
+            fcntl.flock(tmp_file.fileno(), fcntl.LOCK_EX)
+            try:
+                json.dump(data, tmp_file, indent=2)
+            finally:
+                fcntl.flock(tmp_file.fileno(), fcntl.LOCK_UN)
+        os.replace(temp_filepath, filepath)
+
+    for R_00_str, alpha_dict in results.items():
+        R_00 = np.array(json.loads(R_00_str))
+        sorted_alpha_items = sorted(alpha_dict.items(), key=lambda item: float(item[0]))
+        sorted_alpha_items = sorted_alpha_items[::-1]
+
+        for alpha_str, entry in sorted_alpha_items:
+            if float(alpha_str) > 5:
+                print(f"Skipping alpha = {alpha_str} because it is greater than 5")
+                continue
+
+            alpha_value = float(alpha_str)
+            schur = np.array(entry["schur"])
+            R_01 = np.array(entry["R_01"])
+            S = np.array(entry["S"])
+
+            print(f"\nRefining alpha = {alpha_value}")
+        
+
+            schur_refined, R_01_refined, S_refined, diverged = state_evolution_full_recursion(
+                R_00=R_00,
+                schur_0=schur,
+                R_01_0=R_01,
+                S_0=S,
+                lambda_reg=lambda_reg,
+                alpha=alpha_value,
+                k=k,
+                k_0=k_0,
+                tol=tol,
+                max_iter=max_iter,
+                integral_mesh_size=integral_mesh_size
+            )
+
+            entry["schur"] = schur_refined.tolist()
+            entry["R_01"] = R_01_refined.tolist()
+            entry["S"] = S_refined.tolist()
+            entry["diverged"] = bool(diverged)
+            entry.pop("error", None)
+
+            _persist_results()
+
+    return filepath
 
 
 

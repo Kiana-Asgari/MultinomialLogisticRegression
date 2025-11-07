@@ -10,7 +10,9 @@ from state_evolution.utils import sphere_mesh_integration, get_primary_device
 
 
 def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
-
+    breakpoint()
+    return 0
+    
     device = get_primary_device()
     dtype = torch.float32
 
@@ -36,9 +38,9 @@ def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, seed=42):
         output_dim=1,
         seed=seed,
         n_radius=18,
-        n_polar=8,
-        radius=5.5,
-        batch_size=30_000,
+        n_polar=14,
+        radius=5,
+        batch_size=350_000,
     )
 
     accuracy = accuracy_tensor[0]

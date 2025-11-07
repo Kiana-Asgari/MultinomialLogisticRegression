@@ -1,10 +1,13 @@
 from configs.config_loader import example_configs
-from multinomial_logistic.log_data.log_fp import run_and_log_fp
+from multinomial_logistic.log_data.log_fp import run_and_log_fp, refine_logged_fp
 #from multinomial_logistic.log_data.log_mle_empirical import run_and_log_mle
 from state_evolution.full_recursion import state_evolution_full_recursion
-from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests
-from multinomial_logistic.log_data.utils import plot_errors_vs_alpha, plot_density
+from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests_regularized, refine_logged_fp_tests_regularized
+from multinomial_logistic.log_data.utils import plot_errors_vs_alpha, plot_density, plot_regularized_error
 from multinomial_logistic.log_data.log_esd import run_and_log_esd
+from multinomial_logistic.log_data.log_fp_regularized import run_and_log_fp_regularized, refine_logged_regulairzed_fp
+from multinomial_logistic.log_data.log_regularized_mle_empirical import run_and_log_mle_regularized
+
 import numpy as np
 import torch
 from configs.R_initiation import get_R_00
@@ -27,18 +30,45 @@ def _ESD():
         except Exception as e:
             print(f"Error for alpha {alpha}: {e}")
 
+def reg_stuff():
+    k, k_0 = 4, 4
+    type_3 = 'symmetric'
+    alphas = [10]#[3, 5, 10]
+    R00 = get_R_00(k, type_3)
+
+    lambda_regs =1/2*np.array([0.009, 0.005, 0.15])
+    run_and_log_fp_regularized(k_0=k_0, k=k, lambda_regs=lambda_regs, alphas=alphas,
+                               tol=1e-4, max_iter=50, type_3=type_3, integral_mesh_size=8, integral_size=4.5)
+    # refine_logged_regulairzed_fp(k_0=k_0, k=k, type_3=type_3, tol=1e-4, max_iter=2, 
+    #                             integral_mesh_size=9, modified_alpha=10)
+
+    #refine_logged_fp_tests_regularized(k_0=k_0, k=k, R_00=R00, type_3=type_3, metric_name='misclassification_test_errors', modified_alpha=3)
+
+    run_and_log_fp_tests_regularized(k_0=k_0, k=k, R_00=R00, type_3=type_3)
+    plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100, lambda_reg_max=0.1, lambda_reg_min=0.00001)
+
+
 
 if __name__ == "__main__":
     k = 4
     k_0 = 4
-    type_3 = 'three_classes_close'
+    type_3 = 'two_vs_two_vs_one'
+    reg_stuff()
+
     R00 = get_R_00(k, type_3)
 
-    # run_and_log_fp(k=k, k_0=k_0, lambda_reg=0, tol=1e-4, max_iter=250, type_3=type_3,
-    #         alphas = [5.2, 5, 5.0, 4.9, 4.8, 4.6, 4.5, 4.4])
+    # refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=1, max_iter=2, type_3=type_3, integral_mesh_size=13)
+    # refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=1, max_iter=2, type_3=type_3, integral_mesh_size=13)
 
-    run_and_log_fp_tests(k=k, k_0=k_0, lambda_reg=0, type_3=type_3)
-    plot_errors_vs_alpha(k=k, k_0=k_0,alpha_min=3.0, alpha_max=14.0)
+    # type_3 = 'two_classes_close'
+    # R00 = get_R_00(k, type_3)
+
+    # refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=1, max_iter=2, type_3=type_3)
+    # refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=1, max_iter=2, type_3=type_3)
+
+
+    # run_and_log_fp_tests(k=k, k_0=k_0, lambda_reg=0, type_3=type_3)
+    # plot_errors_vs_alpha(k=k, k_0=k_0,alpha_min=3.0, alpha_max=14.0)
 
     # run_and_log_fp(k_0=k_0, k=k, lambda_reg=0, tol=1e-5, max_iter=200,
     #         type_3=type_3, alphas = np.arange(5, 8, 0.1)[::-1],

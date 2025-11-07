@@ -44,10 +44,11 @@ def train_error(R_00, schur, R_01, S, alpha, k, k_0, seed=42):
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_radius=14,
-        n_polar=7,
-        radius=4,
-        batch_size=30_000,
+        n_radius=18,
+        n_azimuth=12,
+        n_polar=10,
+        radius=5,
+        batch_size=180_000,
     )
 
     loss_value = loss_tensor[0].item()

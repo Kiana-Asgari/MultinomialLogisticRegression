@@ -51,10 +51,10 @@ def S_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=k * k,
-        batch_size=150_000,
-        n_radius=12,
-        n_polar=7,
-        radius=4
+        batch_size=100_000,
+        n_radius=18, ##14 is good enough I think. Below is bad
+        n_polar=8,
+        radius=integral_size
     )
     S_integrand = S_integrand_flat.reshape(k, k)
 

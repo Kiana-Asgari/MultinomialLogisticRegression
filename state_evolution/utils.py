@@ -7,7 +7,7 @@ import math
 import contextlib
 
 
-_ALLOWED_CUDA_INDICES = tuple(range(0, 5))
+_ALLOWED_CUDA_INDICES = tuple(range(1, 5))
 
 
 def _get_preferred_cuda_devices(max_devices=None):

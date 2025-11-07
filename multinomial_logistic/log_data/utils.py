@@ -13,7 +13,7 @@ from multinomial_logistic.log_data.read_mle_empirical import read_mle_results
 from multinomial_logistic.evaluation.log_loss_test_error import test_error
 from multinomial_logistic.evaluation.log_loss_train_eror import train_error
 from multinomial_logistic.log_data.log_fp_tests import read_fp_tests_regularized
-from multinomial_logistic.log_data.read_mle_empirical import read_mle_results
+from multinomial_logistic.log_data.read_mle_empirical import get_mle_regularized_results
 from multinomial_logistic.log_data.read_mle_empirical import get_mle_statistics
 
 
@@ -57,41 +57,37 @@ def _find_matching_R00_key(R_00_target, keys, precision=3):
 def plot_regularized_error(k, 
                            k_0, 
                            R_00, 
+                           type_3,
                            save_path=None, 
                            emp_values = None,
                            emp_window=0., 
-                           lambda_reg_max=0.39,
-                           lambda_reg_min=0):
+                           lambda_reg_max=0.31,
+                           lambda_reg_min=0,
+                           d=250,
+                           n_trials=100):
 
-    print('[Info] Plotting regularized error...')
-
-    # ---------------------------------
-    # 1. Load or retrieve your data
-    # ---------------------------------
-    results = read_fp_tests_regularized(k, k_0, R_00)
+    results = read_fp_tests_regularized(k, k_0, R_00, type_3)
     print('loaded the theoretical results', results.keys())
-    emp_results = get_mle_regularized_results(k, k_0, R_00, d=250)
-    print('loaded the empirical results', emp_results.keys())
+    for key in results.keys():
+        print('\nkey:', key)
+        print('lambda_values:', results[key]['lambda_values'],'\n')
+    emp_results = get_mle_regularized_results(k, k_0, R_00, d=d, type_3=type_3, n_trials=n_trials)
+    if emp_results is None:
+        print("No empirical results found, plotting only theoretical results")
 
-    if results is None:
-        print("[Warning] No regularized test results found.")
-        #return
 
-    # ------------------------------
-    # 2. Create figure directory
-    # ------------------------------
+
     if save_path is None:
         fig_dir = os.path.join(
             os.path.dirname(__file__), 
+            "Oct_data" if type_3 != False else "newdata",
             "figures", 
-            "errors", 
-            "regularized"
+            f"{k}_classes",
+            "regularized_errors"
         )
         os.makedirs(fig_dir, exist_ok=True)
 
-    # --------------------------------------
-    # 3. Configure matplotlib & Seaborn RC
-    # --------------------------------------
+
     sns.set_style("whitegrid", {'axes.edgecolor': 'darkgray',
                                'axes.linewidth': 0.7}) 
     mpl.rcParams.update({
@@ -127,44 +123,34 @@ def plot_regularized_error(k,
         ]
 
 
-    # -----------------------------
-    # 4. Iterate over "test" & "train"
-    # -----------------------------
     for error_type in ['test_errors', 'train_errors', 'misclassification_test_errors', 'norms']:
         fig, ax = plt.subplots()
 
         for i, alpha in enumerate(unique_alphas):
-            # Optionally skip alpha == 2.0 if you want
-            if alpha == 2.0:
-                continue
-
             data = results[alpha]
+            color = colors[i % len(colors)]
 
-            # Unpack and filter by lambda_reg_max
-            lambda_values_all = data['lambda_values'].flatten()
-            test_errors_all = data['test_errors'].flatten()
-            train_errors_all = data['train_errors'].flatten()
-            misclassification_test_errors_all = data['misclassification_test_errors'].flatten()
-            f_norms_all = data['f_norms'].flatten()
-       
+            lambda_values_all = np.asarray(data['lambda_values'], dtype=float).reshape(-1)
+            test_errors_all = np.asarray(data['test_errors'], dtype=float).reshape(-1)
+            train_errors_all = np.asarray(data['train_errors'], dtype=float).reshape(-1)
+            misclassification_test_errors_all = np.asarray(
+                data['misclassification_test_errors'], dtype=float
+            ).reshape(-1)
+            f_norms_all = np.asarray(data['f_norms'], dtype=float).reshape(-1)
 
-
-            filtered = [
-                (l, t, tr, mte, fn) for (l, t, tr, mte, fn) 
-                in zip(lambda_values_all,
-                        test_errors_all, 
-                        train_errors_all, 
-                        misclassification_test_errors_all,
-                        f_norms_all) 
-                if l < lambda_reg_max and l > lambda_reg_min
-            ]
-            if not filtered:
+            mask = (
+                (lambda_values_all <= lambda_reg_max)
+                & (lambda_values_all >= lambda_reg_min)
+            )
+            if not np.any(mask):
                 continue
 
-            lambda_values, test_errors, train_errors, misclassification_test_errors, f_norms = zip(*filtered)
+            lambda_values = lambda_values_all[mask]
+            test_errors = test_errors_all[mask]
+            train_errors = train_errors_all[mask]
+            misclassification_test_errors = misclassification_test_errors_all[mask]
+            f_norms = f_norms_all[mask]
 
-
-            # Decide which error array to plot
             if error_type == 'test_errors':
                 errors = test_errors
                 y_label = 'Test error (log loss)'
@@ -179,10 +165,10 @@ def plot_regularized_error(k,
 
             elif error_type == 'norms':
                 errors = np.sqrt(f_norms)
-                y_label =  f'Estimation error ($\|\\bold{{\Theta}} - \\bold{{\Theta_0}}\\|_F$)'
+                y_label =  f'Estimation error ($\|\\bold{{\Theta}} - \\bold{{\Theta_0}}\|_F$)'
 
-            # Add empirical points if available
-            _plot_empirical_errors(
+            if emp_results is not None:
+                 _plot_empirical_errors(
                     ax=ax,
                     alpha=alpha,
                     emp_results=emp_results,
@@ -191,19 +177,14 @@ def plot_regularized_error(k,
                     lambda_reg_max=lambda_reg_max,
                     lambda_reg_min=lambda_reg_min,
                     emp_values=emp_values,
-                    color=colors[i]
-                )
+                    color=color
+                    )
 
-
-            # Plot theoretical or main curve
-            if alpha == 10:
-                lambda_values = lambda_values[1:]
-                errors = errors[1:]
             ax.plot(
-                2*np.array(lambda_values), 
-                errors, 
-                '-', 
-                color=colors[i],
+                2 * lambda_values,
+                errors,
+                '-',
+                color=color,
                 label=fr'$\alpha={alpha:.1f}$',
                 linewidth=1.5
             )
@@ -216,15 +197,13 @@ def plot_regularized_error(k,
 
         ax.legend()
         ax.grid(True)
-
-
         plt.tight_layout()
 
         # 5. Save Plot
         if save_path is None:
             save_path_final = os.path.join(
                 fig_dir, 
-                f'reg_{error_type}_error_k{k}_k0{k_0}.pdf'
+                f'reg_{error_type}_error_k{k}_k0{k_0}_{type_3}.pdf'
             )
         else:
             # Modify user-provided save_path to differentiate test vs train
@@ -246,7 +225,6 @@ def _plot_empirical_errors(ax,
                            emp_values,
                            color):
     
-    print('*****ploting emp for alpha:', alpha, 'error_type:', error_type)
     # Retrieve dictionary of {lambda_value: {error_type: [list_of_errors]}}
     emp_lambda_errors = emp_results[alpha]
 
@@ -257,11 +235,7 @@ def _plot_empirical_errors(ax,
     last_lambda = -10
     # Filter out points that are too close together or above max
     for j, lambd in enumerate(emp_lambdas_sorted):
-        if emp_values is not None:
-            if lambd not in emp_values:
-                print(f"[Warning] Lambda {lambd} not in emp_values")
-                continue
-        elif (lambd - last_lambda >= emp_window) and (lambd < lambda_reg_max) and (lambd > lambda_reg_min):
+        if (lambd - last_lambda >= emp_window) and (lambd < lambda_reg_max) and (lambd > lambda_reg_min):
             filtered_indices.append(j)
             last_lambda = lambd
 
@@ -284,8 +258,7 @@ def _plot_empirical_errors(ax,
             for lambd in filtered_lambdas
         ]
 
-    print('filtered_lambdas:', filtered_lambdas)
-    print('filtered_errors:', filtered_errors)
+
     ax.errorbar(
         x=2*np.array(filtered_lambdas),
         y=filtered_errors,

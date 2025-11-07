@@ -8,17 +8,10 @@ def read_mle_results(alpha, k, k_0, R_00, lambda_reg=0, d=250, n_trials=100, com
     base_dir = "mle_empirical_compressed" if compressed else "mle_empirical"
     data_dir = os.path.join(os.path.dirname(__file__), "data", base_dir)
     
-    if not os.path.exists(data_dir):
-        print(f"No data directory found: {data_dir}")
-        return None
     
     # Look for the specific file with d and n_trials in the name
     filename = f"mle_data{'_compressed' if compressed else ''}_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_ntrials{n_trials}.json"
     filepath = os.path.join(data_dir, filename)
-    
-    if not os.path.exists(filepath):
-        print(f"No file found matching parameters k={k}, k_0={k_0}, lambda={lambda_reg}")
-        return None
     
     # Read the file
     with open(filepath, 'r') as f:
@@ -26,16 +19,10 @@ def read_mle_results(alpha, k, k_0, R_00, lambda_reg=0, d=250, n_trials=100, com
         
     # Check if we have results for this R_00
     R_00_str = str(R_00.tolist())
-    if R_00_str not in data["results"]:
-        print(f"No results found for R_00={R_00}")
-        return None
     
     # Get all available alphas for this R_00
     available_alphas = [float(a) for a in data["results"][R_00_str].keys()]
     
-    if not available_alphas:
-        print(f"No valid results found for R_00={R_00}")
-        return None
     
     # Find closest alpha
     available_alphas = np.array(available_alphas)
@@ -43,11 +30,6 @@ def read_mle_results(alpha, k, k_0, R_00, lambda_reg=0, d=250, n_trials=100, com
     closest_alpha_str = str(closest_alpha)
     
     result = data["results"][R_00_str][closest_alpha_str]
-    
-    # First check if the computation diverged
-    if result["diverged"]:
-        print(f"Warning: Computation diverged for alpha={closest_alpha}")
-        return None, None, None, None, True
     
     # Convert lists back to numpy arrays with proper shapes
     shapes = result["shapes"]
@@ -214,18 +196,16 @@ def read_mle_esd(k, k_0, alpha, d=250, n_trials=100):
 
 
 
-def get_mle_regularized_results(k_0, k, R_00, d):
-    # Set default parameters that match those used in run_and_log_mle_regularized
-    n_trials = 100
-    
-    # Create base filename
-    base_filename = f"mle_reg_k{k}_k0{k_0}_d{d}_ntrials{n_trials}.json"
-    data_dir = os.path.join(os.path.dirname(__file__), "newdata", "mle_empirical")
-    filepath = os.path.join(data_dir, base_filename)
+def get_mle_regularized_results(k_0, k, R_00, d, type_3, n_trials):
 
-    if not os.path.exists(filepath):
-        print(f"No file found matching parameters k={k}, k_0={k_0}")
-        return None
+    # Create base filename
+    if type_3 == False:
+        data_dir = os.path.join(os.path.dirname(__file__), "newdata", "mle_empirical")
+        base_filename = f"mle_reg_k{k}_k0{k_0}_d{d}_ntrials{n_trials}.json"
+    elif type_3 != False:
+        data_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "mle_empirical")
+        base_filename = f"MLE_reg_evals_(k={k},k0={k_0})_{type_3}.json"
+    filepath = os.path.join(data_dir, base_filename)
 
     with open(filepath, 'r') as f:
         data = json.load(f)
@@ -234,7 +214,21 @@ def get_mle_regularized_results(k_0, k, R_00, d):
     
     # Process all results without filtering by R_00
     for result_key in data["results"].keys():
-        result_dict = json.loads(result_key)
+        # Try to parse the key as JSON
+        result_dict = None
+        if isinstance(result_key, dict):
+            result_dict = result_key
+        elif isinstance(result_key, str):
+            try:
+                result_dict = json.loads(result_key)
+            except (json.JSONDecodeError, TypeError):
+                # Skip keys that aren't valid JSON strings with the expected structure
+                continue
+        
+        # Check if result_dict has the expected structure
+        if not isinstance(result_dict, dict) or "alpha" not in result_dict or "lambda_reg" not in result_dict:
+            continue
+            
         alpha = result_dict["alpha"]
         lambda_reg = result_dict["lambda_reg"]
         metrics = data["results"][result_key]

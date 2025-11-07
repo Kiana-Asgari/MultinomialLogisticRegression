@@ -199,9 +199,18 @@ def _initialize_state_evolution(
     dtype = R_00.dtype
     device = R_00.device
     R_00_sqrtm_inv = torch.linalg.inv(_matrix_sqrt(R_00))
-    R_01_t = torch.zeros_like(R_00, device=device, dtype=dtype)
-    schur_t = R_00.clone()
-    S_t = torch.eye(k, dtype=dtype, device=device)
+    if R_01_0 is not None:
+        R_01_t = torch.as_tensor(R_01_0, dtype=dtype, device=device)
+    else:
+        R_01_t = torch.zeros_like(R_00, device=device, dtype=dtype)
+    if schur_0 is not None:
+        schur_t = torch.as_tensor(schur_0, dtype=dtype, device=device)
+    else:
+        schur_t = R_00.clone()  
+    if S_0 is not None:
+        S_t = torch.as_tensor(S_0, dtype=dtype, device=device)
+    else:
+        S_t = torch.eye(k, dtype=dtype, device=device)
     divergence = False
     errors = torch.zeros((max_iter, 3), dtype=dtype, device=device)
 
