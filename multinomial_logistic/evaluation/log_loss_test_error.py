@@ -42,7 +42,7 @@ def test_error(R_00, schur, R_01, k, k_0, alpha, seed=42):
         n_polar=12,
        # n_azimuth=10,
         radius=5,
-        batch_size=350_000,
+        batch_size=450_000,
     )
 
     loss_value = loss_tensor[0].item()

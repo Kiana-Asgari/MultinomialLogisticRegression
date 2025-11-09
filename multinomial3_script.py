@@ -33,19 +33,19 @@ def _ESD():
 def reg_stuff():
     k, k_0 = 4, 4
     type_3 = 'symmetric'
-    alphas = [10]#[3, 5, 10]
     R00 = get_R_00(k, type_3)
-
-    lambda_regs =1/2*np.array([0.009, 0.005, 0.15])
-    run_and_log_fp_regularized(k_0=k_0, k=k, lambda_regs=lambda_regs, alphas=alphas,
-                               tol=1e-4, max_iter=50, type_3=type_3, integral_mesh_size=8, integral_size=4.5)
-    # refine_logged_regulairzed_fp(k_0=k_0, k=k, type_3=type_3, tol=1e-4, max_iter=2, 
-    #                             integral_mesh_size=9, modified_alpha=10)
-
-    #refine_logged_fp_tests_regularized(k_0=k_0, k=k, R_00=R00, type_3=type_3, metric_name='misclassification_test_errors', modified_alpha=3)
-
+    alphas = [1.5, 3, 5, 10]
+    lambda_regs = 1/2 * np.concatenate([np.arange(0.06, 0.12, 0.005)])
+    run_and_log_fp_regularized(k_0=k_0, k=k, lambda_regs=lambda_regs, alphas=alphas, tol=1e-5, max_iter=80, type_3=type_3, integral_mesh_size=8, integral_size=7)
     run_and_log_fp_tests_regularized(k_0=k_0, k=k, R_00=R00, type_3=type_3)
-    plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100, lambda_reg_max=0.1, lambda_reg_min=0.00001)
+
+
+    for modified_alpha in [1.5, 3, 5, 10]:# 5, 10]:     
+        #refine_logged_regulairzed_fp(k_0=k_0, k=k, type_3=type_3, tol=1e-5, max_iter=10, integral_size=7, integral_mesh_size=10,    modified_alpha=modified_alpha)
+        refine_logged_fp_tests_regularized(k_0=k_0, k=k, R_00=R00, type_3=type_3, metric_name='misclassification_test_errors', modified_alpha=modified_alpha)
+
+
+    plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100, lambda_reg_max=0.15, lambda_reg_min=0)
 
 
 

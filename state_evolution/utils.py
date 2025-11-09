@@ -7,7 +7,7 @@ import math
 import contextlib
 
 
-_ALLOWED_CUDA_INDICES = tuple(range(1, 5))
+_ALLOWED_CUDA_INDICES = tuple(range(3, 5))
 
 
 def _get_preferred_cuda_devices(max_devices=None):
@@ -123,11 +123,11 @@ def _prepare_arg(arg, target_device, target_dtype):
         return torch.tensor(arg, dtype=target_dtype, device=target_device)
     return arg
 
-def _set_device_and_dtype(integrand_args):
+def _set_device_and_dtype(integrand_args, dtype=None):
     # ---------- Device / dtype discovery (unchanged pattern) ----------
     preferred_devices = _get_preferred_cuda_devices()
     default_device = preferred_devices[0] if preferred_devices else torch.device("cpu")
-    default_dtype = torch.float32
+    default_dtype = torch.float32 if dtype is None else dtype
 
     source_tensors = [arg for arg in integrand_args if isinstance(arg, torch.Tensor)]
     if source_tensors:
@@ -312,10 +312,11 @@ def mesh_integration(
     size=6,
     min_size=None,
     batch_size = 200_000,
+    dtype=None,
 ):
     """Multi-threaded mesh integration across multiple GPUs."""
     torch.manual_seed(seed)
-    device, dtype = _set_device_and_dtype(integrand_args)
+    device, dtype = _set_device_and_dtype(integrand_args, dtype=dtype)
     
     # Grid setup
     dx = 2.0 * size / n_mesh
@@ -633,11 +634,12 @@ def sphere_mesh_integration(
     n_azimuth=None,
     min_radius=None, #0.0
     normalize=False, #False
+    dtype=None,
 ):
     """Riemann integration over a ball using spherical coordinates."""
 
     torch.manual_seed(seed)
-    device, dtype = _set_device_and_dtype(integrand_args)
+    device, dtype = _set_device_and_dtype(integrand_args, dtype=dtype)
 
     radius_min = 0.0 if min_radius is None else float(min_radius)
     angle_axes, angle_steps, angle_counts = _build_spherical_axes(

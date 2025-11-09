@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from multinomial_logistic.MLE_empirical.utils.data_generation import generate_data, generate_data_torch
 
 
-_DEVICE = torch.device("cuda")
+_DEVICE = torch.device("cuda:3")
 _DTYPE = torch.float32
 
 

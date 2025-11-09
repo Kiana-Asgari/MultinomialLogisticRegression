@@ -10,12 +10,12 @@ div_prox = False
 
 
 def state_evolution_full_recursion(R_00, schur_0, R_01_0, lambda_reg, alpha, k, k_0, S_0=None, 
-tol=1e-5, max_iter=300, seed=42, integral_mesh_size=10  , integral_size=5.5):
+tol=1e-5, max_iter=300, seed=42, integral_mesh_size=None, integral_size=None, dtype=torch.float64):
 
     torch.manual_seed(seed)
 
     device = get_primary_device()
-    dtype = torch.float32
+    dtype = torch.float32 if dtype is None else dtype  
 
 
 
@@ -70,11 +70,12 @@ tol=1e-5, max_iter=300, seed=42, integral_mesh_size=10  , integral_size=5.5):
         )
         errors[t] = current_errors
 
-        _print_stats(t, alpha_tensor, errors)
+        _print_stats(t, alpha_tensor, lambda_tensor, errors)
 
         # if torch.all(current_errors < 1e-4):
         #     integral_mesh_size = 15
         #     integral_size = 5.5
+
         if torch.all(current_errors < tol_tensor):
             divergence = False
             break
@@ -217,8 +218,8 @@ def _initialize_state_evolution(
     return R_00_sqrtm_inv, R_01_t, schur_t, S_t, divergence, errors
 
 
-def _print_stats(t, alpha, errors):
-    print(f"state evolution iteration {t + 1} Done (alpha: {alpha.item()})")
+def _print_stats(t, alpha, lambda_reg, errors):
+    print(f"state evolution iter {t + 1} Done (alpha: {alpha.item()}, lambda: {lambda_reg.item()})")
     print(f"     ** R_01 RESIDUAL IS {errors[t, 0].item()}**")
     print(f"     ** SCHUR RESIDUAL IS {errors[t, 1].item()}**")
     print(f"     ** S RESIDUAL IS {errors[t, 2].item()}**\n\n")

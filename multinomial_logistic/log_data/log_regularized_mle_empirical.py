@@ -11,21 +11,15 @@ def run_and_log_mle_regularized(
     type_3,
     d=250,
     n_trials=100,
-    lambda_regs=np.linspace(0.001, 0.6, 10),
+    lambda_regs=np.linspace(0.0005, 0.6, 100),
     alpha_values=[1.5, 3, 5, 10],
 ):
-
     # Create base filename without timestamp, but with d and n_trials
-    if type_3 == False:
-        base_filename = f"mle_reg_k{k}_k0{k_0}_d{d}_ntrials{n_trials}.json"
-        base_filepath = os.path.join(
-            os.path.dirname(__file__), "newdata", "mle_empirical", base_filename
-        )
-    elif type_3 != False:
-        base_filename = f"MLE_reg_evals_(k={k},k0={k_0})_{type_3}.json"
-        base_filepath = os.path.join(
-            os.path.dirname(__file__), "Oct_data", "mle_empirical", base_filename
-        )
+
+    base_filename = f"MLE_reg_evals_(k={k},k0={k_0})_{type_3}.json"
+    base_filepath = os.path.join(
+        os.path.dirname(__file__), "Oct_data", "mle_empirical", base_filename
+    )
 
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
     data_dir = os.path.dirname(base_filepath)

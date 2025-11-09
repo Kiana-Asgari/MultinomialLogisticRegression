@@ -48,7 +48,7 @@ def train_error(R_00, schur, R_01, S, alpha, k, k_0, seed=42):
         n_azimuth=12,
         n_polar=10,
         radius=5,
-        batch_size=180_000,
+        batch_size=220_000,
     )
 
     loss_value = loss_tensor[0].item()

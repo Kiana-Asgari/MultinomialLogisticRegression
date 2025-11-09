@@ -44,8 +44,9 @@ def run_and_log_fp_regularized(
             if (
                 meta["R_00"] == R_list
                 and abs(meta["alpha"] - alpha_val) < 1e-12
-                and abs(meta["lambda_reg"] - lambda_val) < 1e-7
+                and abs(meta["lambda_reg"] - lambda_val) < 1e-10
             ):
+                print(f"Found existing entry for alpha={alpha_val}, lambda={lambda_val}; found lambda_reg = {meta['lambda_reg']}")
                 return key, entry
         return None, None
 

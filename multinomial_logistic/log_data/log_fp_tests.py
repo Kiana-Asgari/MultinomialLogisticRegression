@@ -80,8 +80,8 @@ def run_and_log_fp_tests_regularized(
         schur_vals = schur_matrices[alpha_mask]
         R_01_vals = R_01_matrices[alpha_mask]
 
-        # Sort by lambda values (in descending order)
-        sort_idx = np.argsort(lambda_values)[::-1]
+        # Sort by lambda values (in ascending order)
+        sort_idx = np.argsort(lambda_values) #[::-1]
         lambda_values = lambda_values[sort_idx]
         S_vals = S_vals[sort_idx]
         schur_vals = schur_vals[sort_idx]
@@ -231,36 +231,25 @@ def run_and_log_fp_tests_regularized(
     return filepath
 
 
-def refine_logged_fp_tests_regularized(
-    k_0,
-    k,
-    R_00,
-    type_3,
-    metric_name: Literal['test_errors', 'train_errors', 'f_norms', 'misclassification_test_errors'],
-    modified_alpha,
-):
-    """Recompute a stored regularized FP evaluation metric for a specific alpha."""
 
-    valid_metrics = {"test_errors": "test_errors",
-                    "train_errors": "train_errors",
-                    "f_norms": "f_norms",
-                    "misclassification_test_errors": "misclassification_test_errors"}
-    if metric_name not in valid_metrics:
-        raise ValueError(
-            f"Unsupported metric '{metric_name}'. Choose from {sorted(valid_metrics)}."
-        )
+
+
+########################################################################################
+def _match_alpha_key(target, keys):
+    for key in keys:
+        if abs(float(key) - target) < 1e-8:
+            return key
+    return None
+
+def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modified_alpha):
 
     alpha_val = float(modified_alpha)
-
-
     data_dir = os.path.join(
         os.path.dirname(__file__), "Oct_data", "fp_tests_regularized"
     )
     filename = f"FP_reg_evals_k{k}_k0{k_0}_{type_3}.json"
     filepath = os.path.join(data_dir, filename)
 
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"No regularized FP test file found at {filepath}")
 
     with open(filepath, "r") as f:
         data = json.load(f)
@@ -269,16 +258,7 @@ def refine_logged_fp_tests_regularized(
     results = data.get("results", {})
 
 
-    def _match_alpha_key(target, keys):
-        for key in keys:
-            if abs(float(key) - target) < 1e-8:
-                return key
-        return None
-
     alpha_key = _match_alpha_key(alpha_val, results.keys())
-
-
-    stored_lambda = np.array(results[alpha_key]["lambda_values"], dtype=float)
 
     (
         alphas,
@@ -290,20 +270,11 @@ def refine_logged_fp_tests_regularized(
     ) = get_regularized_fp_data(k, k_0, R_00, type_3)
 
     mask_alpha = np.isclose(alphas, alpha_val, atol=1e-8)
-    if not mask_alpha.any():
-        raise ValueError(f"Alpha {alpha_val} not present in FP data file.")
 
     lambda_alpha = lambda_regs[mask_alpha]
     S_alpha = S_matrices[mask_alpha]
     schur_alpha = schur_matrices[mask_alpha]
     R_01_alpha = R_01_matrices[mask_alpha]
-
-    # Order data in descending lambda to mirror stored ordering
-    order = np.argsort(lambda_alpha)[::-1]
-    lambda_alpha = lambda_alpha[order]
-    S_alpha = S_alpha[order]
-    schur_alpha = schur_alpha[order]
-    R_01_alpha = R_01_alpha[order]
 
     # Filter out lambda >= 0.8
     valid = lambda_alpha < 0.8
@@ -316,83 +287,38 @@ def refine_logged_fp_tests_regularized(
     sqrtm_R00_inv = np.linalg.inv(sqrtm(R_00))
 
     recompute_funcs = {
-        "test_errors": lambda idx: test_error(
-            R_00,
-            schur_alpha[idx],
-            R_01=R_01_alpha[idx],
-            alpha=alpha_val,
-            k=k,
-            k_0=k_0,
-        ),
-        "train_errors": lambda idx: train_error(
-            R_00=R_00,
-            schur=schur_alpha[idx],
-            R_01=R_01_alpha[idx],
-            S=S_alpha[idx],
-            alpha=alpha_val,
-            k=k,
-            k_0=k_0,
-        ),
-        "f_norms": lambda idx: (
-            np.trace(R_00)
-            + np.trace(
-                schur_alpha[idx] + R_01_alpha[idx] @ inv_R00 @ R_01_alpha[idx].T
-            )
-            - np.trace(R_01_alpha[idx])
-            - np.trace(R_01_alpha[idx].T)
-        ),
-        "misclassification_test_errors": lambda idx: misclassification_test_error(
-            S=S_alpha[idx],
-            R_00=R_00,
-            schur_t=schur_alpha[idx],
-            A_t=R_01_alpha[idx] @ sqrtm_R00_inv,
-            alpha=alpha_val,
-            k=k,
-            k_0=k_0,
-        ),
+        "test_errors": lambda idx: test_error(R_00=R_00, schur=schur_alpha[idx], R_01=R_01_alpha[idx], alpha=alpha_val, k=k, k_0=k_0),
+        "train_errors": lambda idx: train_error(R_00=R_00, schur=schur_alpha[idx], R_01=R_01_alpha[idx], S=S_alpha[idx], alpha=alpha_val, k=k, k_0=k_0),
+        "f_norms": lambda idx: np.trace(R_00) + np.trace(schur_alpha[idx] + R_01_alpha[idx] @ inv_R00 @ R_01_alpha[idx].T) - np.trace(R_01_alpha[idx]) - np.trace(R_01_alpha[idx].T),
+        "misclassification_test_errors": lambda idx: misclassification_test_error(S=S_alpha[idx], R_00=R_00, schur_t=schur_alpha[idx], A_t=R_01_alpha[idx] @ sqrtm_R00_inv, alpha=alpha_val, k=k, k_0=k_0),
     }
+    lambda_values = results[alpha_key]["lambda_values"]
+    updated_metric_values = list(results[alpha_key].get(metric_name, []))
+    if len(updated_metric_values) > len(lambda_values):
+        updated_metric_values = updated_metric_values[: len(lambda_values)]
+    if len(updated_metric_values) < len(lambda_values):
+        updated_metric_values.extend(
+            [None] * (len(lambda_values) - len(updated_metric_values))
+        )
 
-    old_metric_values = results[alpha_key].get(metric_name, [])
-    recomputed_values = [
-        float(old_metric_values[i]) if i < len(old_metric_values) else None
-        for i in range(len(stored_lambda))
-    ]
-
-    lambda_order = np.argsort(stored_lambda)
-
-    for pos in lambda_order:
-        lambda_val = stored_lambda[pos]
+    for i, lambda_val in enumerate(lambda_values):
         matches = np.where(np.isclose(lambda_alpha, lambda_val, atol=1e-6))[0]
         if matches.size == 0:
-            if recomputed_values[pos] is None:
-                if pos < len(old_metric_values):
-                    recomputed_values[pos] = float(old_metric_values[pos])
+            if i >= len(updated_metric_values):
+                updated_metric_values.append(None)
             continue
 
         idx = matches[0]
-        recomputed_values[pos] = float(recompute_funcs[metric_name](idx))
-        print(
-            f"for alpha: {alpha_val}, lambda: {lambda_val}, {metric_name} is {recomputed_values[pos]}"
-        )
+        metric_value = float(recompute_funcs[metric_name](idx))
+        updated_metric_values[i] = metric_value
+        results[alpha_key][metric_name] = updated_metric_values
 
-    final_values = []
-    for i, val in enumerate(recomputed_values):
-        if val is None:
-            if i < len(old_metric_values):
-                final_values.append(float(old_metric_values[i]))
-        else:
-            final_values.append(float(val))
+        with open(filepath, "w") as f:
+            json.dump({"metadata": metadata, "results": results}, f, indent=4)
+            
+        print(f"for alpha: {alpha_val}, lambda: {lambda_val}, {metric_name} is {metric_value}")
 
-
-
-    results[alpha_key][metric_name] = final_values
-
-    with open(filepath, "w") as f:
-        json.dump({"metadata": metadata, "results": results}, f, indent=4)
-
-    print(
-        f"Updated {metric_name} for alpha={alpha_key} in {filepath}: {recomputed_values}"
-    )
+    print(f"Updated {metric_name} for alpha={alpha_key} in {filepath}: {results[alpha_key][metric_name]}")
 
     return filepath
 

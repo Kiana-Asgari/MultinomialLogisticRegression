@@ -127,6 +127,8 @@ def plot_regularized_error(k,
         fig, ax = plt.subplots()
 
         for i, alpha in enumerate(unique_alphas):
+            if alpha == 15:
+                continue
             data = results[alpha]
             color = colors[i % len(colors)]
 

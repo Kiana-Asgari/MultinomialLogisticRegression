@@ -47,10 +47,11 @@ def R_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=2 * k * k,
-        batch_size=50_000,
+        batch_size=200_000,
         n_radius=18, #14 is good enough I think. Below is bad
         n_polar=integral_mesh_size,
-        radius=integral_size
+        radius=integral_size,
+        dtype=dtype
     )
     R_01_integrand = combined_integrand[: k * k].reshape(k, k)
     schur_integrand = combined_integrand[k * k :].reshape(k, k)
