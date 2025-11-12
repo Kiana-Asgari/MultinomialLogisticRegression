@@ -18,6 +18,7 @@ def run_and_log_fp_regularized(
     max_iter: int = 80,
     integral_mesh_size: int = 8,
     integral_size: float = 4.5,
+    dtype: torch.dtype = torch.float64,
 ):
 
     base_filepath = os.path.join(
@@ -103,6 +104,7 @@ def run_and_log_fp_regularized(
                     max_iter=max_iter,
                     integral_mesh_size=integral_mesh_size,
                     integral_size=integral_size,
+                    dtype=dtype,
                 )
 
                 results[key] = {
@@ -121,12 +123,11 @@ def refine_logged_regulairzed_fp(
     k_0: int,
     k: int,
     type_3: Literal[
-        False,
         "symmetric",
         "two_classes_close",
         "three_classes_close",
         "two_vs_two_vs_one",
-    ] = False,
+    ] = "symmetric",
     tol: float = 1e-5,
     max_iter: int = 80,
     integral_mesh_size: int = 8,
@@ -149,7 +150,7 @@ def refine_logged_regulairzed_fp(
             os.path.dirname(__file__),
             "Oct_data",
             "fp_reg_solution",
-            f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}.json",
+            f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}(old).json",
         )
         print(f"Refining regularized FP data for type_3 = {type_3}")
 

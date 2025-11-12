@@ -47,7 +47,7 @@ def R_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=2 * k * k,
-        batch_size=400_000,
+        batch_size=300_000,
         n_radius=32, #14 is good enough I think. Below is bad
         n_polar=integral_mesh_size,
         radius=integral_size,

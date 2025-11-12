@@ -103,7 +103,7 @@ def run_and_log_mle(
     elif type_3 != False:
         R_00_values = np.array([get_R_00(k, type_3)])
 
-    alphas = np.arange(3.6, 16, 0.4)
+    alphas = np.linspace(3.5, 5, 10)
     alphas = alphas[::-1]
     print(
         "\n MEL:alphas:",

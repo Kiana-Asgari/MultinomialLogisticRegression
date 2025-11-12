@@ -31,75 +31,42 @@ def _ESD():
         except Exception as e:
             print(f"Error for alpha {alpha}: {e}", flush=True)
 
-def reg_stuff():
-    k, k_0 = 4, 4
-    type_3 = 'symmetric'
-    R00 = get_R_00(k, type_3)
-    for modified_alpha in [1.5, 3, 5, 10]:     
-        refine_logged_regulairzed_fp(k_0=k_0, k=k, type_3=type_3, tol=1e-5, max_iter=2, integral_size=5, integral_mesh_size=13, 
-                                    modified_alpha=modified_alpha, dtype=torch.float32)
-        refine_logged_fp_tests_regularized(k_0=k_0, k=k, R_00=R00, type_3=type_3, metric_name='misclassification_test_errors', modified_alpha=modified_alpha)
-        plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100, lambda_reg_max=0.06, lambda_reg_min=0)
 
-    plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100, lambda_reg_max=0.06, lambda_reg_min=0)
-
-
-
-if __name__ == "__main__":
-    k = 4
-    k_0 = 4
-    type_3 = 'symmetric'
-    R00 = get_R_00(k, type_3)
-    reg_stuff()
-
-    #plot_errors_vs_alpha(k=k, k_0=k_0, alpha_min=6, alpha_max=13.1)
-    # type_3 = 'three_classes_close'
-    # alphas = [7.5, 6.5, 5.5, 4.5, 4.4]
-    # run_and_log_fp(k_0=k_0, k=k, alphas=alphas, lambda_reg=0, tol=1e-2, max_iter=50, use_lambda_reg=0.000, dtype=torch.float32,
-    #                     type_3=type_3, integral_mesh_size=13, integral_size=5)
-    # run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='misclassification_test_error', alpha_min=3.6, alpha_max=10)
-    # run_and_log_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='misclassification_test_error', alpha_min=3.6, alpha_max=10)
-
-
-
-
-
-    for i in range(10):
-        print(f"\n\nIteration {i}\n\n", flush=True)
-        type_3 = 'three_classes_close'
-        R00 = get_R_00(k, type_3)
-        refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=5*1e-2, max_iter=5, use_lambda_reg=0.000, dtype=torch.float32,
-                        type_3=type_3, integral_mesh_size=13, integral_size=5, alpha_max=14, alpha_min=3.6)
-        refine_logged_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='misclassification_test_error', alpha_min=3.6, alpha_max=10)
-        #refine_logged_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='test_error', alpha_min=3.6, alpha_max=10)
-        plot_errors_vs_alpha(k=k, k_0=k_0, alpha_min=0, alpha_max=14.0)
-        continue
  
 
-        type_3 = 'two_classes_close'
+# whats left from regularized fp: wait for the soal11 run to finish. It is modifiying 1.5, 3, 5 alphas.
+# Then, merge the fp_solution with fp_solution(old).json; rename the old file to be tha main file;
+# change the @log_fp_regularized to use the new file not the old one.
+# run the fp_tests_regularized with the new file; currently it only has half of the 10 alpha.
+# plot the results.
+
+
+
+# Whats left from fp: wait for the soal10 run to finish. It is midofiying symmetric fp.
+# After, look at the plots of symmetric fp. Then, you need to keo refining two classes close fp.
+#important: On soal 10; only use two fences here. The full fences are for soal 11.
+if __name__ == "__main__":
+    k,k_0 = 4, 4
+    R00 = get_R_00(k, "symmetric")  
+
+    for type_3 in ['symmetric']: #need to run this
         R00 = get_R_00(k, type_3)
-        refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=5*1e-2, max_iter=5, use_lambda_reg=0.000, dtype=torch.float32,
-                        type_3=type_3, integral_mesh_size=13, integral_size=5, alpha_max=5, alpha_min=3.6)
-        refine_logged_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='misclassification_test_error', alpha_min=3.6, alpha_max=10)
-        type_3 = 'symmetric'
-        R00 = get_R_00(k, type_3)
-        refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=5*1e-2, max_iter=5, use_lambda_reg=0.000, dtype=torch.float32,
-                        type_3=type_3, integral_mesh_size=13, integral_size=5, alpha_max=5, alpha_min=3.6)
-        refine_logged_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='misclassification_test_error', alpha_min=3.6, alpha_max=10)
-    
-        type_3 = 'two_vs_two_vs_one'
-        R00 = get_R_00(k, type_3)
-        refine_logged_fp(k_0=k_0, k=k, lambda_reg=0, tol=5*1e-2, max_iter=5, use_lambda_reg=0.000, dtype=torch.float32,
-                        type_3=type_3, integral_mesh_size=13, integral_size=5, alpha_max=5, alpha_min=3.6)
-        refine_logged_fp_tests(k_0=k_0, k=k, lambda_reg=0, type_3=type_3, metric_name='misclassification_test_error', alpha_min=3.6, alpha_max=10)
+        refine_logged_fp(k_0=k_0, k=k, type_3=type_3, tol=1e-5, use_lambda_reg=0,
+                                        max_iter=4, integral_size=5, integral_mesh_size=13, 
+                                        alpha_max=5, alpha_min=3.6, dtype=torch.float32)
 
-        plot_errors_vs_alpha(k=k, k_0=k_0, alpha_min=3.6, alpha_max=14.0)
+        refine_logged_fp_tests(k_0=k_0, k=k, type_3=type_3, metric_name='train_error')
+        plot_errors_vs_alpha(k=k, k_0=k_0, alpha_min=3.6, alpha_max=14.0, d=300)
+    sys.exit()
+    lambdas = np.linspace(0.05, 0.3, 20)
 
-            
+    run_and_log_fp_regularized(k_0=k_0, k=k, type_3=type_3, alphas=np.array([10]), lambda_regs=lambdas,
+                             dtype=torch.float32, integral_mesh_size=13, integral_size=5, max_iter=30, tol=1e-4)
+    run_and_log_fp_tests_regularized(k_0=k_0, k=k,type_3=type_3, R_00=R00)
+    plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100, lambda_reg_max=0.3, lambda_reg_min=0)
 
 
 
-    plot_errors_vs_alpha(k=k, k_0=k_0, alpha_min=3.6, alpha_max=14.0)
 
 
 

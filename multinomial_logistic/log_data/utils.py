@@ -113,11 +113,11 @@ def plot_regularized_error(k,
     unique_alphas = sorted(results.keys())
     # Colors for different alpha lines
     colors = [
+        'black',
+        '#002B5B',  # Darkest navy blue
         '#3E7893',  # Medium blue
         '#5091AA',  # Blue gray
         '#62A9C1',  # Light steel blue
-        '#002B5B',  # Darkest navy blue
-        'black',
         '#74C2D8',  # Sky blue
         '#86DBEF',  # Light blue
         '#98F4FF'   # Lightest blue
@@ -300,10 +300,10 @@ def set_up_plotting_style():
         'axes.formatter.use_mathtext': True,
     })
     colors = [
-        '#3E7893',  # Medium blue
-        '#002B5B',  # Darkest navy blue
+        '#E57A77',
+        '#1F449C',  # Deep ocean blue
+        'mediumslateblue',  # Medium blue
         '#5091AA',  # Blue gray
-        'black',
         '#62A9C1',  # Light steel blue
         '#74C2D8',  # Sky blue
         '#86DBEF',  # Light blue
@@ -319,7 +319,7 @@ def set_up_plotting_style():
 from multinomial_logistic.log_data.log_fp_tests import get_fp_misclassification_statistics
 from configs.R_initiation import get_R_00
 
-def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
+def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100):
     colors = set_up_plotting_style()
     if k>=3:
         fp_results_symmetric = get_fp_statistics(k, k_0, type_3='symmetric')
@@ -344,13 +344,10 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
     # Read MLE data
     if k>3:
         base_path = 'multinomial_logistic/log_data/Oct_data/mle_empirical'
-        d = 300
     elif k==3:
         base_path = 'multinomial_logistic/log_data/Oct_data/mle_empirical'
-        d = 250
     else:
         base_path = 'multinomial_logistic/log_data/newdata/mle_empirical'
-        d = 250
 
     # Load mle data
     if k>=3:
@@ -389,10 +386,10 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
         plt.figure(figsize=(10, 6))
         
         # Plot theoretical curves
-        labels = [r'$\mathbf{R}_{00}= \mathbf{R}_{00}^{(1)}$', 
-                 r'$\mathbf{R}_{00}=  \mathbf{R}_{00}^{(3)}$', 
-                 r'$\mathbf{R}_{00}=  \mathbf{R}_{00}^{(2)}$',
-                 r'$\mathbf{R}_{00}=  \mathbf{R}_{00}^{(4)}$']
+        labels = [r'$\mathbf{R}_{00}= (symmetric)$', 
+                 r'$\mathbf{R}_{00}= (three classes close)$', 
+                 r'$\mathbf{R}_{00}= (two classes close)$',
+                 r'$\mathbf{R}_{00}= (two vs two vs one)$']
         
         alphas_list = [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric, alphas_fp_two_vs_two_vs_one]
         
