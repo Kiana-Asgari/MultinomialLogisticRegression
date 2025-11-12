@@ -15,7 +15,7 @@ tol=1e-5, max_iter=300, seed=42, integral_mesh_size=None, integral_size=None, dt
     torch.manual_seed(seed)
 
     device = get_primary_device()
-    dtype = torch.float32 if dtype is None else dtype  
+    dtype = torch.float64 if dtype is None else dtype  
 
 
 
@@ -71,6 +71,11 @@ tol=1e-5, max_iter=300, seed=42, integral_mesh_size=None, integral_size=None, dt
         errors[t] = current_errors
 
         _print_stats(t, alpha_tensor, lambda_tensor, errors)
+        print('         S_next:', S_next.flatten())
+        print('         R_01_next:', R_01_next.flatten())
+        print('         schur_next:', schur_next.flatten())
+
+
 
         # if torch.all(current_errors < 1e-4):
         #     integral_mesh_size = 15
@@ -98,7 +103,30 @@ def _compute_next_state_variables(
     R_00_sqrtm_inv,
     integral_mesh_size=10,
     integral_size=5.5,
-):
+): 
+    while False:
+        S_next = S_recursion(
+            S_t_tensor=S_t,
+            R_00_tensor=R_00,
+            R00_sqrt=R00_sqrt,
+            schur_tensor=schur_t,
+            R_01_tensor=R_01_t,
+            lambda_tensor=lambda_reg,
+            alpha_tensor=alpha,
+            k=k,
+            k_0=k_0,
+            R_00_sqrtm_inv_tensor=R_00_sqrtm_inv,
+            integral_mesh_size=10,
+            integral_size=integral_size,
+        )
+        print(f"   [midstep] S_next -S_t norm: {torch.linalg.norm(S_next - S_t)}")
+        if torch.linalg.norm(S_t - S_next) < 1e-1:
+            S_t = S_next
+            break
+        S_t = S_next
+        
+
+
     S_next = S_recursion(
         S_t_tensor=S_t,
         R_00_tensor=R_00,
@@ -113,23 +141,47 @@ def _compute_next_state_variables(
         integral_mesh_size=integral_mesh_size,
         integral_size=integral_size,
     )
+   # print(f"   [final] S_next -S_t norm: {torch.linalg.norm(S_next - S_t)}")
+
+    while False:
+        R_01_next, schur_next = R_recursion(
+            S_t_tensor=S_t,
+            S_next_tensor=S_next,
+            R_00_tensor=R_00,
+            schur_tensor=schur_t,
+            R_01_tensor=R_01_t,
+            lambda_tensor=lambda_reg,
+            alpha_tensor=alpha,
+            k=k,
+            k_0=k_0,
+            R_00_sqrtm_inv_tensor=R_00_sqrtm_inv,
+            integral_mesh_size=8,
+            integral_size=integral_size,
+        )
+        print(f"   [midstep] schur_next -schur_t norm: {torch.linalg.norm(schur_next - schur_t)}")
+        if torch.linalg.norm(schur_next - schur_t) < 1e-1:
+            R_01_t = R_01_next
+            schur_t = schur_next
+            break
+        R_01_t = R_01_next
+        schur_t = schur_next
 
     R_01_next, schur_next = R_recursion(
-        S_t_tensor=S_t,
-        S_next_tensor=S_next,
-        R_00_tensor=R_00,
-        schur_tensor=schur_t,
-        R_01_tensor=R_01_t,
-        lambda_tensor=lambda_reg,
-        alpha_tensor=alpha,
-        k=k,
-        k_0=k_0,
-        R_00_sqrtm_inv_tensor=R_00_sqrtm_inv,
-        integral_mesh_size=integral_mesh_size,
-        integral_size=integral_size,
-    )
+            S_t_tensor=S_t,
+            S_next_tensor=S_next,
+            R_00_tensor=R_00,
+            schur_tensor=schur_t,
+            R_01_tensor=R_01_t,
+            lambda_tensor=lambda_reg,
+            alpha_tensor=alpha,
+            k=k,
+            k_0=k_0,
+            R_00_sqrtm_inv_tensor=R_00_sqrtm_inv,
+            integral_mesh_size=integral_mesh_size,
+            integral_size=integral_size,
+        )
 
-    print("\n", "-" * 40, "\n")
+
     return S_next, schur_next, R_01_next
 
 
@@ -193,10 +245,7 @@ def _initialize_state_evolution(
 
 
 
-    print("*************state evolution iteration started*************")
-    print(
-        f"     [initial parameters] lambda: {lambda_reg}, alpha: {alpha}, k: {k}, R_00 norm: {torch.linalg.norm(R_00)}"
-    )
+    print(f"{'*'*20} State evolution (α={alpha:5.2f}, λ={lambda_reg}, R_00 = [{R_00[0,0]:.2f}  {R_00[0,1]:.2f}  {R_00[1,0]:.2f}  {R_00[1,1]:.2f}]) {'*'*20}")
     dtype = R_00.dtype
     device = R_00.device
     R_00_sqrtm_inv = torch.linalg.inv(_matrix_sqrt(R_00))
@@ -219,11 +268,7 @@ def _initialize_state_evolution(
 
 
 def _print_stats(t, alpha, lambda_reg, errors):
-    print(f"state evolution iter {t + 1} Done (alpha: {alpha.item()}, lambda: {lambda_reg.item()})")
-    print(f"     ** R_01 RESIDUAL IS {errors[t, 0].item()}**")
-    print(f"     ** SCHUR RESIDUAL IS {errors[t, 1].item()}**")
-    print(f"     ** S RESIDUAL IS {errors[t, 2].item()}**\n\n")
-
+    print(f"[Iter {t + 1}]     R01 error: {errors[t, 0].item():.4f},   Schur error: {errors[t, 1].item():.4f},   S error: {errors[t, 2].item():.4f}\n")
 
 def _matrix_sqrt(matrix):
     symmetric_matrix = 0.5 * (matrix + matrix.transpose(-1, -2))

@@ -6,7 +6,7 @@ from multinomial_logistic.utils import batched_inv
 from multinomial_logistic.evaluation.utils import plot_distribution, custom_linspace
 from state_evolution.full_recursion import state_evolution_full_recursion
 from multinomial_logistic.MLE_empirical.mle_empirical_baseline import esd_empirical
-from state_evolution.utils import mesh_integration, sphere_mesh_integration
+from state_evolution.utils import sphere_mesh_integration
 
 
 

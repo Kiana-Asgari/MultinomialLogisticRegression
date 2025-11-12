@@ -5,6 +5,7 @@ from state_evolution.full_recursion import state_evolution_full_recursion
 from typing import Literal
 from configs.R_initiation import get_R_00
 import fcntl
+import torch
 
 
 def run_and_log_fp_regularized(
@@ -131,6 +132,7 @@ def refine_logged_regulairzed_fp(
     integral_mesh_size: int = 8,
     modified_alpha: float = 10,
     integral_size: float = 4.5,
+    dtype: torch.dtype = torch.float64,
 ):
     """Refine previously logged regularized fixed points by rerunning state evolution."""
 
@@ -151,10 +153,6 @@ def refine_logged_regulairzed_fp(
         )
         print(f"Refining regularized FP data for type_3 = {type_3}")
 
-    if not os.path.exists(base_filepath):
-        raise FileNotFoundError(
-            f"No logged regularized FP data found at {base_filepath}"
-        )
 
     with open(base_filepath, "r") as f:
         data = json.load(f)
@@ -214,6 +212,7 @@ def refine_logged_regulairzed_fp(
                     max_iter=max_iter,
                     integral_mesh_size=integral_mesh_size,
                     integral_size=integral_size,
+                    dtype=dtype
                 ))
         else:
             schur_refined, R_01_refined, S_refined, diverged = schur, R_01, S, False # not refining for other alphas

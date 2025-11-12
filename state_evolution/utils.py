@@ -7,7 +7,7 @@ import math
 import contextlib
 
 
-_ALLOWED_CUDA_INDICES = tuple(range(3, 5))
+_ALLOWED_CUDA_INDICES =  (3,4)
 
 
 def _get_preferred_cuda_devices(max_devices=None):
@@ -127,7 +127,7 @@ def _set_device_and_dtype(integrand_args, dtype=None):
     # ---------- Device / dtype discovery (unchanged pattern) ----------
     preferred_devices = _get_preferred_cuda_devices()
     default_device = preferred_devices[0] if preferred_devices else torch.device("cpu")
-    default_dtype = torch.float32 if dtype is None else dtype
+    default_dtype = torch.float64 if dtype is None else dtype
 
     source_tensors = [arg for arg in integrand_args if isinstance(arg, torch.Tensor)]
     if source_tensors:

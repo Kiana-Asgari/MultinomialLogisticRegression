@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import torch
 import os
 from datetime import datetime
 from state_evolution.full_recursion import state_evolution_full_recursion
@@ -7,8 +8,8 @@ import fcntl
 from typing import Literal
 from configs.R_initiation import get_R_00
 
-def run_and_log_fp(k_0, k, alphas, lambda_reg=0, tol=1e-5, max_iter=300, 
-non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_size=5,
+def run_and_log_fp(k_0, k, alphas, lambda_reg=0, tol=1e-5, max_iter=300, use_lambda_reg=0,
+non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_size=5, dtype=torch.float64,
                     type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):     
     # Create base filename without timestamp
 
@@ -100,14 +101,15 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
                                                             schur_0=schur,
                                                             R_01_0=R_01,
                                                             S_0=S,
-                                                            lambda_reg=lambda_reg,
+                                                            lambda_reg=use_lambda_reg,
                                                             alpha=alpha,
                                                             k=k,
                                                             k_0=k_0,
                                                             tol=tol,
                                                             max_iter=max_iter,
                                                             integral_mesh_size=integral_mesh_size,
-                                                            integral_size=integral_size
+                                                            integral_size=integral_size,
+                                                            dtype=dtype
                                                         )
             
 
@@ -148,10 +150,11 @@ non_symmetric=False, two_classes_close=False, integral_mesh_size=10, integral_si
     return filepath
 
 
-def refine_logged_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300,
+def refine_logged_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300, use_lambda_reg=0,
                      non_symmetric=False, two_classes_close=False,
                      integral_mesh_size=10, integral_size=5,
-                     type_3: Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):
+                     type_3: Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False,
+                     alpha_max=6, alpha_min=4.5, dtype=torch.float64):
     """Refine previously logged fixed points by rerunning state evolution from saved states."""
 
     if non_symmetric and not type_3:
@@ -196,11 +199,11 @@ def refine_logged_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300,
     for R_00_str, alpha_dict in results.items():
         R_00 = np.array(json.loads(R_00_str))
         sorted_alpha_items = sorted(alpha_dict.items(), key=lambda item: float(item[0]))
-        sorted_alpha_items = sorted_alpha_items[::-1]
+        #sorted_alpha_items = sorted_alpha_items[::-1]
 
         for alpha_str, entry in sorted_alpha_items:
-            if float(alpha_str) > 5:
-                print(f"Skipping alpha = {alpha_str} because it is greater than 5")
+            if float(alpha_str) >alpha_max or float(alpha_str) < alpha_min:
+                #print(f"Skipping alpha = {alpha_str} because it is greater than 5")
                 continue
 
             alpha_value = float(alpha_str)
@@ -208,21 +211,22 @@ def refine_logged_fp(k_0, k, lambda_reg=0, tol=1e-5, max_iter=300,
             R_01 = np.array(entry["R_01"])
             S = np.array(entry["S"])
 
-            print(f"\nRefining alpha = {alpha_value}")
-        
-
+            print(f"\nRefining alpha = {alpha_value:5.2f}, lambda = {use_lambda_reg}")
+     
             schur_refined, R_01_refined, S_refined, diverged = state_evolution_full_recursion(
                 R_00=R_00,
                 schur_0=schur,
                 R_01_0=R_01,
                 S_0=S,
-                lambda_reg=lambda_reg,
+                lambda_reg=use_lambda_reg,
                 alpha=alpha_value,
                 k=k,
                 k_0=k_0,
                 tol=tol,
                 max_iter=max_iter,
-                integral_mesh_size=integral_mesh_size
+                integral_mesh_size=integral_mesh_size,
+                integral_size=integral_size,
+                dtype=dtype
             )
 
             entry["schur"] = schur_refined.tolist()

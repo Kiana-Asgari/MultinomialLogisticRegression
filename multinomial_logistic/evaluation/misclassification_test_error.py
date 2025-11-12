@@ -27,14 +27,15 @@ def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, dtype=tor
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_radius=18,
-        n_polar=11,
-        radius=7,
+        n_radius=32,
+        n_polar=10,
+        n_azimuth=50,
+        radius=6,
         batch_size=600_000,
     )
 
     accuracy = accuracy_tensor[0]
-    print("     accuracy_mesh: ", accuracy.item())
+
     return (1 - accuracy).item()
 
 

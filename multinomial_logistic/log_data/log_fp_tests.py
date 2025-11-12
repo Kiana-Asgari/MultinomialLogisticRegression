@@ -582,10 +582,22 @@ def refine_logged_fp_tests(
     non_symmetric=False,
     two_classes_close=False,
     type_3: Literal[
-        False, "symmetric", "two_classes_close", "three_classes_close"
+        False, "symmetric", "two_classes_close", "three_classes_close", "two_vs_two_vs_one"
     ] = False,
+    metric_name=None,
+    alpha_min=None,
+    alpha_max=None,
 ):
-    """Recompute stored FP test metrics for all logged alphas."""
+    """
+    Recompute stored FP test metrics using previously saved FP solutions.
+
+    Args:
+        metric_name (str | None): Specific metric to recompute. When None, all metrics
+            are refreshed. Allowed values are
+            {"test_error","train_error","misclassification_test_error","F_norm"}.
+        alpha_min (float | None): Inclusive lower bound for the actual alpha values to refine.
+        alpha_max (float | None): Inclusive upper bound for the actual alpha values to refine.
+    """
 
     if type_3 == False and two_classes_close:
         base_filename = (
@@ -650,6 +662,62 @@ def refine_logged_fp_tests(
         print("No stored FP test results to refine.")
         return filepath
 
+    metric_aliases = {
+        "f_norm": "F_norm",
+        "f-norm": "F_norm",
+        "fnorm": "F_norm",
+    }
+    metric_functions = {
+        "test_error": lambda R_00, schur, R_01, S, alpha_val, inv_R00, sqrtm_R00_inv: float(
+            test_error(R_00, schur, R_01=R_01, alpha=alpha_val, k=k, k_0=k_0)
+        ),
+        "train_error": lambda R_00, schur, R_01, S, alpha_val, inv_R00, sqrtm_R00_inv: float(
+            train_error(
+                R_00=R_00,
+                schur=schur,
+                R_01=R_01,
+                S=S,
+                alpha=alpha_val,
+                k=k,
+                k_0=k_0,
+            )
+        ),
+        "misclassification_test_error": lambda R_00, schur, R_01, S, alpha_val, inv_R00, sqrtm_R00_inv: float(
+            misclassification_test_error(
+                S=S,
+                R_00=R_00,
+                schur_t=schur,
+                A_t=R_01.T @ sqrtm_R00_inv,
+                alpha=alpha_val,
+                k=k,
+                k_0=k_0,
+            )
+        ),
+        "F_norm": lambda R_00, schur, R_01, S, alpha_val, inv_R00, sqrtm_R00_inv: float(
+            np.trace(R_00)
+            + np.trace(schur + R_01 @ inv_R00 @ R_01.T)
+            - np.trace(R_01)
+            - np.trace(R_01.T)
+        ),
+    }
+
+    if metric_name is None:
+        metrics_to_update = tuple(metric_functions.keys())
+    else:
+        metric_candidate = metric_name.strip()
+        if metric_candidate in metric_functions:
+            metrics_to_update = (metric_candidate,)
+        else:
+            normalized = metric_candidate.lower()
+            canonical = metric_aliases.get(normalized)
+            if canonical is None or canonical not in metric_functions:
+                allowed = ", ".join(metric_functions.keys())
+                raise ValueError(
+                    f"Invalid metric '{metric_name}'. Allowed values are: {allowed}"
+                )
+            metrics_to_update = (canonical,)
+
+
     def _match_alpha_key(value, candidates):
         for key in candidates:
             try:
@@ -659,7 +727,7 @@ def refine_logged_fp_tests(
                 continue
         return None
 
-    updated = False
+    updates_applied = 0
 
     for R_00_str, alpha_dict in results.items():
         fp_alpha_dict = fp_results.get(R_00_str)
@@ -677,6 +745,15 @@ def refine_logged_fp_tests(
 
         for alpha_key, entry in alpha_dict.items():
             alpha_val = float(entry.get("actual_alpha", alpha_key))
+
+            if alpha_min is not None and alpha_val < alpha_min:
+                continue
+            if alpha_max is not None and alpha_val > alpha_max:
+                continue
+
+            if bool(entry.get("diverged", False)):
+                continue
+
             fp_alpha_key = _match_alpha_key(alpha_val, fp_alpha_dict.keys())
             if fp_alpha_key is None:
                 print(
@@ -689,52 +766,22 @@ def refine_logged_fp_tests(
             R_01 = np.array(fp_entry["R_01"]).reshape(k_0, k)
             S = np.array(fp_entry["S"]).reshape(k, k)
 
-            R_11 = schur + R_01 @ inv_R00 @ R_01.T
-            test_err = test_error(
-                R_00,
-                schur,
-                R_01=R_01,
-                alpha=alpha_val,
-                k=k,
-                k_0=k_0,
-            )
-            train_err = train_error(
-                R_00=R_00,
-                schur=schur,
-                R_01=R_01,
-                S=S,
-                alpha=alpha_val,
-                k=k,
-                k_0=k_0,
-            )
-            A = R_01.T @ sqrtm_R00_inv
-            misclassification_test_err = misclassification_test_error(
-                S=S,
-                R_00=R_00,
-                schur_t=schur,
-                A_t=A,
-                alpha=alpha_val,
-                k=k,
-                k_0=k_0,
-            )
-            f_norm = np.trace(R_00) + np.trace(R_11) - np.trace(R_01) - np.trace(R_01.T)
+            for metric in metrics_to_update:
+                entry[metric] = metric_functions[metric](
+                    R_00, schur, R_01, S, alpha_val, inv_R00, sqrtm_R00_inv
+                )
+                updates_applied += 1
 
-            entry.update(
-                {
-                    "test_error": float(test_err),
-                    "train_error": float(train_err),
-                    "misclassification_test_error": float(misclassification_test_err),
-                    "F_norm": float(f_norm),
-                    "diverged": bool(entry.get("diverged", False)),
-                    "actual_alpha": float(alpha_val),
-                }
-            )
-            updated = True
+            entry["actual_alpha"] = float(alpha_val)
+            print(f"Updated {metric} for alpha={alpha_val} to {entry[metric]}")
 
-    if updated:
+    if updates_applied:
         with open(filepath, "w") as f:
             json.dump({"metadata": metadata, "results": results}, f, indent=2)
-        print(f"Refined FP test metrics saved to {filepath}")
+        print(
+            f"Refined {updates_applied} metric values saved to {filepath} "
+            f"(metrics: {', '.join(metrics_to_update)})"
+        )
     else:
         print("No metrics were updated.")
 

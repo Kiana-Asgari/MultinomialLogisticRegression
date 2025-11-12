@@ -5,6 +5,7 @@ import json
 import os
 import matplotlib as mpl
 from matplotlib.lines import Line2D
+#from torch._C import T
 
 from multinomial_logistic.log_data.log_fp_tests import get_fp_statistics
 from multinomial_logistic.log_data.read_mle_empirical import read_mle_results
@@ -112,11 +113,11 @@ def plot_regularized_error(k,
     unique_alphas = sorted(results.keys())
     # Colors for different alpha lines
     colors = [
-        'black',
-        '#002B5B',  # Darkest navy blue
         '#3E7893',  # Medium blue
         '#5091AA',  # Blue gray
         '#62A9C1',  # Light steel blue
+        '#002B5B',  # Darkest navy blue
+        'black',
         '#74C2D8',  # Sky blue
         '#86DBEF',  # Light blue
         '#98F4FF'   # Lightest blue
@@ -299,15 +300,16 @@ def set_up_plotting_style():
         'axes.formatter.use_mathtext': True,
     })
     colors = [
-        '#E57A77',
-        '#1F449C',  # Deep ocean blue
-        'mediumslateblue',  # Medium blue
+        '#3E7893',  # Medium blue
+        '#002B5B',  # Darkest navy blue
         '#5091AA',  # Blue gray
+        'black',
         '#62A9C1',  # Light steel blue
         '#74C2D8',  # Sky blue
         '#86DBEF',  # Light blue
         '#98F4FF'   # Lightest blue
         ]
+
     return colors
 
 
@@ -387,19 +389,21 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
         plt.figure(figsize=(10, 6))
         
         # Plot theoretical curves
-        labels = [r'$\mathbf{R}_{00}= sym \mathbf{R}_{00}^{(1)}$', 
-                 r'$\mathbf{R}_{00}= two \mathbf{R}_{00}^{(2)}$', 
-                 r'$\mathbf{R}_{00}= three \mathbf{R}_{00}^{(3)}$',
-                 r'$\mathbf{R}_{00}= two \mathbf{R}_{00}^{(2)}$']
+        labels = [r'$\mathbf{R}_{00}= \mathbf{R}_{00}^{(1)}$', 
+                 r'$\mathbf{R}_{00}=  \mathbf{R}_{00}^{(3)}$', 
+                 r'$\mathbf{R}_{00}=  \mathbf{R}_{00}^{(2)}$',
+                 r'$\mathbf{R}_{00}=  \mathbf{R}_{00}^{(4)}$']
         
         alphas_list = [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric, alphas_fp_two_vs_two_vs_one]
         
-        for i, (alphas, values, label, color) in enumerate(zip(alphas_list, fp_values, labels, colors)):
+        for i in [3,1,0,2]:
+            alphas, values, label, color = alphas_list[i], fp_values[i], labels[i], colors[i]
             # Plot each metric separately for better debugging
             if metric_name == 'test_errors':
                 mask = (alphas >= alpha_min) & (alphas <= alpha_max)
                 filtered_alphas = alphas[mask]
-                filtered_values = np.array(values[mask]) #+ 2*1e-3
+                filtered_values = np.array(values[mask])
+
             elif metric_name == 'train_errors':
                 mask = (alphas >= alpha_min) & (alphas <= alpha_max)
                 filtered_alphas = alphas[mask]
@@ -412,21 +416,14 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
                 mask = (alphas >= alpha_min) & (alphas <= alpha_max)
                 filtered_alphas = alphas[mask]
                 filtered_values = np.sqrt(np.array(values[mask]))# + 1e-2
-            plt.plot(filtered_alphas, filtered_values, '-', color=colors[2-i], label=label, linewidth=1.8)
+            plt.plot(filtered_alphas, filtered_values, '-', color=colors[i % len(colors)], label=label, linewidth=1.8)
 
         # Add empirical points 
-        if k>=3:
-            data_sets = [
-                (mle_data_symmetric, get_R_00(k, 'symmetric'), colors[2]),
-                (mle_data_two_classes_close, get_R_00(k, 'two_classes_close'), colors[1]),
-                (mle_data_three_classes_close, get_R_00(k, 'three_classes_close'), colors[0]),
-                (mle_data_two_vs_two_vs_one, get_R_00(k, 'two_vs_two_vs_one'), colors[3])
-            ]
-        else:
-            data_sets = [
-                (mle_data_symmetric, [[1.0, 0.5], [0.5, 1.0]], colors[2]),
-                (mle_data_two_classes_close, [[1.0, 0.9], [0.9, 1.0]], colors[1]),
-                (mle_data_non_symmetric, [[1.0, -0.5], [-0.5, 1.0]], colors[0])
+        data_sets = [
+            (mle_data_symmetric, get_R_00(k, 'symmetric'), colors[0 % len(colors)]),
+            (mle_data_two_classes_close, get_R_00(k, 'two_classes_close'), colors[1 % len(colors)]),
+            (mle_data_three_classes_close, get_R_00(k, 'three_classes_close'), colors[2 % len(colors)]),
+            (mle_data_two_vs_two_vs_one, get_R_00(k, 'two_vs_two_vs_one'), colors[3 % len(colors)])
             ]
 
         
@@ -452,8 +449,6 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
                 
                 if alphas:
                     # Debug prints
-                    print(f"Final mle lengths for {metric_name} - alphas: {len(alphas)}, values: {len(values)}, errors: {len(errors)}")
-                    print('alphas:', alphas)
                     alphas = np.array(alphas)
                     values = np.array(values)
                     errors = np.array(errors)
@@ -465,10 +460,14 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
                     errors = errors[sort_idx]
                     if metric_name == 'test_errors' or metric_name == 'F_norm':
                         alphas = np.array(alphas) - 2*1e-3
-                       #plt.ylim(bottom=1)
-
-                    #if metric_name == 'misclassification_test_errors':
-                    #    plt.ylim(bottom=0.4,top=0.62)
+                    while True:
+                        if values[0] < 0 or alphas[0] < alpha_min: #TODO
+                            values = values[1:]
+                            errors = errors[1:]
+                            alphas = alphas[1:]
+                        else:
+                            break
+  
                     plt.errorbar(alphas, values, yerr=errors, fmt='o', 
                                     color=color,        
                                     markersize=3,
@@ -480,11 +479,8 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min):
         plt.xlabel(r'$\alpha$')
         plt.ylabel(y_label)
         plt.grid(True, alpha=0.3)
-        plt.legend()
-        #plt.xlim(left=5)
-        #plt.ylim(top=2)
-        
-        # Add formatter for y-axis ticks to show 2 decimal places
+        if metric_name != 'misclassification_test_errors':
+            plt.legend(loc='upper right')
         ax = plt.gca()
         ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
 
