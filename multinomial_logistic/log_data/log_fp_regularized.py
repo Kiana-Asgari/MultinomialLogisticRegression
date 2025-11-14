@@ -134,6 +134,8 @@ def refine_logged_regulairzed_fp(
     modified_alpha: float = 10,
     integral_size: float = 4.5,
     dtype: torch.dtype = torch.float64,
+    lambda_reg_min: float = 0.0,
+    lambda_reg_max: float = 0.1,
 ):
     """Refine previously logged regularized fixed points by rerunning state evolution."""
 
@@ -150,7 +152,7 @@ def refine_logged_regulairzed_fp(
             os.path.dirname(__file__),
             "Oct_data",
             "fp_reg_solution",
-            f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}(old).json",
+            f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}.json",
         )
         print(f"Refining regularized FP data for type_3 = {type_3}")
 
@@ -194,7 +196,8 @@ def refine_logged_regulairzed_fp(
         lambda_reg = float(key_data["lambda_reg"])
 
         print(f"\nRefining alpha = {alpha_value}, lambda = {lambda_reg}")
-
+        if lambda_reg < lambda_reg_min or lambda_reg > lambda_reg_max:
+            continue
         schur = np.array(entry["schur"])
         R_01 = np.array(entry["R_01"])
         S = np.array(entry["S"])
@@ -236,7 +239,7 @@ def get_regularized_fp_data(k, k_0, R_00, type_3='symmetric'):
         os.path.dirname(__file__),
         "Oct_data",
         "fp_reg_solution",
-        f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}.json",
+        f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}.json", #TODO
     )
 
     with open(base_filepath, "r") as f:

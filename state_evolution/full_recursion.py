@@ -71,9 +71,7 @@ tol=1e-5, max_iter=300, seed=42, integral_mesh_size=None, integral_size=None, dt
         errors[t] = current_errors
 
         _print_stats(t, alpha_tensor, lambda_tensor, errors)
-        print('         S_next:', S_next.flatten())
-        print('         R_01_next:', R_01_next.flatten())
-        print('         schur_next:', schur_next.flatten())
+
 
 
 
@@ -86,6 +84,9 @@ tol=1e-5, max_iter=300, seed=42, integral_mesh_size=None, integral_size=None, dt
             break
 
         schur_t, R_01_t, S_t = schur_next, R_01_next, S_next
+    # print(f"         [final] S:", S_t.flatten())
+    # print(f"         [final] R_01:", R_01_t.flatten())
+    # print(f"         [final] schur:", schur_t.flatten())
 
     return schur_t, R_01_t, S_t, divergence
 

@@ -18,28 +18,11 @@ from multinomial_logistic.log_data.log_fp import read_fp_results
 from multinomial_logistic.log_data.log_fp_regularized import get_regularized_fp_data
 
 
-def run_and_log_fp_tests_regularized(
-    k_0,
-    k,
-    R_00,
-    type_3
-):
-    """
-    Run and log regularized FP tests, saving test errors for different alpha and lambda values.
-    """
-    print("running and logging fp tests regularized...")
-    alphas, lambda_regs, S_matrices, schur_matrices, R_01_matrices, diverged_flags = (
-        get_regularized_fp_data(k, k_0, R_00, type_3)
-    )
+def run_and_log_fp_tests_regularized(k_0, k, R_00, type_3):
+    alphas, lambda_regs, S_matrices, schur_matrices, R_01_matrices, diverged_flags = (get_regularized_fp_data(k, k_0, R_00, type_3))
 
     # Create data directory if it doesn't exist
-    if type_3 == False:
-        input(f"Creating new file: {type_3}?...")
-        data_dir = os.path.join(
-            os.path.dirname(__file__), "data", "fp_tests_regularized"
-        )
-    elif type_3 != False:
-        data_dir = os.path.join(
+    data_dir = os.path.join(
             os.path.dirname(__file__),
             "Oct_data",
             "fp_tests_regularized"
@@ -48,10 +31,7 @@ def run_and_log_fp_tests_regularized(
     os.makedirs(data_dir, exist_ok=True)
 
     # Create filename based on parameters
-    if type_3 == False:
-        filename = f"fp_reg_tests_k{k}_k0{k_0}.json"
-    elif type_3 != False:
-        filename = f"FP_reg_evals_k{k}_k0{k_0}_{type_3}.json"
+    filename = f"FP_reg_evals_k{k}_k0{k_0}_{type_3}.json"
     filepath = os.path.join(data_dir, filename)
 
     # Load existing results if file exists
@@ -241,7 +221,7 @@ def _match_alpha_key(target, keys):
             return key
     return None
 
-def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modified_alpha):
+def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modified_alpha, lambda_reg_min=0, lambda_reg_max=0.4):
 
     alpha_val = float(modified_alpha)
     data_dir = os.path.join(
@@ -302,6 +282,8 @@ def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modifi
         )
 
     for i, lambda_val in enumerate(lambda_values):
+        if lambda_val < lambda_reg_min or lambda_val > lambda_reg_max:
+            continue
         matches = np.where(np.isclose(lambda_alpha, lambda_val, atol=1e-6))[0]
         if matches.size == 0:
             if i >= len(updated_metric_values):

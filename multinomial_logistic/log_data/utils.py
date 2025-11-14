@@ -112,17 +112,7 @@ def plot_regularized_error(k,
     })
     unique_alphas = sorted(results.keys())
     # Colors for different alpha lines
-    colors = [
-        'black',
-        '#002B5B',  # Darkest navy blue
-        '#3E7893',  # Medium blue
-        '#5091AA',  # Blue gray
-        '#62A9C1',  # Light steel blue
-        '#74C2D8',  # Sky blue
-        '#86DBEF',  # Light blue
-        '#98F4FF'   # Lightest blue
-        ]
-
+    colors = set_up_plotting_style()
 
     for error_type in ['test_errors', 'train_errors', 'misclassification_test_errors', 'norms']:
         fig, ax = plt.subplots()
@@ -203,15 +193,7 @@ def plot_regularized_error(k,
         plt.tight_layout()
 
         # 5. Save Plot
-        if save_path is None:
-            save_path_final = os.path.join(
-                fig_dir, 
-                f'reg_{error_type}_error_k{k}_k0{k_0}_{type_3}.pdf'
-            )
-        else:
-            # Modify user-provided save_path to differentiate test vs train
-            base, ext = os.path.splitext(save_path)
-            save_path_final = f'{base}_{error_type}{ext}'
+        save_path_final = os.path.join("results", f"Figures({k+1}_classes)", "regularized_errors", f'{error_type}_vs_lambda({k+1}_classes).pdf')
 
         plt.savefig(save_path_final, dpi=300, bbox_inches='tight')
         print(f'[Info] {error_type.title()} error plot saved to {save_path_final}')
@@ -299,16 +281,11 @@ def set_up_plotting_style():
         'mathtext.default': 'regular',
         'axes.formatter.use_mathtext': True,
     })
-    colors = [
-        '#E57A77',
-        '#1F449C',  # Deep ocean blue
-        'mediumslateblue',  # Medium blue
-        '#5091AA',  # Blue gray
-        '#62A9C1',  # Light steel blue
-        '#74C2D8',  # Sky blue
-        '#86DBEF',  # Light blue
-        '#98F4FF'   # Lightest blue
-        ]
+    colors = [  "#86231B", #"dark_red" 
+        "#D48682", #"light_red" 
+        "#7C76DC", #"light_blue" 
+        "#2E489A",
+        "black"] #"dark_blue" 
 
     return colors
 
@@ -319,7 +296,7 @@ def set_up_plotting_style():
 from multinomial_logistic.log_data.log_fp_tests import get_fp_misclassification_statistics
 from configs.R_initiation import get_R_00
 
-def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100):
+def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100, desired_metric='all'):
     colors = set_up_plotting_style()
     if k>=3:
         fp_results_symmetric = get_fp_statistics(k, k_0, type_3='symmetric')
@@ -383,13 +360,15 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100):
     ]
 
     for metric_name, fp_values, y_label in metrics:
+        if desired_metric != 'all' and metric_name != desired_metric:
+            continue
         plt.figure(figsize=(10, 6))
         
         # Plot theoretical curves
-        labels = [r'$\mathbf{R}_{00}= (symmetric)$', 
-                 r'$\mathbf{R}_{00}= (three classes close)$', 
-                 r'$\mathbf{R}_{00}= (two classes close)$',
-                 r'$\mathbf{R}_{00}= (two vs two vs one)$']
+        labels = [r'$\mathbf{R}_{00}= sym$', 
+                 r'$\mathbf{R}_{00}= two$', 
+                 r'$\mathbf{R}_{00}= three$',
+                 r'$\mathbf{R}_{00}= tvt v one$']
         
         alphas_list = [alphas_fp_symmetric, alphas_fp_two_classes_close, alphas_fp_non_symmetric, alphas_fp_two_vs_two_vs_one]
         
@@ -458,7 +437,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100):
                     if metric_name == 'test_errors' or metric_name == 'F_norm':
                         alphas = np.array(alphas) - 2*1e-3
                     while True:
-                        if values[0] < 0 or alphas[0] < alpha_min: #TODO
+                        if values[0] < 0.0 or alphas[0] < alpha_min: #TODO
                             values = values[1:]
                             errors = errors[1:]
                             alphas = alphas[1:]
@@ -482,9 +461,9 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100):
         ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
 
         # Save the plot
-        save_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "figures", f"{k}_classes", "errors_vs_alpha")
+        save_dir = os.path.join("results", f"Figures({k+1}_classes)", "errors_vs_alpha")
         os.makedirs(save_dir, exist_ok=True)
-        saving_path = os.path.join(save_dir, f'{metric_name}_vs_alpha_k{k}_k0{k_0}.pdf')
+        saving_path = os.path.join(save_dir, f'{metric_name}_vs_alpha({k+1}_classes).pdf')
         plt.savefig(saving_path, bbox_inches='tight', dpi=300)
         print(f'\n{metric_name} vs alpha plot saved to {saving_path}')
         plt.close()

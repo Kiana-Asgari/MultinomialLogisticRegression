@@ -33,13 +33,14 @@ def run_and_log_mle(
     n_trials=100,
     two_classes_close=False,
     non_symmetric=False,
+    alphas=[4],
     type_3: Literal[
         False,
         "symmetric",
         "two_classes_close",
         "three_classes_close",
         "two_vs_two_vs_one",
-    ] = False,
+    ] = False
 ):
     # Set parameters
 
@@ -103,8 +104,6 @@ def run_and_log_mle(
     elif type_3 != False:
         R_00_values = np.array([get_R_00(k, type_3)])
 
-    alphas = np.linspace(3.5, 5, 10)
-    alphas = alphas[::-1]
     print(
         "\n MEL:alphas:",
         alphas.shape,
