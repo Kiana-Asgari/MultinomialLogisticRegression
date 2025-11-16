@@ -253,11 +253,7 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0,
                     type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False,
                     non_symmetric=False, two_classes_close=False):
 
-    data_dir = os.path.join(os.path.dirname(__file__), "data", "fp_solution")
     
-    if not os.path.exists(data_dir):
-        print("No data directory found")
-        return None
     
     # Look for the specific file
     if k>=3:
@@ -277,9 +273,6 @@ def read_fp_results(alpha, k, k_0, R_00, lambda_reg=0,
         filename = f"fp_data_k{k}_k0{k_0}_lambda{lambda_reg}.json"
         filepath = os.path.join(fp_data_dir, filename)
     
-    if not os.path.exists(filepath):
-        print(f"No file found matching parameters k={k}, k_0={k_0}, lambda={lambda_reg}")
-        return None
     
     # Read the file
     with open(filepath, 'r') as f:

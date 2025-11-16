@@ -87,6 +87,7 @@ tol=1e-5, max_iter=300, seed=42, integral_mesh_size=None, integral_size=None, dt
     # print(f"         [final] S:", S_t.flatten())
     # print(f"         [final] R_01:", R_01_t.flatten())
     # print(f"         [final] schur:", schur_t.flatten())
+    #breakpoint()
 
     return schur_t, R_01_t, S_t, divergence
 

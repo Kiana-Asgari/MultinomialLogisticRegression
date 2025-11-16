@@ -195,12 +195,12 @@ def refine_logged_regulairzed_fp(
         alpha_value = float(key_data["alpha"])
         lambda_reg = float(key_data["lambda_reg"])
 
-        print(f"\nRefining alpha = {alpha_value}, lambda = {lambda_reg}")
         if lambda_reg < lambda_reg_min or lambda_reg > lambda_reg_max:
             continue
         schur = np.array(entry["schur"])
         R_01 = np.array(entry["R_01"])
         S = np.array(entry["S"])
+        print(f"\nRefining alpha = {alpha_value}, lambda = {lambda_reg}")
         if alpha_value == modified_alpha:
             schur_refined, R_01_refined, S_refined, diverged = (
                 state_evolution_full_recursion(

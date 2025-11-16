@@ -8,7 +8,7 @@ from state_evolution.utils import sphere_mesh_integration, get_primary_device
 def train_error(R_00, schur, R_01, S, alpha, k, k_0, seed=42):
 
     device = get_primary_device()
-    dtype = torch.float32
+    dtype = torch.float64
 
     R_00_tensor = torch.tensor(R_00, device=device, dtype=dtype)
     schur_tensor = torch.tensor(schur, device=device, dtype=dtype)
@@ -44,10 +44,9 @@ def train_error(R_00, schur, R_01, S, alpha, k, k_0, seed=42):
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_radius=18,
-        n_azimuth=12,
+        n_radius=100,
         n_polar=10,
-        radius=5,
+        radius=6,
         batch_size=220_000,
     )
 

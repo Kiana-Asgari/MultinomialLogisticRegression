@@ -27,10 +27,9 @@ def misclassification_test_error(S, R_00, schur_t, A_t, alpha, k, k_0, dtype=tor
         input_dim=k + k_0,
         output_dim=1,
         seed=seed,
-        n_radius=32,
-        n_polar=10,
-        n_azimuth=50,
-        radius=6,
+        n_radius=100,
+        n_polar=11,
+        radius=5,
         batch_size=600_000,
     )
 

@@ -2,6 +2,145 @@ import numpy as np
 from typing import Literal
 
 
+def _recognize_trig_value(val, tol=1e-10):
+    """Try to recognize if a value is a trigonometric function of a common angle."""
+    if np.isclose(val, 0.0, atol=tol):
+        return "0"
+    
+    # Common angles to check
+    common_angles = {
+        0: (0, "0"),
+        np.pi/12: (np.pi/12, "π/12"),
+        np.pi/6: (np.pi/6, "π/6"),
+        np.pi/4: (np.pi/4, "π/4"),
+        np.pi/3: (np.pi/3, "π/3"),
+        np.pi/2: (np.pi/2, "π/2"),
+        2*np.pi/3: (2*np.pi/3, "2π/3"),
+        3*np.pi/4: (3*np.pi/4, "3π/4"),
+        5*np.pi/6: (5*np.pi/6, "5π/6"),
+        np.pi: (np.pi, "π"),
+        7*np.pi/8: (7*np.pi/8, "7π/8"),
+    }
+    
+    # Check cosine
+    for angle, (angle_val, angle_str) in common_angles.items():
+        if np.isclose(val, np.cos(angle_val), atol=tol):
+            return f"cos({angle_str})"
+        if np.isclose(val, -np.cos(angle_val), atol=tol):
+            return f"-cos({angle_str})"
+    
+    # Check sine
+    for angle, (angle_val, angle_str) in common_angles.items():
+        if np.isclose(val, np.sin(angle_val), atol=tol):
+            return f"sin({angle_str})"
+        if np.isclose(val, -np.sin(angle_val), atol=tol):
+            return f"-sin({angle_str})"
+    
+    # Check 1/√3 (tetrahedral)
+    sqrt3 = np.sqrt(3)
+    if np.isclose(val, 1/sqrt3, atol=tol):
+        return "1/√3"
+    if np.isclose(val, -1/sqrt3, atol=tol):
+        return "-1/√3"
+    
+    # Check exact 1 and -1
+    if np.isclose(val, 1.0, atol=tol):
+        return "1"
+    if np.isclose(val, -1.0, atol=tol):
+        return "-1"
+    
+    return None
+
+
+def _format_phi_component(phi_val, theta_str, tol=1e-10):
+    """Format a phi component symbolically, recognizing trigonometric functions."""
+    # First try to recognize as a standalone trig value
+    trig_str = _recognize_trig_value(phi_val, tol)
+    if trig_str is not None:
+        # If it's 0, 1, or -1, use as is
+        if trig_str in ["0", "1", "-1"]:
+            return trig_str
+        # Otherwise, it's a trig function that will be multiplied by sin(theta)
+        return f"{trig_str}*sin({theta_str})"
+    
+    # Try to recognize as sin(theta) or cos(theta) times something
+    # Check if phi_val is close to a common trig value
+    for test_val in [1.0, -1.0, 1/np.sqrt(3), -1/np.sqrt(3)]:
+        if np.isclose(abs(phi_val), abs(test_val), atol=tol):
+            sign = "-" if phi_val < 0 else ""
+            if np.isclose(abs(test_val), 1.0, atol=tol):
+                return f"{sign}sin({theta_str})"
+            elif np.isclose(abs(test_val), 1/np.sqrt(3), atol=tol):
+                return f"{sign}sin({theta_str})/√3"
+    
+    # Fallback: use numerical value
+    return f"{phi_val:.6f}*sin({theta_str})"
+
+
+def _print_vectors_symbolic(theta_values, phi, cos_sign, include_base, num_vectors):
+    """Print vectors in symbolic form using sin and cosine notation."""
+    print("\n" + "="*60)
+    print("Vector symbolic representation:")
+    print("="*60)
+    
+    vector_idx = 0
+    
+    if include_base:
+        base_str = "(" + ", ".join(["1" if i == 0 else "0" for i in range(phi.shape[1] + 1)]) + ")"
+        print(f"v1 = {base_str}")
+        vector_idx = 1
+    
+    for i in range(num_vectors):
+        theta_val = theta_values[i] if theta_values.ndim > 0 else theta_values
+        sign = cos_sign[i] if cos_sign is not None else 1.0
+        
+        # Format theta value symbolically
+        theta_str = None
+        common_theta_values = {
+            np.arccos(-1/4): "arccos(-1/4)",
+            np.arccos(-1/3): "arccos(-1/3)",
+            np.arccos(-3/4): "arccos(-3/4)",
+            7*np.pi/8: "7π/8",
+            3*np.pi/4: "3π/4",
+            np.pi/3: "π/3",
+            2*np.pi/3: "2π/3",
+            np.pi/12: "π/12",
+            np.pi/6: "π/6",
+            np.pi/4: "π/4",
+            np.pi/2: "π/2",
+        }
+        
+        for test_val, test_str in common_theta_values.items():
+            if np.isclose(theta_val, test_val, atol=1e-10):
+                theta_str = test_str
+                break
+        
+        if theta_str is None:
+            theta_str = f"θ{i+1}"
+        
+        # First component: cos_sign * cos(theta)
+        if sign == 1.0:
+            first_comp = f"cos({theta_str})"
+        elif sign == -1.0:
+            first_comp = f"-cos({theta_str})"
+        else:
+            sign_str = _recognize_trig_value(sign) or f"{sign:.6f}"
+            first_comp = f"{sign_str}*cos({theta_str})"
+        
+        # Remaining components: sin(theta) * phi[i, j]
+        components = [first_comp]
+        for j in range(phi.shape[1]):
+            phi_val = phi[i, j]
+            comp_str = _format_phi_component(phi_val, theta_str)
+            components.append(comp_str)
+        
+        vector_str = "(" + ", ".join(components) + ")"
+        print(f"v{vector_idx + 1} = {vector_str}")
+        vector_idx += 1
+    
+    print("="*60 + "\n")
+
+
 def _generate_vectors(theta, phi, *, cos_sign=None, include_base=False):
     """Construct vectors from polar angle(s) theta and directional matrix phi."""
 
@@ -17,6 +156,7 @@ def _generate_vectors(theta, phi, *, cos_sign=None, include_base=False):
     cos_components = np.cos(theta_values)
     sin_components = np.sin(theta_values)
 
+
     if cos_sign is None:
         cos_sign = np.ones_like(cos_components)
     else:
@@ -30,6 +170,16 @@ def _generate_vectors(theta, phi, *, cos_sign=None, include_base=False):
         base_vector = np.zeros(spatial_dim + 1, dtype=float)
         base_vector[0] = 1.0
         vectors = np.vstack((base_vector, vectors))
+
+    # Print symbolic representation
+    # print('='*60)
+    # print('vectors:', vectors)
+    # for i in range(vectors.shape[0]):
+    #     for j in range(i, vectors.shape[0]):
+    #         print(f'inner product of vectors {i} and {j}:', vectors[i] @ vectors[j])
+
+    # _print_vectors_symbolic(theta_values, phi, cos_sign, include_base, num_vectors)
+
 
     return [vectors[i] for i in range(vectors.shape[0])]
 
@@ -56,6 +206,7 @@ _TETRAHEDRAL_DIRECTIONS = np.array([
 def _symmetric_classes_r4():
     # PRODUCING 5 vectors in R^4 in a fully rotationaly symmetric way
     theta = np.arccos(-1/4)                     # symmetric angle for 5 points on S³
+
     v1, v2, v3, v4, v5 = _generate_vectors(theta, _TETRAHEDRAL_DIRECTIONS, include_base=True)
     R_00 = _compute_R_00(v1, v2, v3, v4, v5)
     return R_00
@@ -151,7 +302,7 @@ def _two_vs_two_vs_one():
     return R_00
 def _compute_R_00(v1, v2, v3, v4, v5=None):
     # --- Compute theta1, theta2, theta3 and Theta0,R_00=Theta0.T @ Theta0 ---
-   # breakpoint()
+
 
     theta1, theta2, theta3 = v2 - v1, v3 - v1, v4 - v1
     theta4 = v5 - v1 if v5 is not None else None

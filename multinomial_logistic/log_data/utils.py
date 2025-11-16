@@ -69,9 +69,6 @@ def plot_regularized_error(k,
 
     results = read_fp_tests_regularized(k, k_0, R_00, type_3)
     print('loaded the theoretical results', results.keys())
-    for key in results.keys():
-        print('\nkey:', key)
-        print('lambda_values:', results[key]['lambda_values'],'\n')
     emp_results = get_mle_regularized_results(k, k_0, R_00, d=d, type_3=type_3, n_trials=n_trials)
     if emp_results is None:
         print("No empirical results found, plotting only theoretical results")
@@ -281,13 +278,20 @@ def set_up_plotting_style():
         'mathtext.default': 'regular',
         'axes.formatter.use_mathtext': True,
     })
-    colors = [  "#86231B", #"dark_red" 
+    colors1 = [  "#86231B", #"dark_red" 
         "#D48682", #"light_red" 
         "#7C76DC", #"light_blue" 
         "#2E489A",
         "black"] #"dark_blue" 
+    colors2 = [
+        "#5C1A5E", #Deep Plum
+        "#C04A6B", #rosewood
+        "#B89CE5", #Soft Orchid
+        "#4458A5", #indigo stale
+        "#1E2A4E" #Midnight stale
+    ]
 
-    return colors
+    return colors2
 
 
 
@@ -609,7 +613,7 @@ def plot_density(k,
     # -------------
     if save_path is None:
         # Create a default path if none is provided
-        fig_dir = os.path.join(os.path.dirname(__file__), "Oct_data", "figures", "ESD", f'{k+1}_classes')
+        fig_dir = os.path.join("results", f"Figures({k+1}_classes)", "ESD")
         os.makedirs(fig_dir, exist_ok=True)
         filename = (f"density_k{k}_k0{k_0}_R00{R_00[0,1]:.2f}"
                     f"_alpha{alpha_target:.2f}_lambda{lambda_reg}"
