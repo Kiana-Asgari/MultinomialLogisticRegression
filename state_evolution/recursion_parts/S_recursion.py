@@ -51,7 +51,7 @@ def S_recursion(
         k_0,
         input_dim=k + k_0,
         output_dim=k * k,
-        batch_size=600_000,
+        batch_size=1_500_000,
         n_radius=100, ##32 used for fp
         n_polar=integral_mesh_size,
         radius=integral_size,

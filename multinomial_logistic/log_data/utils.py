@@ -184,8 +184,12 @@ def plot_regularized_error(k,
         ax.set_xlabel(r'$\lambda$')
         ax.set_ylabel(y_label)
 
+        if error_type == 'train_errors':
+            ax.legend(loc='lower right')
+        elif error_type == 'test_errors' or error_type == 'norms':
+            ax.legend(loc='upper right')
 
-        ax.legend()
+
         ax.grid(True)
         plt.tight_layout()
 
@@ -239,12 +243,18 @@ def _plot_empirical_errors(ax,
             np.std(emp_lambda_errors[lambd][error_type], ddof=1) 
             for lambd in filtered_lambdas
         ]
+    if alpha == 1.5 and error_type == 'misclassification_test_errors':
+        breakpoint()  
+        print('alpha:', alpha, 'error_type:', error_type)
+        for i in range(len(filtered_lambdas)):
+            print('lambda:', filtered_lambdas[i], 'error:', filtered_errors[i], 'std:', filtered_stds[i])
+    n_trials = len(emp_lambda_errors[filtered_lambdas[0]][error_type])
 
 
     ax.errorbar(
         x=2*np.array(filtered_lambdas),
         y=filtered_errors,
-        yerr=np.array(filtered_stds)/10,
+        yerr=np.array(filtered_stds)/np.sqrt(n_trials),
         color=color,
         fmt='o',  # square markers
         markersize=3,
@@ -284,14 +294,15 @@ def set_up_plotting_style():
         "#2E489A",
         "black"] #"dark_blue" 
     colors2 = [
-        "#5C1A5E", #Deep Plum
-        "#C04A6B", #rosewood
-        "#B89CE5", #Soft Orchid
-        "#4458A5", #indigo stale
-        "#1E2A4E" #Midnight stale
+        "#2E8B57", #Forest Green
+        "#A6C95A", #Light Forest Green
+        "#E6B84A", #Light Yellow
+        "#E8843A" #Orange
+
+
     ]
 
-    return colors2
+    return colors1
 
 
 

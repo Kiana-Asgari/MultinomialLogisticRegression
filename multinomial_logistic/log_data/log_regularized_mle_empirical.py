@@ -9,9 +9,9 @@ def run_and_log_mle_regularized(
     k,
     R_00_values,
     type_3,
-    d=250,
-    n_trials=100,
-    lambda_regs=np.linspace(0.0005, 0.6, 100),
+    d,
+    n_trials,
+    lambda_regs=np.linspace(0.0001, 0.6, 80),
     alpha_values=[1.5, 3, 5, 10],
 ):
     # Create base filename without timestamp, but with d and n_trials
@@ -49,8 +49,6 @@ def run_and_log_mle_regularized(
         results = {}
         print(f"Creating new  mle reg file: {os.path.basename(filepath)}")
 
-    n_trials = 100
-    d = 250
 
     for R_00 in R_00_values:
         for lambda_reg in lambda_regs:

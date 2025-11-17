@@ -3,13 +3,14 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from types import SimpleNamespace
-
+import numpy as np
 from multinomial_logistic.MLE_empirical.utils.data_generation import generate_data, generate_data_torch
 
 
 _DEVICE = torch.device("cuda:3")
-_DTYPE = torch.float32
-
+_DTYPE = torch.float64
+#random_seeds = np.random.randint(0, 1000000, 1000)
+_GLOBAL_RNG = np.random.default_rng()
 
 def _to_tensor(arr):
     return torch.as_tensor(arr, dtype=_DTYPE, device=_DEVICE)
@@ -128,41 +129,42 @@ def fit_mle_baseline(alpha=None, k=None, lambda_reg=0, R_00=None, n_trials=1, d=
     test_errors = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
     train_errors = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
     misclassification = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
-
+    seed_pairs = _GLOBAL_RNG.integers(
+                   0,
+                   1_000_000,
+                    size=(total_trials, 2),
+                    dtype=np.int64
+                )
     for idx in range(total_trials):
-        batch_seed = 2 * idx
+        train_seed, eval_seed = map(int, seed_pairs[idx])
         if learn_from_data:
             X_tensor = _to_tensor(X_train_batch)
             Y_tensor = _to_tensor(Y_train_batch)
+
         else:
             X_tensor, Y_tensor = generate_data_torch(
                 alpha=alpha,
                 d=dim,
                 k=classes,
                 Theta_0=Theta_0,
-                random_state=batch_seed,
+                random_state=train_seed,
                 device=_DEVICE,
-                dtype=_DTYPE,
+                dtype=_DTYPE
+            )           
+            eval_X, eval_Y = generate_data_torch(
+                alpha=10,
+                d=dim,
+                k=classes,
+                Theta_0=Theta_0,                
+                random_state=eval_seed,
+                device=_DEVICE,
+                dtype=_DTYPE
             )
 
         theta_hat, _, history = lbfgs_multinomial(X_tensor, Y_tensor, lambda_reg, verbose=False)
         theta_collection[idx] = theta_hat
         norms[idx] = torch.linalg.norm(Theta_0 - theta_hat) ** 2
         train_errors[idx] = _logistic_loss(theta_hat, X_tensor, Y_tensor)
-
-        if X_test_batch is None:
-            eval_X, eval_Y = generate_data_torch(
-                alpha=alpha,
-                d=dim,
-                k=classes,
-                Theta_0=Theta_0,
-                random_state=batch_seed + 1,
-                device=_DEVICE,
-                dtype=_DTYPE,
-            )
-        else:
-            eval_X = _to_tensor(X_test_batch)
-            eval_Y = _to_tensor(Y_test_batch)
 
         test_errors[idx] = _logistic_loss(theta_hat, eval_X, eval_Y)
         misclassification[idx] = _classification_error(theta_hat, eval_X, eval_Y)

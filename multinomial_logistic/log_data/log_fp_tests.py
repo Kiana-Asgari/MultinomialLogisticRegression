@@ -359,9 +359,16 @@ def read_fp_tests_regularized(k, k_0, R_00, type_3:Literal[False, 'symmetric', '
         test_errors = np.array(alpha_data["test_errors"])
         train_errors = np.array(alpha_data["train_errors"])
         f_norms = np.array(alpha_data["f_norms"])
-        misclassification_test_errors = np.array(
-            alpha_data["misclassification_test_errors"]
-        )
+        
+        # Handle both old format (array of numbers) and new format (array of objects)
+        misclassification_test_errors_raw = alpha_data["misclassification_test_errors"]
+        if misclassification_test_errors_raw and isinstance(misclassification_test_errors_raw[0], dict):
+            # New format: array of objects with lambda and error
+            misclassification_test_errors = np.array([item["error"] for item in misclassification_test_errors_raw])
+        else:
+            # Old format: array of numbers
+            misclassification_test_errors = np.array(misclassification_test_errors_raw)
+        
         results[alpha] = {
             "lambda_values": lambda_values,
             "test_errors": test_errors,
