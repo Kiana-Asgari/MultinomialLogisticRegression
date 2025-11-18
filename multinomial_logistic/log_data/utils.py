@@ -183,6 +183,10 @@ def plot_regularized_error(k,
         # Axis labels, title, legend
         ax.set_xlabel(r'$\lambda$')
         ax.set_ylabel(y_label)
+        # if miscalssification, clip x axis from right at 0.3
+        if error_type == 'misclassification_test_errors':
+            ax.set_xlim(-0.02, 0.2)
+            ax.set_ylim(0.58, 0.72)
 
         if error_type == 'train_errors':
             ax.legend(loc='lower right')
@@ -252,7 +256,7 @@ def _plot_empirical_errors(ax,
     ax.errorbar(
         x=2*np.array(filtered_lambdas),
         y=filtered_errors,
-        yerr=np.array(filtered_stds)/np.sqrt(n_trials),
+        yerr=2*np.array(filtered_stds)/np.sqrt(n_trials),
         color=color,
         fmt='o',  # square markers
         markersize=3,
@@ -464,6 +468,7 @@ def plot_errors_vs_alpha(k, k_0, alpha_max, alpha_min, d=250, n_trials=100, desi
                                     capthick=1.5,
                                     elinewidth=1.8,
                                     alpha=0.76)
+
 
         plt.xlabel(r'$\alpha$')
         plt.ylabel(y_label)

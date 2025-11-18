@@ -60,7 +60,6 @@ if __name__ == "__main__":
     d=250
     n_trials=100
 
-
     plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=d, n_trials=n_trials,
                                         lambda_reg_max=0.3, lambda_reg_min=0.00)
     sys.exit()
