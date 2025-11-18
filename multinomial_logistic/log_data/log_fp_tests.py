@@ -257,7 +257,7 @@ def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modifi
     R_01_alpha = R_01_matrices[mask_alpha]
 
     # Filter out lambda >= 0.8
-    valid = lambda_alpha < 0.8
+    valid = lambda_alpha < 0.4
     lambda_alpha = lambda_alpha[valid]
     S_alpha = S_alpha[valid]
     schur_alpha = schur_alpha[valid]
@@ -280,7 +280,7 @@ def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modifi
         updated_metric_values.extend(
             [None] * (len(lambda_values) - len(updated_metric_values))
         )
-
+    
     for i, lambda_val in enumerate(lambda_values):
         if lambda_val < lambda_reg_min or lambda_val > lambda_reg_max:
             continue
@@ -292,7 +292,7 @@ def refine_logged_fp_tests_regularized(k_0, k ,R_00, type_3, metric_name, modifi
 
         idx = matches[0]
         metric_value = float(recompute_funcs[metric_name](idx))
-        updated_metric_values[i] = metric_value
+        updated_metric_values[i] = {"lambda": lambda_val, "error": metric_value}
         results[alpha_key][metric_name] = updated_metric_values
 
         with open(filepath, "w") as f:

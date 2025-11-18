@@ -12,6 +12,15 @@ _DTYPE = torch.float64
 #random_seeds = np.random.randint(0, 1000000, 1000)
 _GLOBAL_RNG = np.random.default_rng()
 
+def _make_theta_0(R_00, dim, classes, learn_from_data=False):
+
+    sqrt_block = _matrix_sqrt(R_00)
+    zeros_pad = torch.zeros((classes, dim - classes), dtype=_DTYPE, device=_DEVICE)
+    Theta_0 = torch.cat((sqrt_block, zeros_pad), dim=1) if not learn_from_data else torch.zeros((classes, dim), dtype=_DTYPE, device=_DEVICE)
+    
+    return Theta_0
+
+
 def _to_tensor(arr):
     return torch.as_tensor(arr, dtype=_DTYPE, device=_DEVICE)
 
@@ -120,15 +129,14 @@ def fit_mle_baseline(alpha=None, k=None, lambda_reg=0, R_00=None, n_trials=1, d=
     total_trials = 1 if learn_from_data else n_trials
     dim = X_train_batch.shape[1] if learn_from_data else d
     classes = Y_train_batch.shape[1] if learn_from_data else k
-    base_cov = _prepare_covariance(R_00, classes)
-    sqrt_block = _matrix_sqrt(base_cov)
-    zeros_pad = torch.zeros((classes, dim - classes), dtype=_DTYPE, device=_DEVICE)
-    Theta_0 = torch.cat((sqrt_block, zeros_pad), dim=1) if not learn_from_data else torch.zeros((classes, dim), dtype=_DTYPE, device=_DEVICE)
+    Theta_0 = _make_theta_0(R_00, dim, classes, learn_from_data)
     theta_collection = torch.zeros((total_trials, classes, dim), dtype=_DTYPE, device=_DEVICE)
+    
     norms = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
     test_errors = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
     train_errors = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
     misclassification = torch.zeros((total_trials,), dtype=_DTYPE, device=_DEVICE)
+    
     seed_pairs = _GLOBAL_RNG.integers(
                    0,
                    1_000_000,
@@ -152,7 +160,7 @@ def fit_mle_baseline(alpha=None, k=None, lambda_reg=0, R_00=None, n_trials=1, d=
                 dtype=_DTYPE
             )           
             eval_X, eval_Y = generate_data_torch(
-                alpha=10,
+                alpha=100,
                 d=dim,
                 k=classes,
                 Theta_0=Theta_0,                

@@ -4,7 +4,6 @@ from multinomial_logistic.log_data.log_fp import run_and_log_fp, refine_logged_f
 from state_evolution.full_recursion import state_evolution_full_recursion
 from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests_regularized, refine_logged_fp_tests_regularized
 from multinomial_logistic.log_data.utils import plot_errors_vs_alpha, plot_density, plot_regularized_error
-from multinomial_logistic.log_data.log_esd import run_and_log_esd
 from multinomial_logistic.log_data.log_fp_regularized import run_and_log_fp_regularized, refine_logged_regulairzed_fp
 from multinomial_logistic.log_data.log_regularized_mle_empirical import run_and_log_mle_regularized
 from multinomial_logistic.log_data.log_fp_tests import run_and_log_fp_tests, refine_logged_fp_tests
@@ -35,17 +34,21 @@ def _ESD():
         except Exception as e:
             print(f"Error for alpha {alpha}: {e}")
 
+
+
+
+
 def ref_reg(alpha, reg_min, reg_max):
     refine_logged_regulairzed_fp(k_0=k_0, k=k,type_3=type_3, max_iter=1,
-                                tol=1e-5, integral_mesh_size=11, integral_size=7,
+                                tol=1e-5, integral_mesh_size=12, integral_size=6,
                                 lambda_reg_min=reg_min, lambda_reg_max=reg_max,
-                                dtype=torch.float32, modified_alpha=alpha)
+                                dtype=torch.float64, modified_alpha=alpha)
     refine_logged_fp_tests_regularized(k_0=k_0, k=k,type_3=type_3, R_00=R00, 
                                         lambda_reg_min=reg_min, lambda_reg_max=reg_max,
                                         metric_name='misclassification_test_errors',
                                         modified_alpha=alpha)
     plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=300, n_trials=100,
-                                        lambda_reg_max=0.05, lambda_reg_min=0)
+                                        lambda_reg_max=0.3, lambda_reg_min=0)
 
  
 
@@ -56,20 +59,10 @@ if __name__ == "__main__":
     R00 = get_R_00(k, type_3)
     d=250
     n_trials=100
-    run_and_log_mle_regularized(k=k, k_0=k_0,  type_3=type_3, d=d, n_trials=n_trials, 
-                                alpha_values=[1.5, 3, 5, 10], lambda_regs=np.linspace(0.0001, 0.02, 2), R_00_values=[R00])
+
+
     plot_regularized_error(k=k, k_0=k_0, R_00=R00, type_3=type_3, d=d, n_trials=n_trials,
-                                        lambda_reg_max=0.3, lambda_reg_min=0.0)
-
-
-    # ref_reg(alpha=5, reg_min=0.035, reg_max=0.05)
-    # ref_reg(alpha=5, reg_min=0.05, reg_max=0.1)
-    # ref_reg(alpha=10, reg_min=0.04, reg_max=0.05)
-    # ref_reg(alpha=3, reg_min=0.00, reg_max=0.05)
-    # ref_reg(alpha=1.5, reg_min=0.025, reg_max=0.05)
-
-
-
+                                        lambda_reg_max=0.3, lambda_reg_min=0.00)
     sys.exit()
 
     type_3 = 'two_vs_two_vs_one'

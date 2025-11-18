@@ -275,4 +275,3 @@ def get_density_data(k, k_0, R_00, alpha_target, lambda_reg=0, z_imag_target=1e-
 
 
 
-

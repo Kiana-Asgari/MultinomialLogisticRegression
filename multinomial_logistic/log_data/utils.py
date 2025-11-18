@@ -244,8 +244,6 @@ def _plot_empirical_errors(ax,
             for lambd in filtered_lambdas
         ]
     if alpha == 1.5 and error_type == 'misclassification_test_errors':
-        breakpoint()  
-        print('alpha:', alpha, 'error_type:', error_type)
         for i in range(len(filtered_lambdas)):
             print('lambda:', filtered_lambdas[i], 'error:', filtered_errors[i], 'std:', filtered_stds[i])
     n_trials = len(emp_lambda_errors[filtered_lambdas[0]][error_type])

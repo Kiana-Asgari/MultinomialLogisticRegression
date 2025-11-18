@@ -152,9 +152,10 @@ def refine_logged_regulairzed_fp(
             os.path.dirname(__file__),
             "Oct_data",
             "fp_reg_solution",
-            f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}.json",
+            f"FP_reg_solutions_(k={k},k0={k_0})_{type_3}.json", #TODO
         )
         print(f"Refining regularized FP data for type_3 = {type_3}")
+        
 
 
     with open(base_filepath, "r") as f:
@@ -175,6 +176,7 @@ def refine_logged_regulairzed_fp(
             finally:
                 fcntl.flock(tmp_file.fileno(), fcntl.LOCK_UN)
         os.replace(temp_filepath, base_filepath)
+    print(f"\n\nrefining the file {base_filepath}\n\n")
 
     # Sort entries by R_00, lambda_reg, then alpha for deterministic processing
     sorted_items = []
