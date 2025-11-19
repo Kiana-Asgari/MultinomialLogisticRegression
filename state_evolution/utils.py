@@ -7,7 +7,7 @@ import math
 import contextlib
 
 
-_ALLOWED_CUDA_INDICES =  (2,3)
+_ALLOWED_CUDA_INDICES =  (2,4)
 
 def _get_preferred_cuda_devices(max_devices=None):
     """Return available CUDA devices restricted to indices 1-4."""

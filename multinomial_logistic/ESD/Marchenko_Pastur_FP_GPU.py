@@ -139,9 +139,9 @@ def _MP_integrand_gpu(Z_batch, S_t, R00_sqrt, schur_root, cov_inv, A_full, A_t, 
 #####################################################################################
 
 def _complex_integration_gpu(R_00, schur, A, S, MP_S_inv, alpha, k, k_0, *,
-                         size=4.5, batch_size=350_000, 
-                        seed=42, sphere=False, 
-                        n_radius=12, n_polar=6):
+                            size=4.5, batch_size=1_100_000, 
+                            seed=42, sphere=False, 
+                            n_radius=20, n_polar=7):
     """Compute complex expectations using torch mesh integration."""
     del alpha  # retained for API co    mpatibility
 

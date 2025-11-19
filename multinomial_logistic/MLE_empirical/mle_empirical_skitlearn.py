@@ -8,7 +8,7 @@ from multinomial_logistic.utils import batched_mlogit_jacobian
 
 
 set_global_output_type('cupy')
-_CUDA_DEVICE = cp.cuda.Device(0)
+_CUDA_DEVICE = cp.cuda.Device(3)
 _free_mem, _total_mem = cp.cuda.runtime.memGetInfo()
 _memory_limit = int(_total_mem * 0.7)
 _memory_pool = cp.cuda.MemoryPool()
@@ -67,7 +67,7 @@ def fit_mle_skitlearn(alpha=None, k=None, d=None, n_trials=100, R_00=None,
         train_proba = cp.asarray(model.predict_proba(X_train_gpu))
         results['train_errors'][i] = _log_loss_gpu(y_train_gpu, train_proba)
         
-        X_test, y_test_onehot = generate_data(alpha=1e2, d=d, k=k, Theta_0=Theta_0, random_state=seeds[iter+1])
+        X_test, y_test_onehot = generate_data(alpha=10, d=d, k=k, Theta_0=Theta_0, random_state=seeds[iter+1])
         y_test = _concatenate_onehot(y_test_onehot)
         X_test_gpu = cp.asarray(X_test, dtype=cp.float32)
         y_test_gpu = cp.asarray(y_test, dtype=cp.int32)

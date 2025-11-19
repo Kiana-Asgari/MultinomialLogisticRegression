@@ -33,7 +33,7 @@ def run_and_log_mle(
     n_trials=100,
     two_classes_close=False,
     non_symmetric=False,
-    alphas=[4],
+    alphas=None,
     type_3: Literal[
         False,
         "symmetric",
@@ -236,15 +236,19 @@ def run_and_log_mle(
 
     return filepath
 
-
-def run_and_log_esd_empirical(k_0, k, alpha, R_00, lambda_reg=0, n_iters=100, d=250):
+import sys
+def run_and_log_esd_empirical(k_0, k, alpha, R_00, lambda_reg=0, n_trials=100, d=250, skitlearn=True):
     # Create base filename
-    base_filename = (
-        f"esd_data_k{k}_k0{k_0}_lambda{lambda_reg}_d{d}_alpha{alpha:.2f}.json"
-    )
-    base_filepath = os.path.join(
-        os.path.dirname(__file__), "data", "mle_empirical", base_filename
-    )
+    base_filename = (f"EMP_esd_k{k}_d{d}_alpha{alpha:.1f}_R00{R_00[0][1]:.2f}.json")
+    base_filepath = os.path.join( os.path.dirname(__file__), "Oct_data", "mle_empirical", base_filename)
+    # if file exists, do not run the experiment again
+    if os.path.exists(base_filepath):
+        replace_flag = input(f"\n\n\nFile {base_filename} exists. Replace? (y/n)\n\n\n")
+        if replace_flag == 'y':
+            os.remove(base_filepath)
+        else:
+            return None
+
 
     # Create data/mle_empirical directory if it doesn't exist
     os.makedirs(os.path.dirname(base_filepath), exist_ok=True)
@@ -257,45 +261,32 @@ def run_and_log_esd_empirical(k_0, k, alpha, R_00, lambda_reg=0, n_iters=100, d=
             "lambda_reg": lambda_reg,
             "d": d,
             "alpha": alpha,
-            "n_iters": n_iters,
+            "n_trials": n_trials,
             "R_00": R_00.tolist(),
         },
         "eigenvalues": [],
     }
 
     # Run iterations
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        print(f"\rComputing ESD")
-
-        try:
-            # Compute ESD for this iteration
-            avg_Theta_hat, avg_esd, eigenvalues = esd_empirical(
+    eigenvalues = esd_empirical(
                 alpha=alpha,
                 k=k,
                 lambda_reg=lambda_reg,
                 R_00=R_00,
                 d=d,
-                max_iter=n_iters,
+                n_trials=n_trials,
+                skitlearn=skitlearn
             )
 
             # Check for valid eigenvalues
-            if eigenvalues is not None:
-                eigenvalues = np.asarray(eigenvalues)
-                if not np.any(
-                    np.isnan(eigenvalues.flatten())
-                ):  # Check for NaN in flattened array
-                    results["eigenvalues"].append(eigenvalues.tolist())
-
-        except (FloatingPointError, RuntimeError) as e:
-            print(f"\nNumerical error in iteration {iter}: {str(e)}")
-
-    print("\nSaving results...")
+    if eigenvalues is not None:
+            eigenvalues = np.asarray(eigenvalues)
+            if not np.any(np.isnan(eigenvalues.flatten())):  # Check for NaN in flattened array
+                results["eigenvalues"].append(eigenvalues.tolist())
 
     # Save results
     with open(base_filepath, "w") as f:
         json.dump(results, f)
 
     print(f"Results saved to: {base_filepath}")
-    return base_filepath
+    return eigenvalues.tolist()

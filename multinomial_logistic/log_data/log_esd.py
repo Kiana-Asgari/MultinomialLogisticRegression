@@ -10,7 +10,8 @@ from state_evolution.full_recursion import state_evolution_full_recursion
 
 def run_and_log_esd(k_0, k, lambda_reg=0, alpha_input=None, R_00_input=None, 
                     S_input=None, schur_input=None, R_01_input=None, file_number=None, z_imag=1e-4,
-                    z_real_values = np.linspace(0.5, 1, 10), max_iter=200, type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):     
+                    z_real_values = np.linspace(0.5, 1, 10),
+                    tol=1e-4, max_iter=200, type_3:Literal[False, 'symmetric', 'two_classes_close', 'three_classes_close'] = False):     
     # Create base filename
     if file_number is None:
         base_filename = f"esd_data_k{k}_k0{k_0}_lambda{lambda_reg}_alpha{alpha_input}.json"
@@ -61,7 +62,7 @@ def run_and_log_esd(k_0, k, lambda_reg=0, alpha_input=None, R_00_input=None,
                 continue
                 schur, R_01, S, diverged = state_evolution_full_recursion(R_00=R_00, schur_0=R_00, R_01_0=np.zeros((k, k)), S_0=np.eye(k),
                                                                         lambda_reg=lambda_reg, alpha=alpha, k=k, k_0=k_0,
-                                                                         max_iter=100, tol=1e-4)
+                                                                         max_iter=max_iter)
                 
                     
                 actual_alpha = alpha
@@ -102,7 +103,7 @@ def run_and_log_esd(k_0, k, lambda_reg=0, alpha_input=None, R_00_input=None,
 
                 new_MP_S, density = stieltjes_inversion(R_00, schur, A, S, z_real=z_real, z_imag=z_imag,\
                                        alpha=alpha, k=k, k_0=k_0, last_MP_S=last_MP_S,
-                                        max_iter=max_iter)
+                                        max_iter=max_iter, tol=tol)
                 print('at z_real = ', z_real, ' density = ', density)
                 # Initialize z_real dict if needed
                 if z_real_str not in results[R_00_str][actual_alpha_str]:

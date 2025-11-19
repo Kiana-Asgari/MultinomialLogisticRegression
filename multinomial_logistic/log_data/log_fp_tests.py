@@ -714,7 +714,7 @@ def refine_logged_fp_tests(
     def _match_alpha_key(value, candidates):
         for key in candidates:
             try:
-                if abs(float(key) - value) < 1e-8:
+                if abs(float(key) - value) < 1e-4:
                     return key
             except ValueError:
                 continue
